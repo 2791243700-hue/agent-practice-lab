@@ -1,0 +1,59 @@
+# Agent Practice Lab · Agent 入门实训平台
+
+面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
+
+**当前状态：设计与双人开发计划已确定，尚未实现可运行应用。** 本仓库作为两名开发者共同协作的起点；暂无安装、启动或在线演示入口。
+
+## 首版范围
+
+- 本地运行、浏览器操作；学生自行申请并配置模型服务 API Key。
+- 使用统一教学 Agent，每关先读介绍，再实践并查看反馈。
+- 验收结合真实操作过程、任务结果和概念理解；模拟运行不计正式通过。
+- 登录和线上部署保留扩展接口，首版不建设账号系统或云端服务。
+
+## 四个入门关卡
+
+1. **让 Agent 理解任务**：描述目标、约束和输出要求。
+2. **给 Agent 足够的资料**：理解上下文、材料读取与来源核对。
+3. **让 Agent 使用工具**：查看工具输入、执行结果和信息使用过程。
+4. **管理权限并检查成果**：练习拒绝和批准，检查产物并提交。
+
+## 设计文档
+
+- [本地版设计与架构](outputs/local-agent-learning-design.md)
+- [四关导读](outputs/lesson-introductions.md)
+- [分阶段实施计划](outputs/local-agent-learning-implementation-plan.md)
+- [双人分工与 GitHub 协作](outputs/two-person-github-collaboration-plan.md)
+
+拟采用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。依赖兼容性与真实模型调用将在实施阶段验证。
+
+## 双人协作
+
+| 角色 | 主要负责 |
+| --- | --- |
+| A | 前端页面、课程内容、模拟接口、浏览器测试和使用说明 |
+| B | 后端接口、Agent 执行、数据存储、工具授权、规则评分和启动脚本 |
+
+先确定接口契约，两人再并行开发；先完成第一关闭环，再扩展其余三关。使用短期功能分支和 Pull Request 合并到 main。
+
+```powershell
+git clone https://github.com/2791243700-hue/agent-practice-lab.git
+cd agent-practice-lab
+git switch -c feat/lesson-intro
+```
+
+上述命令用于获取文档并开始开发，并不会启动应用。第二名开发者需要仓库写权限才能直接推送分支，也可通过 fork 提交 PR。
+
+## 计划中的代码组织
+
+```text
+apps/web/        前端
+apps/api/        后端与 Agent
+content/lessons/ 课程导读、材料和模板
+contracts/      HTTP 与事件契约
+tests/e2e/      浏览器验收
+scripts/        本地启停与检查
+outputs/        已确认的设计与计划（当前已有）
+```
+
+API Key、个人连接信息、实验数据、数据库和日志不进入源码仓库。运行时凭据按设计仅保存在后端进程内存。
