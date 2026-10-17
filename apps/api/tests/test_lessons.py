@@ -1,7 +1,9 @@
 import copy
 import json
+
 import pytest
-from conftest import create_attempt, post
+from conftest import create_attempt
+
 
 def test_intro_available_without_key_and_answers_are_private(client):
     lessons = client.get("/api/v1/lessons").json()["items"]
@@ -13,6 +15,7 @@ def test_intro_available_without_key_and_answers_are_private(client):
         assert len(value["intro_markdown"]) > 100
         assert "rules" not in value
         assert "correct_option_id" not in response.text
+
 
 def test_version_archive_survives_course_changes(client):
     attempt = create_attempt(client)
@@ -26,6 +29,7 @@ def test_version_archive_survives_course_changes(client):
     assert detail["intro_markdown"] == old["intro"]
     assert client.get("/api/v1/lessons/01-task").json()["version"] == "2.0.0"
 
+
 def test_course_missing_intro_or_republishing_changed_version_rejected(client, tmp_path):
     catalog = client.app.state.school.catalog
     original = catalog.get("01-task", "1.0.0")
@@ -33,7 +37,8 @@ def test_course_missing_intro_or_republishing_changed_version_rejected(client, t
     changed["intro"] = "changed"
     with pytest.raises(ValueError):
         catalog.publish(changed)
-    package = tmp_path / "invalid"; package.mkdir()
+    package = tmp_path / "invalid"
+    package.mkdir()
     manifest = copy.deepcopy(original["manifest"])
     (package / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises((ValueError, FileNotFoundError)):

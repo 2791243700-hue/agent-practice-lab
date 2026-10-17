@@ -5,12 +5,22 @@ from collections.abc import AsyncIterator, Callable
 
 from agentscope.agent import Agent, ContextConfig, InjectionConfig, ModelConfig, ReActConfig
 from agentscope.credential import OpenAICredential
-from agentscope.formatter import OpenAIChatFormatter
 from agentscope.event import (
-    ExceedMaxItersEvent, ExternalExecutionResultEvent, ReplyEndEvent,
-    RequireExternalExecutionEvent, TextBlockDeltaEvent, TextBlockEndEvent,
+    ExceedMaxItersEvent,
+    ExternalExecutionResultEvent,
+    ReplyEndEvent,
+    RequireExternalExecutionEvent,
+    TextBlockDeltaEvent,
+    TextBlockEndEvent,
 )
-from agentscope.message import AssistantMsg, TextBlock, ToolCallBlock, ToolResultBlock, ToolResultState, UserMsg
+from agentscope.formatter import OpenAIChatFormatter
+from agentscope.message import (
+    AssistantMsg,
+    ToolCallBlock,
+    ToolResultBlock,
+    ToolResultState,
+    UserMsg,
+)
 from agentscope.model import ChatModelBase, OpenAIChatModel
 from agentscope.permission import PermissionBehavior, PermissionDecision
 from agentscope.tool import ToolBase, Toolkit
@@ -27,6 +37,7 @@ class RuntimeFailure(Exception):
 
 class ExternalTool(ToolBase):
     """The SDK plans calls; our gateway owns all execution and approval."""
+
     is_external_tool = True
     is_concurrency_safe = False
 
@@ -43,8 +54,14 @@ class ExternalTool(ToolBase):
 
 class MeteredModel(ChatModelBase):
     def __init__(self, wrapped: ChatModelBase, specs=None):
-        super().__init__(wrapped.credential, wrapped.model, wrapped.parameters,
-                         stream=wrapped.stream, max_retries=0, context_size=wrapped.context_size)
+        super().__init__(
+            wrapped.credential,
+            wrapped.model,
+            wrapped.parameters,
+            stream=wrapped.stream,
+            max_retries=0,
+            context_size=wrapped.context_size,
+        )
         self.wrapped = wrapped
         self.formatter = getattr(wrapped, "formatter", None) or OpenAIChatFormatter()
         self.specs = specs or {}
@@ -75,17 +92,23 @@ class MeteredModel(ChatModelBase):
         self.calls += 1
         response = await self.wrapped(*args, **kwargs)
         if hasattr(response, "__aiter__"):
+
             async def stream():
                 async for chunk in response:
                     if chunk.is_last:
                         self.record(chunk)
                     yield chunk
+
             return stream()
         self.record(response)
         return response
 
     def usage(self):
-        return {"input_tokens": self.input_tokens, "output_tokens": self.output_tokens, "model_calls": self.calls}
+        return {
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "model_calls": self.calls,
+        }
 
 
 def make_model(request: RuntimeRequest) -> OpenAIChatModel:
@@ -96,7 +119,8 @@ def make_model(request: RuntimeRequest) -> OpenAIChatModel:
         OpenAICredential(api_key=access.api_key, base_url=access.base_url),
         model=access.model,
         parameters=OpenAIChatModel.Parameters(temperature=request.settings["temperature"]),
-        stream=True, max_retries=0,
+        stream=True,
+        max_retries=0,
         client_kwargs={"timeout": 30.0, "max_retries": 0},
     )
 
@@ -114,13 +138,15 @@ class AgentScopeRuntime:
 
     async def stream(self, request: RuntimeRequest, invoke_tool: InvokeTool) -> AsyncIterator[RuntimeEvent]:
         # The SDK may log provider exception bodies; the app publishes sanitized errors instead.
-        logging.getLogger("agentscope").setLevel(logging.CRITICAL)
+        logging.getLogger("as").setLevel(logging.CRITICAL + 1)
         allowed = {spec.name: spec for spec in request.allowed_tools}
         model = MeteredModel(self.model_factory(request), allowed)
         self.tasks[request.run_id] = asyncio.current_task()
         agent = Agent(
-            "课程资料助手", request.settings.get("system_instruction", ""),
-            model=model, toolkit=Toolkit(tools=[ExternalTool(spec) for spec in allowed.values()]),
+            "课程资料助手",
+            request.settings.get("system_instruction", ""),
+            model=model,
+            toolkit=Toolkit(tools=[ExternalTool(spec) for spec in allowed.values()]),
             react_config=ReActConfig(max_iters=10, interruption_raise_cancelled_error=True),
             model_config=ModelConfig(max_retries=0),
             context_config=ContextConfig(compression_tool_enabled=False),
@@ -141,11 +167,18 @@ class AgentScopeRuntime:
                     if asyncio.current_task().cancelling():
                         raise asyncio.CancelledError
                     if isinstance(event, TextBlockDeltaEvent):
-                        yield RuntimeEvent(kind="message.delta", payload={"message_id": event.block_id, "delta": event.delta})
+                        yield RuntimeEvent(
+                            kind="message.delta", payload={"message_id": event.block_id, "delta": event.delta}
+                        )
                     elif isinstance(event, TextBlockEndEvent):
-                        yield RuntimeEvent(kind="message.completed", payload={
-                            "message_id": event.block_id, "role": "assistant", "content": event.text or "",
-                        })
+                        yield RuntimeEvent(
+                            kind="message.completed",
+                            payload={
+                                "message_id": event.block_id,
+                                "role": "assistant",
+                                "content": event.text or "",
+                            },
+                        )
                     elif isinstance(event, RequireExternalExecutionEvent):
                         results = []
                         for block in event.tool_calls:
@@ -157,16 +190,32 @@ class AgentScopeRuntime:
                                 Draft202012Validator(allowed[block.name].input_schema).validate(arguments)
                             except Exception:
                                 raise RuntimeFailure("MODEL_INCOMPATIBLE") from None
-                            result = await invoke_tool(ToolCall(id=block.id, name=block.name, arguments=arguments))
-                            state = {"ok": ToolResultState.SUCCESS, "denied": ToolResultState.DENIED,
-                                     "error": ToolResultState.ERROR}[result.status]
-                            results.append(ToolResultBlock(id=block.id, name=block.name,
-                                output=json.dumps(result.data, ensure_ascii=False), state=state))
-                        continuation = ExternalExecutionResultEvent(reply_id=event.reply_id, execution_results=results)
+                            result = await invoke_tool(
+                                ToolCall(id=block.id, name=block.name, arguments=arguments)
+                            )
+                            state = {
+                                "ok": ToolResultState.SUCCESS,
+                                "denied": ToolResultState.DENIED,
+                                "error": ToolResultState.ERROR,
+                            }[result.status]
+                            results.append(
+                                ToolResultBlock(
+                                    id=block.id,
+                                    name=block.name,
+                                    output=json.dumps(result.data, ensure_ascii=False),
+                                    state=state,
+                                )
+                            )
+                        continuation = ExternalExecutionResultEvent(
+                            reply_id=event.reply_id, execution_results=results
+                        )
                     elif isinstance(event, ExceedMaxItersEvent):
                         raise RuntimeFailure("LIMIT_EXCEEDED")
                     elif isinstance(event, ReplyEndEvent):
-                        if event.error or str(event.finished_reason) not in ("completed", "require_external_execution"):
+                        if event.error or str(event.finished_reason) not in (
+                            "completed",
+                            "require_external_execution",
+                        ):
                             if continuation is None:
                                 raise RuntimeFailure()
                 if continuation is None:

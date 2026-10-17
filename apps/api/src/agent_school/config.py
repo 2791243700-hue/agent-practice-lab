@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+
 @dataclass
 class Config:
     root: Path
@@ -22,8 +23,10 @@ class Config:
     @classmethod
     def from_env(cls):
         root = Path(__file__).resolve().parents[4]
-        return cls(root=root, data_dir=Path(os.environ.get("AGENT_SCHOOL_DATA", root / "data")),
-                   local_token=os.environ.get("AGENT_SCHOOL_LOCAL_TOKEN", ""),
-                   frontend_origin=os.environ.get("AGENT_SCHOOL_FRONTEND_ORIGIN", "http://127.0.0.1:3000"),
-                   demo_enabled=os.environ.get("AGENT_SCHOOL_DEMO", "0") == "1")
-
+        return cls(
+            root=root,
+            data_dir=Path(os.environ.get("AGENT_SCHOOL_DATA", root / "data")),
+            local_token=os.environ.get("AGENT_SCHOOL_LOCAL_TOKEN", ""),
+            frontend_origin=os.environ.get("AGENT_SCHOOL_FRONTEND_ORIGIN", "http://127.0.0.1:3000"),
+            demo_enabled=os.environ.get("AGENT_SCHOOL_DEMO", "0") == "1",
+        )

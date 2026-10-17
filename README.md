@@ -2,7 +2,7 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**当前状态：设计、双人开发计划和 v0.1.0 接口契约已确定，尚未实现可运行应用。** 本仓库作为两名开发者共同协作的起点；暂无应用安装、启动或在线演示入口。契约文件可以独立校验。
+**当前状态：v0.1.0 后端已实现，前端待接入。** 后端可本地启动并提供课程、Agent 运行、工具授权、规则评分和导出；当前尚无学生浏览器界面或在线演示。接口契约与后端均可独立验证。
 
 ## 首版范围
 
@@ -26,6 +26,8 @@
 - [双人分工与 GitHub 协作](outputs/two-person-github-collaboration-plan.md)
 - [v0.1.0 接口契约与调用规则](contracts/README.md)（35 个 HTTP 操作、11 类事件）
 - [机器可读 OpenAPI](contracts/openapi.json)与[生成的 TypeScript 类型](contracts/types.d.ts)
+- [后端安装、启动与前端联调](docs/backend.md)
+- [后端验证报告](docs/runtime-validation.md)
 
 拟采用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。依赖兼容性与真实模型调用将在实施阶段验证。
 
@@ -44,17 +46,17 @@ cd agent-practice-lab
 git switch -c feat/lesson-intro
 ```
 
-上述命令用于获取文档并开始开发，并不会启动应用。第二名开发者需要仓库写权限才能直接推送分支，也可通过 fork 提交 PR。
+上述命令用于获取项目并开始开发。后端在 apps/api 执行 uv sync --locked 安装依赖，Windows 从根目录运行 scripts/start.ps1 启动；详细环境、令牌和接入说明见后端文档。第二名开发者需要仓库写权限才能直接推送分支，也可通过 fork 提交 PR。
 
 ## 计划中的代码组织
 
 ```text
 apps/web/        前端
-apps/api/        后端与 Agent
-content/lessons/ 课程导读、材料和模板
+apps/api/        后端与 Agent（已实现）
+content/lessons/ 四关导读、材料和模板（已有基础课程包）
 contracts/      HTTP 与事件契约、生成类型和校验工具（当前已有）
 tests/e2e/      浏览器验收
-scripts/        本地启停与检查
+scripts/        Windows 本地启停
 outputs/        已确认的设计与计划（当前已有）
 ```
 
