@@ -26,6 +26,16 @@ class School:
         self.slot = None
         self.busy_profile = None
         self.profiles = ModelProfiles(self)
+        from agent_school.workspaces import WorkspaceStore
+        from agent_school.events import EventStore
+        from agent_school.approvals import ApprovalBroker
+        from agent_school.tools import ToolGateway
+        from agent_school.runs import RunService
+        self.workspace = WorkspaceStore(self)
+        self.events = EventStore(self)
+        self.approvals = ApprovalBroker(self)
+        self.gateway = ToolGateway(self)
+        self.runs = RunService(self)
 
     def attempt(self, key, active=False):
         value = self.store.get("attempt",key)
@@ -68,6 +78,7 @@ class School:
             "selected_file_ids":[],"progress":"not_started","active_run_id":None,
             "latest_submission_id":None,"reset_to_attempt_id":None,"created_at":now(),"updated_at":now()}
         self.store.put("attempt",value["id"],value)
+        self.workspace.create(value["id"],lesson)
         return value
 
     def update_attempt(self, key, body):
@@ -96,6 +107,8 @@ class School:
     async def prepare(self, operation, path, params, body):
         if operation=="checkConnection":
             return await self.profiles.check(path["profile_id"],body)
+        if operation=="resetAttempt":
+            await self.runs.prepare_reset(path["attempt_id"],body)
 
     async def dispatch(self, operation, path, params, body, prepared=None):
         if operation=="getHealth": return {"status":"ok","contract_version":"0.1.0"}
@@ -112,7 +125,11 @@ class School:
         if operation=="getAttempt": return self.attempt(path["attempt_id"])
         if operation=="listAttempts": return self.page(self.store.list("attempt"),params)
         if operation=="updateAttempt": return self.update_attempt(path["attempt_id"],body)
-        if operation=="resetAttempt": return self.reset_idle(path["attempt_id"],body)
+        if operation=="resetAttempt":
+            try:
+                return self.reset_idle(path["attempt_id"],body)
+            finally:
+                self.runs.resetting.discard(path["attempt_id"])
         if operation=="listProfiles": return {"items":self.store.list("profile")}
         if operation=="getProfile": return self.store.get("profile",path["profile_id"])
         if operation=="createProfile": return self.profiles.create(body)
@@ -120,9 +137,32 @@ class School:
             return self.profiles.mutate(operation,path["profile_id"],body,params)
         if operation=="checkConnection":
             return self.store.put("profile",path["profile_id"],prepared)
+        if operation=="listFiles": return {"items":self.workspace.list(path["attempt_id"])}
+        if operation=="previewFile": return self.workspace.preview(path["attempt_id"],path["file_id"])
+        if operation=="downloadFile":
+            from fastapi.responses import Response
+            info,data=self.workspace.read(path["attempt_id"],path["file_id"])
+            from urllib.parse import quote
+            return Response(data,media_type="application/octet-stream",
+                headers={"Content-Disposition":"attachment; filename*=UTF-8''"+quote(info["display_path"].split("/")[-1])})
+        if operation=="createRun": return self.runs.create(body)
+        if operation=="getRun": return self.store.get("run",path["run_id"])
+        if operation=="listRuns":
+            self.attempt(path["attempt_id"])
+            return self.page([r for r in self.store.list("run") if r["attempt_id"]==path["attempt_id"]],params)
+        if operation=="cancelRun": return self.runs.cancel(path["run_id"])
+        if operation=="getEventHistory":
+            return self.events.history(path["run_id"],params.get("after_seq",0),params.get("limit",100))
+        if operation=="streamEvents":
+            return self.events.subscribe(path["run_id"],int(params.get("Last-Event-ID",params.get("after_seq",0))))
+        if operation=="getApproval": return self.store.get("approval",path["approval_id"])
+        if operation=="decideApproval": return self.approvals.decide(path["approval_id"],body["decision"])
+        if operation=="createSubmission":
+            self.idle(self.attempt(body["attempt_id"],True))
         raise AppError("NOT_FOUND","尚未实现的接口。",404)
 
     async def close(self):
+        await self.runs.close()
         self.credentials.clear()
         self.store.close()
 

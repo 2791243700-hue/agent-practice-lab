@@ -76,9 +76,11 @@ def create_app(config: Config | None = None):
                             raise AppError() from None
                     from jsonschema import Draft202012Validator, FormatChecker
                     if list(Draft202012Validator(schema,format_checker=FormatChecker()).iter_errors(value)):
+                        if name in ("after_seq","Last-Event-ID"):
+                            raise AppError("CURSOR_INVALID","事件位置无效。",400)
                         raise AppError()
                     if name=="Idempotency-Key": idem = value
-                    if location=="query": params[name]=value
+                    if location=="query" or name=="Last-Event-ID": params[name]=value
                 school = request.app.state.school
                 operation_id = operation["operationId"]
                 status = next(int(k) for k in operation["responses"] if k.isdigit() and int(k)<300)
@@ -119,8 +121,7 @@ def create_app(config: Config | None = None):
                                     "body":json.loads(response.body)})
                             return response
                 prepared=await school.prepare(operation_id,dict(request.path_params),params,body)
-                with school.store.atomic():
-                    return await invoke(prepared)
+                return await invoke(prepared)
             except AppError as error:
                 return JSONResponse(error.body,status_code=error.status)
             except Exception:
