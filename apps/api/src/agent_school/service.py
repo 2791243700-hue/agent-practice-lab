@@ -36,6 +36,16 @@ class School:
         self.approvals = ApprovalBroker(self)
         self.gateway = ToolGateway(self)
         self.runs = RunService(self)
+        from agent_school.submissions import SubmissionService
+        from agent_school.exports import ExportService
+        self.submissions = SubmissionService(self)
+        self.exports = ExportService(self)
+
+    def completed(self, lesson_id, version):
+        attempts={a["id"] for a in self.store.list("attempt")
+            if a["lesson_id"]==lesson_id and a["lesson_version"]==version}
+        return any(s["attempt_id"] in attempts and s["passed"] and s["mode"]=="live"
+            for s in self.store.list("submission"))
 
     def attempt(self, key, active=False):
         value = self.store.get("attempt",key)
@@ -115,10 +125,14 @@ class School:
         if operation=="getMe": return {"id":"local-owner","auth_mode":"local",
             "capabilities":{"demo_enabled":self.config.demo_enabled,"max_active_runs":1}}
         if operation=="getLesson":
-            return self.catalog.public(self.catalog.get(path["lesson_id"],params.get("version")))
+            lesson=self.catalog.get(path["lesson_id"],params.get("version"))
+            return self.catalog.public(lesson,self.completed(lesson["manifest"]["id"],lesson["manifest"]["version"]))
         if operation=="listLessons":
             ids = {v["manifest"]["id"] for v in self.store.list("lesson",owner="system")}
-            details = [self.catalog.public(self.catalog.get(key)) for key in ids]
+            details = []
+            for key in ids:
+                lesson=self.catalog.get(key)
+                details.append(self.catalog.public(lesson,self.completed(key,lesson["manifest"]["version"])))
             return {"items":[{k:v[k] for k in ("id","version","title","description","order","completed")}
                 for v in sorted(details,key=lambda v:v["order"])]}
         if operation=="createAttempt": return self.create_attempt(body)
@@ -158,7 +172,19 @@ class School:
         if operation=="getApproval": return self.store.get("approval",path["approval_id"])
         if operation=="decideApproval": return self.approvals.decide(path["approval_id"],body["decision"])
         if operation=="createSubmission":
-            self.idle(self.attempt(body["attempt_id"],True))
+            return self.submissions.submit(body)
+        if operation=="getSubmission": return self.store.get("submission",path["submission_id"])
+        if operation=="listSubmissions":
+            self.attempt(path["attempt_id"])
+            values=[s for s in self.store.list("submission") if s["attempt_id"]==path["attempt_id"]]
+            values=[{k:s[k] for k in ("id","attempt_id","lesson_version","mode","passed","evaluation_passed","created_at")}
+                for s in values]
+            return self.page(values,params)
+        if operation=="downloadSubmissionFile":
+            return self.submissions.download(path["submission_id"],path["file_id"])
+        if operation=="createExport": return self.exports.create(path["attempt_id"],body)
+        if operation=="getExport": return self.store.get("export",path["export_id"])
+        if operation=="downloadExport": return self.exports.download(path["export_id"])
         raise AppError("NOT_FOUND","尚未实现的接口。",404)
 
     async def close(self):
