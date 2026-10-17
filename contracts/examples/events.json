@@ -1,0 +1,741 @@
+{
+  "description": "Each scenario is an independent demo run. Do not concatenate scenarios or count them as official completion.",
+  "scenarios": {
+    "deny-then-approve": [
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 1,
+        "kind": "run.started",
+        "payload": {
+          "status": "running"
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 2,
+        "kind": "tool.requested",
+        "payload": {
+          "call": {
+            "id": "call-save-1",
+            "name": "save_todos",
+            "arguments": {
+              "items": [
+                {
+                  "task_id": "submit-summary",
+                  "title": "提交总结",
+                  "due_date": "2026-11-04",
+                  "source_id": "notice-week"
+                },
+                {
+                  "task_id": "reserve-lab",
+                  "title": "预约实验室",
+                  "due_date": "2026-11-06",
+                  "source_id": "notice-week"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 3,
+        "kind": "approval.requested",
+        "payload": {
+          "approval": {
+            "id": "approval-example",
+            "run_id": "run-example",
+            "call_id": "call-save-1",
+            "tool_name": "save_todos",
+            "arguments": {
+              "items": [
+                {
+                  "task_id": "submit-summary",
+                  "title": "提交总结",
+                  "due_date": "2026-11-04",
+                  "source_id": "notice-week"
+                },
+                {
+                  "task_id": "reserve-lab",
+                  "title": "预约实验室",
+                  "due_date": "2026-11-06",
+                  "source_id": "notice-week"
+                }
+              ]
+            },
+            "status": "pending",
+            "decision": null,
+            "created_at": "2026-10-17T08:00:00Z",
+            "expires_at": "2026-10-17T08:10:00Z",
+            "decided_at": null
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 4,
+        "kind": "approval.decided",
+        "payload": {
+          "approval": {
+            "id": "approval-example",
+            "run_id": "run-example",
+            "call_id": "call-save-1",
+            "tool_name": "save_todos",
+            "arguments": {
+              "items": [
+                {
+                  "task_id": "submit-summary",
+                  "title": "提交总结",
+                  "due_date": "2026-11-04",
+                  "source_id": "notice-week"
+                },
+                {
+                  "task_id": "reserve-lab",
+                  "title": "预约实验室",
+                  "due_date": "2026-11-06",
+                  "source_id": "notice-week"
+                }
+              ]
+            },
+            "status": "denied",
+            "decision": "deny",
+            "created_at": "2026-10-17T08:00:00Z",
+            "expires_at": "2026-10-17T08:10:00Z",
+            "decided_at": "2026-10-17T08:00:00Z"
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 5,
+        "kind": "tool.completed",
+        "payload": {
+          "result": {
+            "call_id": "call-save-1",
+            "name": "save_todos",
+            "status": "denied",
+            "data": {
+              "message": "用户拒绝保存，未修改文件。"
+            }
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 6,
+        "kind": "tool.requested",
+        "payload": {
+          "call": {
+            "id": "call-save-2",
+            "name": "save_todos",
+            "arguments": {
+              "items": [
+                {
+                  "task_id": "submit-summary",
+                  "title": "提交总结",
+                  "due_date": "2026-11-04",
+                  "source_id": "notice-week"
+                },
+                {
+                  "task_id": "reserve-lab",
+                  "title": "预约实验室",
+                  "due_date": "2026-11-06",
+                  "source_id": "notice-week"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 7,
+        "kind": "approval.requested",
+        "payload": {
+          "approval": {
+            "id": "approval-approved",
+            "run_id": "run-example",
+            "call_id": "call-save-2",
+            "tool_name": "save_todos",
+            "arguments": {
+              "items": [
+                {
+                  "task_id": "submit-summary",
+                  "title": "提交总结",
+                  "due_date": "2026-11-04",
+                  "source_id": "notice-week"
+                },
+                {
+                  "task_id": "reserve-lab",
+                  "title": "预约实验室",
+                  "due_date": "2026-11-06",
+                  "source_id": "notice-week"
+                }
+              ]
+            },
+            "status": "pending",
+            "decision": null,
+            "created_at": "2026-10-17T08:00:00Z",
+            "expires_at": "2026-10-17T08:10:00Z",
+            "decided_at": null
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 8,
+        "kind": "approval.decided",
+        "payload": {
+          "approval": {
+            "id": "approval-approved",
+            "run_id": "run-example",
+            "call_id": "call-save-2",
+            "tool_name": "save_todos",
+            "arguments": {
+              "items": [
+                {
+                  "task_id": "submit-summary",
+                  "title": "提交总结",
+                  "due_date": "2026-11-04",
+                  "source_id": "notice-week"
+                },
+                {
+                  "task_id": "reserve-lab",
+                  "title": "预约实验室",
+                  "due_date": "2026-11-06",
+                  "source_id": "notice-week"
+                }
+              ]
+            },
+            "status": "approved",
+            "decision": "approve",
+            "created_at": "2026-10-17T08:00:00Z",
+            "expires_at": "2026-10-17T08:10:00Z",
+            "decided_at": "2026-10-17T08:00:00Z"
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 9,
+        "kind": "tool.completed",
+        "payload": {
+          "result": {
+            "call_id": "call-save-2",
+            "name": "save_todos",
+            "status": "ok",
+            "data": {
+              "files": [
+                {
+                  "id": "file-todos-md",
+                  "kind": "artifact",
+                  "source_id": null,
+                  "title": "待办清单",
+                  "display_path": "artifacts/todos.md",
+                  "media_type": "text/markdown",
+                  "size_bytes": 80,
+                  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "created_at": "2026-10-17T08:00:00Z"
+                },
+                {
+                  "id": "file-todos-json",
+                  "kind": "artifact",
+                  "source_id": null,
+                  "title": "待办清单",
+                  "display_path": "artifacts/todos.json",
+                  "media_type": "application/json",
+                  "size_bytes": 80,
+                  "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "created_at": "2026-10-17T08:00:00Z"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 10,
+        "kind": "message.delta",
+        "payload": {
+          "message_id": "message-example",
+          "delta": "待办清单已保存。"
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 11,
+        "kind": "message.completed",
+        "payload": {
+          "message_id": "message-example",
+          "role": "assistant",
+          "content": "待办清单已保存。"
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 12,
+        "kind": "run.completed",
+        "payload": {
+          "status": "completed",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "model_calls": 2
+          }
+        }
+      }
+    ],
+    "approval-expired": [
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 1,
+        "kind": "run.started",
+        "payload": {
+          "status": "running"
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 2,
+        "kind": "tool.requested",
+        "payload": {
+          "call": {
+            "id": "call-save-1",
+            "name": "save_todos",
+            "arguments": {
+              "items": [
+                {
+                  "task_id": "submit-summary",
+                  "title": "提交总结",
+                  "due_date": "2026-11-04",
+                  "source_id": "notice-week"
+                },
+                {
+                  "task_id": "reserve-lab",
+                  "title": "预约实验室",
+                  "due_date": "2026-11-06",
+                  "source_id": "notice-week"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 3,
+        "kind": "approval.requested",
+        "payload": {
+          "approval": {
+            "id": "approval-example",
+            "run_id": "run-example",
+            "call_id": "call-save-1",
+            "tool_name": "save_todos",
+            "arguments": {
+              "items": [
+                {
+                  "task_id": "submit-summary",
+                  "title": "提交总结",
+                  "due_date": "2026-11-04",
+                  "source_id": "notice-week"
+                },
+                {
+                  "task_id": "reserve-lab",
+                  "title": "预约实验室",
+                  "due_date": "2026-11-06",
+                  "source_id": "notice-week"
+                }
+              ]
+            },
+            "status": "pending",
+            "decision": null,
+            "created_at": "2026-10-17T08:00:00Z",
+            "expires_at": "2026-10-17T08:10:00Z",
+            "decided_at": null
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:10:00Z",
+        "seq": 4,
+        "kind": "approval.decided",
+        "payload": {
+          "approval": {
+            "id": "approval-example",
+            "run_id": "run-example",
+            "call_id": "call-save-1",
+            "tool_name": "save_todos",
+            "arguments": {
+              "items": [
+                {
+                  "task_id": "submit-summary",
+                  "title": "提交总结",
+                  "due_date": "2026-11-04",
+                  "source_id": "notice-week"
+                },
+                {
+                  "task_id": "reserve-lab",
+                  "title": "预约实验室",
+                  "due_date": "2026-11-06",
+                  "source_id": "notice-week"
+                }
+              ]
+            },
+            "status": "expired",
+            "decision": null,
+            "created_at": "2026-10-17T08:00:00Z",
+            "expires_at": "2026-10-17T08:10:00Z",
+            "decided_at": "2026-10-17T08:10:00Z"
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:10:00Z",
+        "seq": 5,
+        "kind": "run.failed",
+        "payload": {
+          "status": "failed",
+          "error": {
+            "error": {
+              "code": "APPROVAL_EXPIRED",
+              "message": "授权等待超时。",
+              "request_id": "request-example",
+              "retryable": false,
+              "fields": []
+            }
+          },
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "model_calls": 2
+          }
+        }
+      }
+    ],
+    "cancelled": [
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 1,
+        "kind": "run.started",
+        "payload": {
+          "status": "running"
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 2,
+        "kind": "run.cancelled",
+        "payload": {
+          "status": "cancelled",
+          "reason": "user",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "model_calls": 0
+          }
+        }
+      }
+    ],
+    "interrupted": [
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 1,
+        "kind": "run.started",
+        "payload": {
+          "status": "running"
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 2,
+        "kind": "run.interrupted",
+        "payload": {
+          "status": "interrupted",
+          "reason": "process_restart",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "model_calls": 0
+          }
+        }
+      }
+    ],
+    "model-failed": [
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 1,
+        "kind": "run.started",
+        "payload": {
+          "status": "running"
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 2,
+        "kind": "run.failed",
+        "payload": {
+          "status": "failed",
+          "error": {
+            "error": {
+              "code": "MODEL_UNAVAILABLE",
+              "message": "模型服务暂不可用，请稍后重试。",
+              "request_id": "request-example",
+              "retryable": true,
+              "fields": []
+            }
+          },
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "model_calls": 2
+          }
+        }
+      }
+    ],
+    "read-and-query": [
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 1,
+        "kind": "run.started",
+        "payload": {
+          "status": "running"
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 2,
+        "kind": "tool.requested",
+        "payload": {
+          "call": {
+            "id": "call-list",
+            "name": "list_materials",
+            "arguments": {}
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 3,
+        "kind": "tool.completed",
+        "payload": {
+          "result": {
+            "call_id": "call-list",
+            "name": "list_materials",
+            "status": "ok",
+            "data": {
+              "materials": [
+                {
+                  "id": "notice-week",
+                  "title": "课程通知",
+                  "display_path": "materials/notice.md",
+                  "media_type": "text/markdown",
+                  "size_bytes": 150
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 4,
+        "kind": "tool.requested",
+        "payload": {
+          "call": {
+            "id": "call-read",
+            "name": "read_material",
+            "arguments": {
+              "file_id": "notice-week"
+            }
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 5,
+        "kind": "tool.completed",
+        "payload": {
+          "result": {
+            "call_id": "call-read",
+            "name": "read_material",
+            "status": "ok",
+            "data": {
+              "source_id": "notice-week",
+              "content": "总结截止 2026-11-04；实验室预约截止 2026-11-06。",
+              "truncated": false
+            }
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 6,
+        "kind": "tool.requested",
+        "payload": {
+          "call": {
+            "id": "call-course",
+            "name": "lookup_course",
+            "arguments": {
+              "course_id": "agent101"
+            }
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 7,
+        "kind": "tool.completed",
+        "payload": {
+          "result": {
+            "call_id": "call-course",
+            "name": "lookup_course",
+            "status": "ok",
+            "data": {
+              "course_id": "agent101",
+              "session_date": "2026-11-05",
+              "room": "A301"
+            }
+          }
+        }
+      },
+      {
+        "schema_version": "0.1.0",
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "created_at": "2026-10-17T08:00:00Z",
+        "seq": 8,
+        "kind": "run.completed",
+        "payload": {
+          "status": "completed",
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "model_calls": 2
+          }
+        }
+      }
+    ]
+  }
+}

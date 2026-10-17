@@ -31,7 +31,7 @@ B 的核心实现较多，A 同时承担课程内容、模拟数据、浏览器�
 
 ## 2. 开始开发前共同确定的契约
 
-B 先提出最小契约 PR，A 根据界面所需信息审阅，合并后双方并行。
+现已整理 [v0.1.0 契约](../contracts/README.md)，包含 OpenAPI、事件与课程 schema、生成类型、模拟样例和自动校验。A、B 据此审阅并行开发；后续变更继续通过契约 PR 同步。
 
 - HTTP：/api/v1/me、model-profiles、lessons、attempts、runs、approvals、submissions 等资源的路径、方法、请求与响应，以及错误码。明确哪些操作可能消耗模型额度。
 - 字段：lesson_id/version、attempt_id、run_id、call_id、approval_id、submission_id；日期与时间格式、运行状态、live/demo 标记、幂等键。
@@ -40,7 +40,7 @@ B 先提出最小契约 PR，A 根据界面所需信息审阅，合并后双方�
 - 授权：逐次 approve/deny、超时、重复决定、取消后决定的返回行为；显示参数和服务端执行参数保持一致。
 - 验收：每项规则的 passed、required、message、evidence_refs；前端展示反馈，后端决定正式通过。
 
-Pydantic 模型为服务端类型来源，导出 contracts/openapi.json；有明确类型的事件模型导出 contracts/events.schema.json。前端类型从契约生成，禁止修改生成文件来绕过不一致。CI 检查导出内容与源模型一致。
+后端实现前，contracts/openapi.json 是 HTTP 结构的规范来源。B 实现 Pydantic 后切换为模型导出，并保持已确定契约一致；事件 schema 与 OpenAPI 事件模型保持同步。前端使用生成的 contracts/types.d.ts，禁止修改生成文件来绕过不一致。当前 CI 校验契约、样例和生成类型；模型导出一致性检查待后端实现时接入。
 
 contracts/examples/ 提供无敏感信息的成功、失败、等待授权、拒绝、过期、取消和评分不通过样例。A 据此编写前端模拟接口；模拟只用于开发和演示，页面明确标记，不能写入正式课程通过记录。
 
@@ -88,6 +88,6 @@ PR 说明至少包含：完成了什么、接口或课程规则是否变化、�
 
 仓库已确定为 https://github.com/2791243700-hue/agent-practice-lab，由 2791243700-hue 持有并公开。仓库管理员可在确认第二名开发者的 GitHub 用户名后邀请协作；当前未邀请其他账号，也未配置 CODEOWNERS 或分支保护。
 
-首次提交包含 README、已确认设计、导读、实施计划、协作方案、忽略规则和 PR 模板，作为共同基线。后续从 main 建立功能分支，按上述阶段提交代码。CI 与分支保护待开发检查接入后配置。
+首次提交包含 README、已确认设计、导读、实施计划、协作方案、忽略规则和 PR 模板，作为共同基线。接口契约阶段补充 contracts/ 和契约检查 CI。后续从 main 建立功能分支，按上述阶段提交代码；应用测试 CI 和分支保护待相应检查接入后配置。
 
 工作流参考：[GitHub 官方 GitHub flow](https://docs.github.com/en/get-started/using-github/github-flow)。

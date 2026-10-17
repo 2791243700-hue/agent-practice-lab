@@ -1,0 +1,563 @@
+{
+  "description": "Illustrative mock bodies, not evidence of a live model run. Hashes and sizes are placeholders.",
+  "examples": [
+    {
+      "name": "local-user",
+      "schema": "Me",
+      "value": {
+        "id": "local-owner",
+        "auth_mode": "local",
+        "capabilities": {
+          "demo_enabled": true,
+          "max_active_runs": 1
+        }
+      }
+    },
+    {
+      "name": "model-profile-no-key-returned",
+      "schema": "ModelProfile",
+      "value": {
+        "id": "profile-example",
+        "revision": 2,
+        "name": "我的教学模型",
+        "provider": "openai-compatible",
+        "base_url": "https://model-provider.example/v1",
+        "model": "example-tool-model",
+        "credential_status": "configured",
+        "connection_check": {
+          "status": "passed",
+          "text_ok": true,
+          "tools_ok": true,
+          "error_code": null,
+          "message": "文本与工具调用检查通过。",
+          "checked_at": "2026-10-17T08:00:00Z"
+        },
+        "created_at": "2026-10-17T08:00:00Z",
+        "updated_at": "2026-10-17T08:00:00Z"
+      }
+    },
+    {
+      "name": "create-demo-attempt",
+      "schema": "AttemptCreate",
+      "value": {
+        "lesson_id": "04-permission",
+        "lesson_version": "1.0.0",
+        "mode": "demo"
+      }
+    },
+    {
+      "name": "demo-attempt",
+      "schema": "Attempt",
+      "value": {
+        "id": "attempt-example",
+        "owner_id": "local-owner",
+        "lesson_id": "04-permission",
+        "lesson_version": "1.0.0",
+        "mode": "demo",
+        "revision": 1,
+        "status": "active",
+        "settings": {
+          "system_instruction": "根据课程资料完成任务，不猜测未提供的信息。",
+          "temperature": 0.3
+        },
+        "selected_file_ids": [
+          "notice-week"
+        ],
+        "progress": "in_progress",
+        "active_run_id": "run-example",
+        "latest_submission_id": null,
+        "reset_to_attempt_id": null,
+        "created_at": "2026-10-17T08:00:00Z",
+        "updated_at": "2026-10-17T08:00:00Z"
+      }
+    },
+    {
+      "name": "start-demo-run",
+      "schema": "RunCreate",
+      "value": {
+        "attempt_id": "attempt-example",
+        "expected_attempt_revision": 1,
+        "profile_id": null,
+        "input_text": "整理课程待办，保存前请让我检查。"
+      }
+    },
+    {
+      "name": "awaiting-approval",
+      "schema": "Run",
+      "value": {
+        "id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "status": "awaiting_approval",
+        "last_seq": 3,
+        "input_text": "整理课程待办，保存前请让我检查。",
+        "snapshot": {
+          "settings": {
+            "system_instruction": "根据课程资料完成任务，不猜测未提供的信息。",
+            "temperature": 0.3
+          },
+          "selected_file_ids": [
+            "notice-week"
+          ],
+          "profile_id": null,
+          "profile_revision": null,
+          "model": null
+        },
+        "pending_approval": {
+          "id": "approval-example",
+          "run_id": "run-example",
+          "call_id": "call-save-1",
+          "tool_name": "save_todos",
+          "arguments": {
+            "items": [
+              {
+                "task_id": "submit-summary",
+                "title": "提交总结",
+                "due_date": "2026-11-04",
+                "source_id": "notice-week"
+              },
+              {
+                "task_id": "reserve-lab",
+                "title": "预约实验室",
+                "due_date": "2026-11-06",
+                "source_id": "notice-week"
+              }
+            ]
+          },
+          "status": "pending",
+          "decision": null,
+          "created_at": "2026-10-17T08:00:00Z",
+          "expires_at": "2026-10-17T08:10:00Z",
+          "decided_at": null
+        },
+        "usage": {
+          "input_tokens": null,
+          "output_tokens": null,
+          "model_calls": 2
+        },
+        "error": null,
+        "created_at": "2026-10-17T08:00:00Z",
+        "started_at": "2026-10-17T08:00:00Z",
+        "ended_at": null
+      }
+    },
+    {
+      "name": "deny-save",
+      "schema": "ApprovalDecision",
+      "value": {
+        "decision": "deny"
+      }
+    },
+    {
+      "name": "approve-save",
+      "schema": "ApprovalDecision",
+      "value": {
+        "decision": "approve"
+      }
+    },
+    {
+      "name": "busy-error",
+      "schema": "ErrorResponse",
+      "value": {
+        "error": {
+          "code": "RUN_BUSY",
+          "message": "已有任务正在运行，请等待或先停止。",
+          "request_id": "request-example",
+          "retryable": true,
+          "fields": []
+        }
+      }
+    },
+    {
+      "name": "expired-error",
+      "schema": "ErrorResponse",
+      "value": {
+        "error": {
+          "code": "APPROVAL_EXPIRED",
+          "message": "本次授权已过期，请重新发起任务。",
+          "request_id": "request-example",
+          "retryable": false,
+          "fields": []
+        }
+      }
+    },
+    {
+      "name": "revision-conflict",
+      "schema": "ErrorResponse",
+      "value": {
+        "error": {
+          "code": "REVISION_CONFLICT",
+          "message": "设置已变化，请刷新后重新操作。",
+          "request_id": "request-example",
+          "retryable": false,
+          "fields": []
+        }
+      }
+    },
+    {
+      "name": "lesson1-answers",
+      "schema": "ChoiceAnswers",
+      "value": {
+        "question_id": "goal-constraints",
+        "option_id": "clear-goal"
+      }
+    },
+    {
+      "name": "lesson2-answers",
+      "schema": "FactsAnswers",
+      "value": {
+        "facts": [
+          {
+            "task_id": "submit-summary",
+            "due_date": "2026-11-04",
+            "source_id": "notice-week"
+          },
+          {
+            "task_id": "reserve-lab",
+            "due_date": "2026-11-06",
+            "source_id": "notice-week"
+          }
+        ]
+      }
+    },
+    {
+      "name": "lesson3-answers",
+      "schema": "CourseAnswers",
+      "value": {
+        "course_id": "agent101",
+        "session_date": "2026-11-05",
+        "room": "A301"
+      }
+    },
+    {
+      "name": "lesson4-submit",
+      "schema": "SubmissionCreate",
+      "value": {
+        "attempt_id": "attempt-example",
+        "expected_attempt_revision": 1,
+        "answers": {}
+      }
+    },
+    {
+      "name": "demo-evaluation-passed-not-official",
+      "schema": "Submission",
+      "value": {
+        "id": "submission-example",
+        "attempt_id": "attempt-example",
+        "lesson_version": "1.0.0",
+        "mode": "demo",
+        "passed": false,
+        "evaluation_passed": true,
+        "created_at": "2026-10-17T08:00:00Z",
+        "rules": [
+          {
+            "rule_id": "permission-rejection",
+            "passed": true,
+            "required": true,
+            "message": "已拒绝保存且文件未变化。",
+            "evidence_refs": [
+              "evidence-denial",
+              "evidence-inspection"
+            ]
+          },
+          {
+            "rule_id": "todos-artifact",
+            "passed": true,
+            "required": true,
+            "message": "批准保存后，清单事实与来源正确。",
+            "evidence_refs": [
+              "evidence-save",
+              "evidence-file"
+            ]
+          }
+        ],
+        "evidence": [
+          {
+            "id": "evidence-denial",
+            "kind": "event",
+            "run_id": "run-example",
+            "event_seq": 5
+          },
+          {
+            "id": "evidence-inspection",
+            "kind": "inspection",
+            "check": "no_write_on_denial",
+            "passed": true,
+            "before_hashes": [],
+            "after_hashes": []
+          },
+          {
+            "id": "evidence-save",
+            "kind": "event",
+            "run_id": "run-example",
+            "event_seq": 9
+          },
+          {
+            "id": "evidence-file",
+            "kind": "file",
+            "file": {
+              "id": "file-todos-md",
+              "kind": "artifact",
+              "source_id": null,
+              "title": "待办清单",
+              "display_path": "artifacts/todos.md",
+              "media_type": "text/markdown",
+              "size_bytes": 80,
+              "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "created_at": "2026-10-17T08:00:00Z"
+            }
+          }
+        ],
+        "answers": {}
+      }
+    },
+    {
+      "name": "failed-facts-submission",
+      "schema": "Submission",
+      "value": {
+        "id": "submission-failed",
+        "attempt_id": "attempt-facts",
+        "lesson_version": "1.0.0",
+        "mode": "demo",
+        "passed": false,
+        "evaluation_passed": false,
+        "created_at": "2026-10-17T08:00:00Z",
+        "rules": [
+          {
+            "rule_id": "facts",
+            "passed": false,
+            "required": true,
+            "message": "提交总结的截止日期不正确，请核对课程通知。",
+            "evidence_refs": [
+              "evidence-answer"
+            ]
+          }
+        ],
+        "evidence": [
+          {
+            "id": "evidence-answer",
+            "kind": "answer",
+            "answers": {
+              "facts": [
+                {
+                  "task_id": "submit-summary",
+                  "due_date": "2026-11-03",
+                  "source_id": "notice-week"
+                }
+              ]
+            }
+          }
+        ],
+        "answers": {
+          "facts": [
+            {
+              "task_id": "submit-summary",
+              "due_date": "2026-11-03",
+              "source_id": "notice-week"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "lesson4-public-detail",
+      "schema": "LessonDetail",
+      "value": {
+        "id": "04-permission",
+        "version": "1.0.0",
+        "title": "管理权限并检查成果",
+        "description": "练习拒绝与批准，并检查产物。",
+        "order": 4,
+        "completed": false,
+        "objectives": [
+          "能检查保存请求并作出决定。"
+        ],
+        "intro_markdown": "先检查保存的内容和位置，再决定批准或拒绝。拒绝一次不影响后续重新请求。",
+        "task_markdown": "整理课程通知中的两项待办，练习拒绝后重新批准保存。",
+        "completion_criteria": [
+          "拒绝一次保存且未写入。",
+          "批准后生成包含必要任务的清单。"
+        ],
+        "materials": [
+          {
+            "id": "notice-week",
+            "title": "课程通知",
+            "display_path": "materials/notice.md",
+            "media_type": "text/markdown",
+            "size_bytes": 150
+          }
+        ],
+        "allowed_tools": [
+          "list_materials",
+          "read_material",
+          "lookup_course",
+          "save_todos"
+        ],
+        "settings_policy": {
+          "editable_fields": [
+            "system_instruction",
+            "temperature"
+          ],
+          "defaults": {
+            "system_instruction": "根据课程资料完成任务，不猜测未提供的信息。",
+            "temperature": 0.3
+          }
+        },
+        "answer_form": {
+          "kind": "artifact",
+          "prompt": "检查清单后提交。"
+        },
+        "limits": {
+          "max_model_calls": 10,
+          "execution_timeout_seconds": 120,
+          "approval_timeout_seconds": 600
+        }
+      }
+    },
+    {
+      "name": "file-preview",
+      "schema": "FilePreview",
+      "value": {
+        "file": {
+          "id": "file-todos-md",
+          "kind": "artifact",
+          "source_id": null,
+          "title": "待办清单",
+          "display_path": "artifacts/todos.md",
+          "media_type": "text/markdown",
+          "size_bytes": 80,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "created_at": "2026-10-17T08:00:00Z"
+        },
+        "content": "- 提交总结：2026-11-04\n- 预约实验室：2026-11-06\n",
+        "truncated": false
+      }
+    },
+    {
+      "name": "completed-run",
+      "schema": "Run",
+      "value": {
+        "id": "run-example",
+        "attempt_id": "attempt-example",
+        "mode": "demo",
+        "status": "completed",
+        "last_seq": 12,
+        "input_text": "整理课程待办，保存前请让我检查。",
+        "snapshot": {
+          "settings": {
+            "system_instruction": "根据课程资料完成任务，不猜测未提供的信息。",
+            "temperature": 0.3
+          },
+          "selected_file_ids": [
+            "notice-week"
+          ],
+          "profile_id": null,
+          "profile_revision": null,
+          "model": null
+        },
+        "pending_approval": null,
+        "usage": {
+          "input_tokens": null,
+          "output_tokens": null,
+          "model_calls": 2
+        },
+        "error": null,
+        "created_at": "2026-10-17T08:00:00Z",
+        "started_at": "2026-10-17T08:00:00Z",
+        "ended_at": "2026-10-17T08:00:00Z"
+      }
+    },
+    {
+      "name": "event-history-first-page",
+      "schema": "EventPage",
+      "value": {
+        "items": [
+          {
+            "schema_version": "0.1.0",
+            "run_id": "run-example",
+            "attempt_id": "attempt-example",
+            "mode": "demo",
+            "created_at": "2026-10-17T08:00:00Z",
+            "seq": 1,
+            "kind": "run.started",
+            "payload": {
+              "status": "running"
+            }
+          },
+          {
+            "schema_version": "0.1.0",
+            "run_id": "run-example",
+            "attempt_id": "attempt-example",
+            "mode": "demo",
+            "created_at": "2026-10-17T08:00:00Z",
+            "seq": 2,
+            "kind": "tool.requested",
+            "payload": {
+              "call": {
+                "id": "call-save-1",
+                "name": "save_todos",
+                "arguments": {
+                  "items": [
+                    {
+                      "task_id": "submit-summary",
+                      "title": "提交总结",
+                      "due_date": "2026-11-04",
+                      "source_id": "notice-week"
+                    },
+                    {
+                      "task_id": "reserve-lab",
+                      "title": "预约实验室",
+                      "due_date": "2026-11-06",
+                      "source_id": "notice-week"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "schema_version": "0.1.0",
+            "run_id": "run-example",
+            "attempt_id": "attempt-example",
+            "mode": "demo",
+            "created_at": "2026-10-17T08:00:00Z",
+            "seq": 3,
+            "kind": "approval.requested",
+            "payload": {
+              "approval": {
+                "id": "approval-example",
+                "run_id": "run-example",
+                "call_id": "call-save-1",
+                "tool_name": "save_todos",
+                "arguments": {
+                  "items": [
+                    {
+                      "task_id": "submit-summary",
+                      "title": "提交总结",
+                      "due_date": "2026-11-04",
+                      "source_id": "notice-week"
+                    },
+                    {
+                      "task_id": "reserve-lab",
+                      "title": "预约实验室",
+                      "due_date": "2026-11-06",
+                      "source_id": "notice-week"
+                    }
+                  ]
+                },
+                "status": "pending",
+                "decision": null,
+                "created_at": "2026-10-17T08:00:00Z",
+                "expires_at": "2026-10-17T08:10:00Z",
+                "decided_at": null
+              }
+            }
+          }
+        ],
+        "next_after_seq": 3,
+        "has_more": true,
+        "last_seq": 12
+      }
+    }
+  ]
+}

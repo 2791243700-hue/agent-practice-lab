@@ -1,0 +1,27 @@
+name: Contract checks
+
+on:
+  push:
+    branches: [main, feat/api-contract-v1]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run validate
+      - run: npm run types
+      - run: git diff --exit-code -- types.d.ts

@@ -1,0 +1,79 @@
+{
+  "schema_version": "0.1.0",
+  "id": "04-permission",
+  "version": "1.0.0",
+  "order": 4,
+  "title": "管理权限并检查成果",
+  "description": "练习拒绝与批准，并检查产物。",
+  "objectives": [
+    "能检查保存请求并作出决定。"
+  ],
+  "intro_file": "intro.md",
+  "task_file": "task.md",
+  "completion_criteria": [
+    "拒绝一次保存且未写入。",
+    "批准后生成包含必要任务的清单。"
+  ],
+  "initial_files": [
+    {
+      "id": "notice-week",
+      "title": "课程通知",
+      "path": "materials/notice.md",
+      "media_type": "text/markdown"
+    }
+  ],
+  "allowed_tools": [
+    "list_materials",
+    "read_material",
+    "lookup_course",
+    "save_todos"
+  ],
+  "settings_policy": {
+    "editable_fields": [
+      "system_instruction",
+      "temperature"
+    ],
+    "defaults": {
+      "system_instruction": "根据课程资料完成任务，不猜测未提供的信息。",
+      "temperature": 0.3
+    }
+  },
+  "answer_form": {
+    "kind": "artifact",
+    "prompt": "检查清单后提交。"
+  },
+  "limits": {
+    "max_model_calls": 10,
+    "execution_timeout_seconds": 120,
+    "approval_timeout_seconds": 600
+  },
+  "rules": [
+    {
+      "id": "permission-rejection",
+      "required": true,
+      "message": "拒绝保存且未改变文件。",
+      "evaluator": "denied_without_write",
+      "params": {}
+    },
+    {
+      "id": "todos-artifact",
+      "required": true,
+      "message": "批准后清单事实正确。",
+      "evaluator": "approved_todos_artifact",
+      "params": {
+        "expected_items": [
+          {
+            "task_id": "submit-summary",
+            "due_date": "2026-11-04",
+            "source_id": "notice-week"
+          },
+          {
+            "task_id": "reserve-lab",
+            "due_date": "2026-11-06",
+            "source_id": "notice-week"
+          }
+        ]
+      }
+    }
+  ]
+}
