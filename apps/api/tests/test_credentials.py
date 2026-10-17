@@ -1,5 +1,6 @@
-from conftest import post
 from fastapi.testclient import TestClient
+
+from conftest import post
 
 
 def make_profile(client):

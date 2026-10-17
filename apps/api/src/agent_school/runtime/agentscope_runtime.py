@@ -16,6 +16,7 @@ from agentscope.event import (
 from agentscope.formatter import OpenAIChatFormatter
 from agentscope.message import (
     AssistantMsg,
+    TextBlock,
     ToolCallBlock,
     ToolResultBlock,
     ToolResultState,
@@ -53,7 +54,7 @@ class ExternalTool(ToolBase):
 
 
 class MeteredModel(ChatModelBase):
-    def __init__(self, wrapped: ChatModelBase, specs=None):
+    def __init__(self, wrapped: ChatModelBase, specs=None, redactor=lambda value: value):
         super().__init__(
             wrapped.credential,
             wrapped.model,
@@ -65,6 +66,7 @@ class MeteredModel(ChatModelBase):
         self.wrapped = wrapped
         self.formatter = getattr(wrapped, "formatter", None) or OpenAIChatFormatter()
         self.specs = specs or {}
+        self.redactor = redactor
         self.calls = 0
         self.input_tokens: int | None = None
         self.output_tokens: int | None = None
@@ -72,10 +74,14 @@ class MeteredModel(ChatModelBase):
 
     def record(self, response):
         for block in response.content:
+            if isinstance(block, TextBlock):
+                block.text = self.redactor(block.text)
             if isinstance(block, ToolCallBlock):
                 try:
                     spec = self.specs[block.name]
-                    Draft202012Validator(spec.input_schema).validate(json.loads(block.input))
+                    arguments = json.loads(block.input)
+                    Draft202012Validator(spec.input_schema).validate(arguments)
+                    block.input = json.dumps(self.redactor(arguments), ensure_ascii=False)
                 except Exception:
                     raise RuntimeFailure("MODEL_INCOMPATIBLE") from None
         if response.usage is None:
@@ -126,8 +132,9 @@ def make_model(request: RuntimeRequest) -> OpenAIChatModel:
 
 
 class AgentScopeRuntime:
-    def __init__(self, model_factory: Callable = make_model):
+    def __init__(self, model_factory: Callable = make_model, redactor=lambda value: value):
         self.model_factory = model_factory
+        self.redactor = redactor
         self.tasks: dict[str, asyncio.Task] = {}
         self.usage_by_run: dict[str, dict] = {}
 
@@ -140,7 +147,7 @@ class AgentScopeRuntime:
         # The SDK may log provider exception bodies; the app publishes sanitized errors instead.
         logging.getLogger("as").setLevel(logging.CRITICAL + 1)
         allowed = {spec.name: spec for spec in request.allowed_tools}
-        model = MeteredModel(self.model_factory(request), allowed)
+        model = MeteredModel(self.model_factory(request), allowed, self.redactor)
         self.tasks[request.run_id] = asyncio.current_task()
         agent = Agent(
             "课程资料助手",

@@ -47,7 +47,7 @@ class RunService:
     def __init__(self, school):
         self.school = school
         self.store = school.store
-        self.runtime = AgentScopeRuntime()
+        self.runtime = AgentScopeRuntime(redactor=school.credentials.redact)
         self.demo = DemoRuntime()
         self.contexts = {}
         self.resetting = set()
@@ -179,10 +179,28 @@ class RunService:
             self.school.events.append(run["id"], "run.started", {"status": "running"})
         context.resume()
         history = []
+        buffers = {}
         try:
             async for event in runtime.stream(
                 request, lambda call: self.school.gateway.invoke(context, call)
             ):
+                if event.kind == "message.delta":
+                    safe = self.school.credentials.stream_piece(
+                        buffers, event.payload["message_id"], event.payload["delta"]
+                    )
+                    if safe:
+                        self.school.events.append(
+                            context.run_id, event.kind, {**event.payload, "delta": safe}
+                        )
+                    continue
+                if event.kind == "message.completed":
+                    tail = self.school.credentials.flush_stream(buffers, event.payload["message_id"])
+                    if tail:
+                        self.school.events.append(
+                            context.run_id,
+                            "message.delta",
+                            {"message_id": event.payload["message_id"], "delta": tail},
+                        )
                 self.school.events.append(context.run_id, event.kind, event.payload)
                 if event.kind == "message.completed":
                     history.append(

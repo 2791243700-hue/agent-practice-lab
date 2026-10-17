@@ -10,6 +10,7 @@ class ToolGateway:
 
     async def invoke(self, context, call):
         school = self.school
+        call = call.model_copy(update={"arguments": school.credentials.redact(call.arguments)})
         key = context.run_id + "~" + call.id
         old = school.store.get("tool-result", key, missing_ok=True)
         if old:

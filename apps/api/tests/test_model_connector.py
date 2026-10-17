@@ -1,6 +1,7 @@
 import httpx
-from agent_school.contracts import ModelAccess
 from pydantic import SecretStr
+
+from agent_school.contracts import ModelAccess
 
 
 async def test_connection_check_requires_successful_tool_roundtrip_and_hides_provider_errors():
