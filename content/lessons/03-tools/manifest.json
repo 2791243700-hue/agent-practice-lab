@@ -1,0 +1,60 @@
+{
+  "schema_version": "0.1.0",
+  "id": "03-tools",
+  "version": "1.0.0",
+  "order": 3,
+  "title": "让 Agent 使用工具",
+  "description": "让 Agent 使用工具的入门练习。",
+  "objectives": [
+    "让 Agent 使用工具，并能核对操作过程和结果。"
+  ],
+  "intro_file": "intro.md",
+  "task_file": "task.md",
+  "completion_criteria": [
+    "真实查询指定课程并正确使用返回信息。"
+  ],
+  "initial_files": [
+    {
+      "id": "notice-week",
+      "title": "课程通知",
+      "path": "materials/notice.md",
+      "media_type": "text/markdown"
+    }
+  ],
+  "allowed_tools": [
+    "lookup_course"
+  ],
+  "settings_policy": {
+    "editable_fields": [
+      "system_instruction",
+      "temperature"
+    ],
+    "defaults": {
+      "system_instruction": "根据课程资料完成任务，不猜测缺失信息，保存前请求批准。",
+      "temperature": 0.3
+    }
+  },
+  "answer_form": {
+    "kind": "course",
+    "course_id": "agent101",
+    "prompt": "查询 agent101，核对课程日期和教室。"
+  },
+  "limits": {
+    "max_model_calls": 10,
+    "execution_timeout_seconds": 120,
+    "approval_timeout_seconds": 600
+  },
+  "rules": [
+    {
+      "id": "query-course",
+      "required": true,
+      "message": "真实查询指定课程并正确使用返回信息。",
+      "evaluator": "lookup_and_check_course",
+      "params": {
+        "course_id": "agent101",
+        "session_date": "2026-11-05",
+        "room": "A301"
+      }
+    }
+  ]
+}
