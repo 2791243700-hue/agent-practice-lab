@@ -20,6 +20,12 @@ class School:
         self.contracts = Contracts(config.root)
         self.store = Store(config.data_dir)
         self.catalog = LessonCatalog(self.store,self.contracts,config.root / "content/lessons")
+        from agent_school.credentials import InMemoryCredentialStore
+        from agent_school.model_profiles import ModelProfiles
+        self.credentials = InMemoryCredentialStore()
+        self.slot = None
+        self.busy_profile = None
+        self.profiles = ModelProfiles(self)
 
     def attempt(self, key, active=False):
         value = self.store.get("attempt",key)
@@ -87,7 +93,11 @@ class School:
         self.store.put("attempt",key,old)
         return value
 
-    async def dispatch(self, operation, path, params, body):
+    async def prepare(self, operation, path, params, body):
+        if operation=="checkConnection":
+            return await self.profiles.check(path["profile_id"],body)
+
+    async def dispatch(self, operation, path, params, body, prepared=None):
         if operation=="getHealth": return {"status":"ok","contract_version":"0.1.0"}
         if operation=="getMe": return {"id":"local-owner","auth_mode":"local",
             "capabilities":{"demo_enabled":self.config.demo_enabled,"max_active_runs":1}}
@@ -103,8 +113,16 @@ class School:
         if operation=="listAttempts": return self.page(self.store.list("attempt"),params)
         if operation=="updateAttempt": return self.update_attempt(path["attempt_id"],body)
         if operation=="resetAttempt": return self.reset_idle(path["attempt_id"],body)
+        if operation=="listProfiles": return {"items":self.store.list("profile")}
+        if operation=="getProfile": return self.store.get("profile",path["profile_id"])
+        if operation=="createProfile": return self.profiles.create(body)
+        if operation in ("updateProfile","setCredential","clearCredential","deleteProfile"):
+            return self.profiles.mutate(operation,path["profile_id"],body,params)
+        if operation=="checkConnection":
+            return self.store.put("profile",path["profile_id"],prepared)
         raise AppError("NOT_FOUND","尚未实现的接口。",404)
 
     async def close(self):
+        self.credentials.clear()
         self.store.close()
 

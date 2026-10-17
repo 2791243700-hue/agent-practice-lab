@@ -33,7 +33,6 @@ def create_app(config: Config | None = None):
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
         return response
-    catalog = School.__module__  # The contract is read without creating storage during import.
     from agent_school.schema import Contracts
     contracts = Contracts(config.root)
     app.openapi = lambda: copy.deepcopy(contracts.openapi)
@@ -83,8 +82,8 @@ def create_app(config: Config | None = None):
                 school = request.app.state.school
                 operation_id = operation["operationId"]
                 status = next(int(k) for k in operation["responses"] if k.isdigit() and int(k)<300)
-                async def invoke():
-                    result = await school.dispatch(operation_id,dict(request.path_params),params,body)
+                async def invoke(prepared=None):
+                    result = await school.dispatch(operation_id,dict(request.path_params),params,body,prepared)
                     if isinstance(result,Response): return result
                     if status==204: return Response(status_code=204)
                     schema_name = operation["responses"][str(status)]["content"]["application/json"]["schema"]["$ref"].split("/")[-1]
@@ -102,17 +101,26 @@ def create_app(config: Config | None = None):
                         if old:
                             if old["digest"]!=digest:
                                 raise AppError("IDEMPOTENCY_CONFLICT","操作标识已用于不同请求。",409)
+                            if old.get("pending"):
+                                raise AppError("IDEMPOTENCY_IN_PROGRESS","该操作未确认结束；请检查当前状态。",409,False)
                             return JSONResponse(old["body"],status_code=old["status"])
-                        # dispatch methods are synchronous except explicitly asynchronous workflows;
-                        # each such workflow must preserve its own transaction/lifecycle gate.
+                        if operation_id=="checkConnection":
+                            school.store.put("idempotency",key,{"digest":digest,"pending":True})
+                        try:
+                            prepared=await school.prepare(operation_id,dict(request.path_params),params,body)
+                        except BaseException:
+                            if operation_id=="checkConnection":
+                                school.store.remove("idempotency",key)
+                            raise
                         with school.store.atomic():
-                            response = await invoke()
+                            response = await invoke(prepared)
                             if isinstance(response,JSONResponse):
                                 school.store.put("idempotency",key,{"digest":digest,"status":response.status_code,
                                     "body":json.loads(response.body)})
                             return response
+                prepared=await school.prepare(operation_id,dict(request.path_params),params,body)
                 with school.store.atomic():
-                    return await invoke()
+                    return await invoke(prepared)
             except AppError as error:
                 return JSONResponse(error.body,status_code=error.status)
             except Exception:
