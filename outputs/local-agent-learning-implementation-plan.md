@@ -10,7 +10,7 @@
 
 **Spec:** [已确认设计](local-agent-learning-design.md)，以及 [四关导读](lesson-introductions.md)。执行者先读这两份文档。
 
-日期：2026-10-17。状态：实施计划完成，尚未执行；下述验证命令均为待运行命令。
+日期：2026-10-17。状态：实施计划完成，v0.1.0 接口契约已制定并通过结构校验；应用功能尚未执行，下述应用验证命令均为待运行命令。HTTP 字段、状态和边界行为以 [接口契约](../contracts/README.md) 为准。
 
 ## Global Constraints
 
@@ -54,7 +54,8 @@
 | apps/api/src/agent_school/main.py、routes/ | FastAPI 入口与各资源路由，业务逻辑留在上述模块 |
 | apps/api/tests/ | 后端单元/集成测试；临时数据库、文件、模型、时钟 fixtures |
 | apps/web/src/app/、components/、lib/ | 路由、教学组件、API 客户端与事件状态 |
-| content/lessons/01-task/…04-permission/ | 各含 manifest.json、intro.md、材料、规则和理解题 |
+| content/lessons/01-task/、02-context/、03-tools/、04-permission/ | 各含 manifest.json、intro.md、task.md、材料、规则和理解题；目录 ID 与 API 一致 |
+| contracts/ | 已提供 OpenAPI、事件/课程 schema、TypeScript 类型、模拟样例和验证工具 |
 | data/ | SQLite、工作区、快照，加入 .gitignore |
 | scripts/start.ps1、stop.ps1 | 启停本项目进程，不终止其他同端口进程 |
 | docs/runtime-validation.md、README.md | 技术验证证据、使用说明与限制 |
@@ -76,7 +77,9 @@
 
 返回 DTO 在双人并行开发前由开发者 B 定义最小版本：RunView 至少含 id、attempt_id、mode、status、last_seq；ApprovalView 含 id、run_id、call_id、arguments、decision、expires_at；SubmissionView 含 id、attempt_id、lesson_version、passed、rules、created_at；文件引用只包含服务端 ID、相对展示路径和哈希，不向浏览器暴露任意绝对路径。LessonDefinition 字段对应模板，SnapshotRef 为不可变目录引用与哈希，AttemptEvidence 包含当前尝试的真实运行、工具及授权记录。
 
-开发者 B 维护 Pydantic 契约并导出 contracts/openapi.json 和 contracts/events.schema.json；开发者 A 据此生成前端类型及编写模拟响应。SSE 每种事件的 payload 需要明确 schema，不能仅依赖 OpenAPI 中的流式响应类型。接口变更同时更新契约、示例及消费方；双方确认后合并。
+现已提供 contracts/openapi.json、events.schema.json、lesson.schema.json、types.d.ts 和 examples/，可作为双方开发基线。后端未实现期间，以 JSON 契约为规范来源；开发者 B 实施时落实为 Pydantic 模型，再切换为模型导出并保持 v0.1.0 行为一致。开发者 A 使用生成类型及样例编写模拟响应。SSE 每种事件有明确 payload schema。接口变更同时更新契约、示例及消费方；双方确认后合并。
+
+v0.1.0 的补充约定：Attempt.mode 创建后固定；Run 从 Attempt 继承模式，live 要求 profile_id、demo 要求 null。Submission.evaluation_passed 表示规则检查通过，passed 仅表示真实实训正式通过。新增实训与运行历史、事件分页、提交快照附件和导出下载接口。设置采用 expected_revision，创建类操作使用 Idempotency-Key。其他精确字段及错误码见接口契约，不按下文服务方法签名自行推导 HTTP 请求体。
 
 ## Task 1：验证 SDK 能完成真实的工具调用循环
 

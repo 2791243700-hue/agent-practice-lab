@@ -2,7 +2,7 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**当前状态：设计与双人开发计划已确定，尚未实现可运行应用。** 本仓库作为两名开发者共同协作的起点；暂无安装、启动或在线演示入口。
+**当前状态：设计、双人开发计划和 v0.1.0 接口契约已确定，尚未实现可运行应用。** 本仓库作为两名开发者共同协作的起点；暂无应用安装、启动或在线演示入口。契约文件可以独立校验。
 
 ## 首版范围
 
@@ -24,6 +24,8 @@
 - [四关导读](outputs/lesson-introductions.md)
 - [分阶段实施计划](outputs/local-agent-learning-implementation-plan.md)
 - [双人分工与 GitHub 协作](outputs/two-person-github-collaboration-plan.md)
+- [v0.1.0 接口契约与调用规则](contracts/README.md)（35 个 HTTP 操作、11 类事件）
+- [机器可读 OpenAPI](contracts/openapi.json)与[生成的 TypeScript 类型](contracts/types.d.ts)
 
 拟采用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。依赖兼容性与真实模型调用将在实施阶段验证。
 
@@ -34,7 +36,7 @@
 | A | 前端页面、课程内容、模拟接口、浏览器测试和使用说明 |
 | B | 后端接口、Agent 执行、数据存储、工具授权、规则评分和启动脚本 |
 
-先确定接口契约，两人再并行开发；先完成第一关闭环，再扩展其余三关。使用短期功能分支和 Pull Request 合并到 main。
+以 contracts/ 中的 v0.1.0 契约开始并行开发；先完成第一关闭环，再扩展其余三关。前端使用类型和模拟样例，后端落实接口和业务约束。使用短期功能分支和 Pull Request 合并到 main。
 
 ```powershell
 git clone https://github.com/2791243700-hue/agent-practice-lab.git
@@ -50,7 +52,7 @@ git switch -c feat/lesson-intro
 apps/web/        前端
 apps/api/        后端与 Agent
 content/lessons/ 课程导读、材料和模板
-contracts/      HTTP 与事件契约
+contracts/      HTTP 与事件契约、生成类型和校验工具（当前已有）
 tests/e2e/      浏览器验收
 scripts/        本地启停与检查
 outputs/        已确认的设计与计划（当前已有）
