@@ -116,6 +116,9 @@ def test_live_sdk_http_chain_can_pass_first_lesson_without_exporting_key(client)
             finished = wait_run(client, run["id"])
             assert finished["status"] == "completed", finished
             assert finished["usage"]["model_calls"] == 1
+            events = client.app.state.school.store.event_list(run["id"])
+            complete = [e for e in events if e["kind"] == "message.completed"]
+            assert complete and complete[-1]["payload"]["content"] == "已完成任务，请核对课程通知。"
         result = submit(client, attempt, {"question_id": "goal-constraints", "option_id": "clear-goal"})
         assert result["passed"] and result["evaluation_passed"]
         assert client.get("/api/v1/lessons/01-task").json()["completed"]
