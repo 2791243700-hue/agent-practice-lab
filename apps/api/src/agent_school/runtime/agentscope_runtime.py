@@ -167,6 +167,7 @@ class AgentScopeRuntime:
                 inputs.append(AssistantMsg("课程资料助手", message.content))
         next_input = inputs
         seen_calls: set[str] = set()
+        text_by_block: dict[str, str] = {}
         try:
             while True:
                 continuation = None
@@ -174,16 +175,19 @@ class AgentScopeRuntime:
                     if asyncio.current_task().cancelling():
                         raise asyncio.CancelledError
                     if isinstance(event, TextBlockDeltaEvent):
+                        text_by_block[event.block_id] = text_by_block.get(event.block_id, "") + event.delta
                         yield RuntimeEvent(
                             kind="message.delta", payload={"message_id": event.block_id, "delta": event.delta}
                         )
                     elif isinstance(event, TextBlockEndEvent):
+                        accumulated = text_by_block.pop(event.block_id, "")
+                        final_text = event.text if event.text is not None else accumulated
                         yield RuntimeEvent(
                             kind="message.completed",
                             payload={
                                 "message_id": event.block_id,
                                 "role": "assistant",
-                                "content": event.text or "",
+                                "content": self.redactor(final_text),
                             },
                         )
                     elif isinstance(event, RequireExternalExecutionEvent):

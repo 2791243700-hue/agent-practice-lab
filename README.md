@@ -2,7 +2,23 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**当前状态：v0.1.0 后端已实现，前端待接入。** 后端可本地启动并提供课程、Agent 运行、工具授权、规则评分和导出；当前尚无学生浏览器界面或在线演示。接口契约与后端均可独立验证。
+**当前状态：v0.1.0 本地前后端已接入。** 浏览器内可阅读四关导读、配置自备模型、运行实训、批准或拒绝保存、查看产物、提交验收和导出学习记录。不提供登录或线上部署。外部真实模型实测状态单独记录，脚本模型测试不代表服务商验证。
+
+## 本地启动（Windows）
+
+需要 Node.js 22+、Python 3.11/3.12 和 uv。在仓库根目录：
+
+```powershell
+uv sync --project apps/api --locked
+npm --prefix apps/web ci
+.\scripts\start.ps1
+# 打开启动器显示的 http://127.0.0.1:3000
+# 停止：.\scripts\stop.ps1
+```
+
+无需 Key 即可阅读课程。正式运行时，到“模型设置”填写服务商 API 根地址、模型 ID 和自备 Key，并主动进行连接检查。检查最多调用模型三次，可能消耗额度；不要把 Key 发到聊天或 PR。启动器自动将同一私有令牌交给前后端，不能只单独运行 npm dev。
+
+使用 `scripts/start.ps1 -Demo` 可开启无 Key 演示；演示记录始终不计正式通过。安装、恢复、错误排查见[新手使用说明](docs/user-guide.md)；开发检查、截图见[前端验证](docs/frontend-validation.md)；真实模型测试见[独立实测记录](docs/live-model-validation.md)。
 
 ## 首版范围
 
@@ -28,8 +44,9 @@
 - [机器可读 OpenAPI](contracts/openapi.json)与[生成的 TypeScript 类型](contracts/types.d.ts)
 - [后端安装、启动与前端联调](docs/backend.md)
 - [后端验证报告](docs/runtime-validation.md)
+- [前端向后端开发者交接](docs/backend-handoff.md)
 
-拟采用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。依赖兼容性与真实模型调用将在实施阶段验证。
+使用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。浏览器只调用同源 `/api/v1`，Next.js 服务端代理转发内部令牌；Key 只在后端内存中保存。前端类型来自 `contracts/types.d.ts`，已知生成器 discriminator 差异的边界适配见前端验证文档。
 
 ## 双人协作
 
@@ -48,10 +65,10 @@ git switch -c feat/lesson-intro
 
 上述命令用于获取项目并开始开发。后端在 apps/api 执行 uv sync --locked 安装依赖，Windows 从根目录运行 scripts/start.ps1 启动；详细环境、令牌和接入说明见后端文档。第二名开发者需要仓库写权限才能直接推送分支，也可通过 fork 提交 PR。
 
-## 计划中的代码组织
+## 代码组织
 
 ```text
-apps/web/        前端
+apps/web/        Next.js 前端、同源代理、前端依赖锁文件
 apps/api/        后端与 Agent（已实现）
 content/lessons/ 四关导读、材料和模板（已有基础课程包）
 contracts/      HTTP 与事件契约、生成类型和校验工具（当前已有）
