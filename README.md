@@ -44,6 +44,7 @@ npm --prefix apps/web ci
 - [机器可读 OpenAPI](contracts/openapi.json)与[生成的 TypeScript 类型](contracts/types.d.ts)
 - [后端安装、启动与前端联调](docs/backend.md)
 - [后端验证报告](docs/runtime-validation.md)
+- [前端向后端开发者交接](docs/backend-handoff.md)
 
 使用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。浏览器只调用同源 `/api/v1`，Next.js 服务端代理转发内部令牌；Key 只在后端内存中保存。前端类型来自 `contracts/types.d.ts`，已知生成器 discriminator 差异的边界适配见前端验证文档。
 
