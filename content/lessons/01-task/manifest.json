@@ -1,0 +1,77 @@
+{
+  "schema_version": "0.1.0",
+  "id": "01-task",
+  "version": "1.0.0",
+  "order": 1,
+  "title": "让 Agent 理解任务",
+  "description": "让 Agent 理解任务的入门练习。",
+  "objectives": [
+    "让 Agent 理解任务，并能核对操作过程和结果。"
+  ],
+  "intro_file": "intro.md",
+  "task_file": "task.md",
+  "completion_criteria": [
+    "完成两次不同任务说明的运行。",
+    "理解目标和约束。"
+  ],
+  "initial_files": [
+    {
+      "id": "notice-week",
+      "title": "课程通知",
+      "path": "materials/notice.md",
+      "media_type": "text/markdown"
+    }
+  ],
+  "allowed_tools": [],
+  "settings_policy": {
+    "editable_fields": [
+      "system_instruction",
+      "temperature"
+    ],
+    "defaults": {
+      "system_instruction": "根据课程资料完成任务，不猜测缺失信息，保存前请求批准。",
+      "temperature": 0.3
+    }
+  },
+  "answer_form": {
+    "kind": "choice",
+    "question_id": "goal-constraints",
+    "prompt": "怎样的任务说明更容易核查结果？",
+    "options": [
+      {
+        "id": "clear-goal",
+        "label": "说明目标、约束和输出要求，再检查结果。"
+      },
+      {
+        "id": "no-check",
+        "label": "只说帮我处理，并直接相信结果。"
+      }
+    ]
+  },
+  "limits": {
+    "max_model_calls": 10,
+    "execution_timeout_seconds": 120,
+    "approval_timeout_seconds": 600
+  },
+  "rules": [
+    {
+      "id": "two-runs",
+      "required": true,
+      "message": "完成两次不同任务说明的运行。",
+      "evaluator": "distinct_completed_runs",
+      "params": {
+        "minimum": 2
+      }
+    },
+    {
+      "id": "understanding",
+      "required": true,
+      "message": "理解目标和约束。",
+      "evaluator": "choice_answer",
+      "params": {
+        "question_id": "goal-constraints",
+        "correct_option_id": "clear-goal"
+      }
+    }
+  ]
+}

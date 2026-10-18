@@ -1,0 +1,79 @@
+{
+  "schema_version": "0.1.0",
+  "id": "04-permission",
+  "version": "1.0.0",
+  "order": 4,
+  "title": "管理权限并检查成果",
+  "description": "管理权限并检查成果的入门练习。",
+  "objectives": [
+    "管理权限并检查成果，并能核对操作过程和结果。"
+  ],
+  "intro_file": "intro.md",
+  "task_file": "task.md",
+  "completion_criteria": [
+    "拒绝保存且文件未变化。",
+    "批准保存并生成事实准确、来源正确的两项待办。"
+  ],
+  "initial_files": [
+    {
+      "id": "notice-week",
+      "title": "课程通知",
+      "path": "materials/notice.md",
+      "media_type": "text/markdown"
+    }
+  ],
+  "allowed_tools": [
+    "list_materials",
+    "read_material",
+    "lookup_course",
+    "save_todos"
+  ],
+  "settings_policy": {
+    "editable_fields": [
+      "system_instruction",
+      "temperature"
+    ],
+    "defaults": {
+      "system_instruction": "根据课程资料完成任务，不猜测缺失信息，保存前请求批准。",
+      "temperature": 0.3
+    }
+  },
+  "answer_form": {
+    "kind": "artifact",
+    "prompt": "先拒绝一次保存，再重新检查并批准；检查产物后提交。"
+  },
+  "limits": {
+    "max_model_calls": 10,
+    "execution_timeout_seconds": 120,
+    "approval_timeout_seconds": 600
+  },
+  "rules": [
+    {
+      "id": "permission-rejection",
+      "required": true,
+      "message": "拒绝保存且文件未变化。",
+      "evaluator": "denied_without_write",
+      "params": {}
+    },
+    {
+      "id": "todos-artifact",
+      "required": true,
+      "message": "批准保存并生成事实准确、来源正确的两项待办。",
+      "evaluator": "approved_todos_artifact",
+      "params": {
+        "expected_items": [
+          {
+            "task_id": "submit-summary",
+            "due_date": "2026-11-04",
+            "source_id": "notice-week"
+          },
+          {
+            "task_id": "reserve-lab",
+            "due_date": "2026-11-06",
+            "source_id": "notice-week"
+          }
+        ]
+      }
+    }
+  ]
+}
