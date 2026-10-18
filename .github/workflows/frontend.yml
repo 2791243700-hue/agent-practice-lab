@@ -1,0 +1,57 @@
+name: Frontend checks
+
+on:
+  push:
+    branches: [main, feat/web-learning-experience]
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'tests/e2e/**'
+      - 'contracts/**'
+      - 'apps/api/**'
+      - '.github/workflows/frontend.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.13.1'
+      - run: uv sync --project apps/api --locked
+      - run: npm ci
+        working-directory: apps/web
+      - run: npm run format:check
+        working-directory: apps/web
+      - run: npm run typecheck
+        working-directory: apps/web
+      - run: npm test
+        working-directory: apps/web
+      - run: npm run build
+        working-directory: apps/web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm run test:e2e
+        working-directory: apps/web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-results
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          retention-days: 7
