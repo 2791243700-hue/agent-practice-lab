@@ -380,3 +380,25 @@ test("演示后可另建正式实训，后端重启恢复中断记录并清除 K
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "去设置 →" })).toBeVisible();
 });
+
+test("事件代理暂时返回 503 后自动恢复，不重复发送任务", async ({ page }) => {
+  await startDemo(page, "01-task");
+  let starts = 0;
+  let eventRequests = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().endsWith("/runs"))
+      starts++;
+  });
+  await page.route("**/api/v1/runs/*/events?**", async (route) => {
+    eventRequests++;
+    if (eventRequests === 1) {
+      await route.fulfill({ status: 503, body: "temporarily unavailable" });
+    } else {
+      await route.continue();
+    }
+  });
+  await send(page, "整理任务的目标、约束和输出要求。");
+  await expect(page.getByText("本轮已完成", { exact: true })).toBeVisible();
+  expect(eventRequests).toBeGreaterThanOrEqual(2);
+  expect(starts).toBe(1);
+});

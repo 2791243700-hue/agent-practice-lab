@@ -66,8 +66,14 @@ export async function api<T>(
       throw new Error("transport");
     }
     if (!detail?.code) throw new Error("transport");
-    if (fingerprint && !["IDEMPOTENCY_IN_PROGRESS"].includes(detail.code))
-      pendingKeys.delete(fingerprint);
+    // A proxy/server failure can arrive after the operation was committed.
+    // Keep its key for the next manual retry; only a definite rejection clears it.
+    const uncertain =
+      response.status >= 500 ||
+      response.status === 408 ||
+      detail.retryable ||
+      detail.code === "IDEMPOTENCY_IN_PROGRESS";
+    if (fingerprint && !uncertain) pendingKeys.delete(fingerprint);
     throw new ApiError(detail);
   }
   const result = response.status === 204 ? undefined : await response.json();

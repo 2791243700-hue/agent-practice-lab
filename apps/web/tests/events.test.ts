@@ -94,3 +94,69 @@ test("wire discriminator adapter matches the unchanged contract constants", () =
   }))
     assert.equal(api.components.schemas[name].properties.kind.const, kind);
 });
+
+test("temporary HTTP failure resumes at the same cursor and receives a terminal event", async () => {
+  const original = globalThis.fetch;
+  const requests: { method: string; cursor: string | null }[] = [];
+  const seen: Event[] = [];
+  globalThis.fetch = async (_input, init) => {
+    requests.push({
+      method: init?.method ?? "GET",
+      cursor: new Headers(init?.headers).get("Last-Event-ID"),
+    });
+    if (requests.length === 1) return new Response(null, { status: 503 });
+    const event: Event = {
+      ...base,
+      kind: "run.interrupted",
+      seq: 5,
+      payload: {
+        status: "interrupted",
+        reason: "process_restart",
+        usage: { input_tokens: null, output_tokens: null, model_calls: 0 },
+      },
+    };
+    return new Response(
+      `id: 5\nevent: run.interrupted\ndata: ${JSON.stringify(event)}\n\n`,
+    );
+  };
+  try {
+    await streamEvents(
+      "run-test",
+      4,
+      new AbortController().signal,
+      (e) => seen.push(e),
+      () => {},
+    );
+    assert.deepEqual(requests, [
+      { method: "GET", cursor: "4" },
+      { method: "GET", cursor: "4" },
+    ]);
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].kind, "run.interrupted");
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("permanent SSE errors stop instead of retrying invalid access or cursors", async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const status of [400, 401, 403, 404]) {
+      let requests = 0;
+      globalThis.fetch = async () => {
+        requests++;
+        return new Response(null, { status });
+      };
+      await streamEvents(
+        "run-test",
+        4,
+        new AbortController().signal,
+        () => assert.fail("no events"),
+        () => {},
+      );
+      assert.equal(requests, 1);
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});

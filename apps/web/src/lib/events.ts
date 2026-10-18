@@ -84,6 +84,11 @@ export async function streamEvents(
         connection("");
         return;
       }
+      if ([408, 429, 500, 502, 503, 504].includes(response.status)) {
+        await response.body?.cancel();
+        // Retry only this read, retaining seq through the bounded backoff below.
+        throw new Error("temporary event transport failure");
+      }
       if (!response.ok || !response.body) {
         connection("事件连接失败，请刷新读取当前运行状态。不会自动重发任务。");
         return;
