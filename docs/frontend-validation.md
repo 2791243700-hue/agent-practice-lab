@@ -8,7 +8,7 @@
 
 浏览器只调用同源 `/api/v1`；私有令牌仅由服务器覆盖注入；请求校验 Host 与写 Origin，SSE 不缓冲。刷新先读取实验固定版本、分页运行和事件历史，再按事件末序号续接；不在恢复时 POST 运行。完整消息替换增量，重复事件去重。审批决定与实际工具完成分别展示。完成状态只取后端 `Submission.passed`。
 
-课程、评分和 JSON 契约没有修改。用户确认后增加了一项最小后端正文修复，独立提交 `c705174`；修正 SDK 结束事件未携带完整正文时的适配。线上身份保持 `/me` 扩展边界，没有增加空登录页或云部署。`src/lib/types.ts` 对生成器 discriminator 问题做边界适配，详见[协调记录](backend-coordination.md)。
+课程、评分和 JSON 契约没有修改。用户确认后增加了一项最小后端正文修复，独立提交 `fix(api): preserve complete streamed assistant replies`；修正 SDK 结束事件未携带完整正文时的适配。线上身份保持 `/me` 扩展边界，没有增加空登录页或云部署。`src/lib/types.ts` 对生成器 discriminator 问题做边界适配，详见[协调记录](backend-coordination.md)。
 
 ## 实际检查
 
@@ -67,4 +67,4 @@ npm run test:launcher
 
 外部模型没有使用本地自备 Key 实测，详见[单独记录](live-model-validation.md)。不查找私人 Key，不将占位测试凭据当作真实凭据。
 
-最小后端修复已按用户同意执行，单独提交便于后端维护者审阅。GitHub 连接已确认，但当前连接账号尚未获得目标仓库写权限；待补齐权限后发布。后端 PR #2 与契约 PR #1 仍未合并，前端 PR 应先以 `feat/backend` 为基分支，依赖合并后再转 main；不把原后端实现混入前端审阅差异。
+最小后端修复已按用户同意执行，单独提交便于后端维护者审阅。GitHub 仓库邀请已接受并确认写权限，本次通过前端 PR 交付。后端 PR #2 与契约 PR #1 仍未合并，前端 PR 先以 `feat/backend` 为基分支，依赖合并后再转 main；不把原后端实现混入前端审阅差异。
