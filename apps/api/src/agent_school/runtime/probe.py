@@ -63,6 +63,7 @@ async def probe_runtime(scenario):
     spec = ToolSpec(
         name="read_material" if scenario in ("read", "malformed", "cancel") else "save_todos",
         description="探针工具",
+        approval_required=scenario in ("approve", "deny"),
         input_schema={
             "type": "object",
             "properties": {"file_id": {"type": "string"}},
