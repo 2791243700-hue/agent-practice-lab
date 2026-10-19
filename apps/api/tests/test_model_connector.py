@@ -1,4 +1,5 @@
 import httpx
+import pytest
 from pydantic import SecretStr
 
 from agent_school.contracts import ModelAccess
@@ -58,3 +59,65 @@ async def test_connection_check_accepts_only_valid_noop_call():
         )
     assert result["tools_ok"]
     assert result["status"] == "passed"
+
+
+@pytest.mark.parametrize("base_url", ["https://api.deepseek.com", "https://api.deepseek.com/v1"])
+async def test_deepseek_check_disables_default_thinking_for_standard_tool_calls(base_url):
+    import json
+
+    from agent_school.runtime.model_connector import ModelConnector
+
+    requests = []
+
+    def handle(request):
+        body = json.loads(request.content)
+        requests.append(body)
+        if body.get("thinking") != {"type": "disabled"}:
+            return httpx.Response(
+                400, json={"error": {"message": "Thinking mode does not support this tool_choice"}}
+            )
+        message = {"role": "assistant", "content": "ok"}
+        if body.get("tools"):
+            message["tool_calls"] = [
+                {
+                    "id": "deepseek-probe",
+                    "type": "function",
+                    "function": {"name": "connection_probe", "arguments": '{"value":"ok"}'},
+                }
+            ]
+        return httpx.Response(200, json={"choices": [{"message": message}]})
+
+    access = ModelAccess(base_url=base_url, model="deepseek-flash", api_key=SecretStr("test-only"))
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        result = await ModelConnector(client).check(access)
+    assert result["status"] == "passed"
+    assert len(requests) == 3
+    assert requests[2]["messages"][-1]["role"] == "tool"
+
+
+@pytest.mark.parametrize(
+    "base_url,expected",
+    [
+        ("https://api.deepseek.com", {"thinking": {"type": "disabled"}}),
+        ("https://api.deepseek.com/v1", {"thinking": {"type": "disabled"}}),
+        ("https://model.example/v1", None),
+        ("https://api.deepseek.com.example/v1", None),
+    ],
+)
+async def test_runtime_uses_same_provider_mode_as_connection_check(base_url, expected):
+    from agent_school.contracts import RuntimeRequest
+    from agent_school.runtime.agentscope_runtime import make_model
+
+    request = RuntimeRequest(
+        run_id="test-run",
+        attempt_id="test-attempt",
+        messages=[],
+        allowed_tools=[],
+        settings={"temperature": 0.3},
+        model=ModelAccess(base_url=base_url, model="deepseek-flash", api_key=SecretStr("test-only")),
+    )
+    model = make_model(request)
+    try:
+        assert model.extra_body == expected
+    finally:
+        await model.client.close()

@@ -28,6 +28,7 @@ from agentscope.tool import ToolBase, Toolkit
 from jsonschema import Draft202012Validator
 
 from agent_school.contracts import InvokeTool, RuntimeEvent, RuntimeRequest, ToolCall, ToolSpec
+from agent_school.runtime.provider_options import basic_chat_options
 
 
 class RuntimeFailure(Exception):
@@ -50,7 +51,10 @@ class ExternalTool(ToolBase):
         self.is_read_only = not spec.approval_required
 
     async def check_permissions(self, tool_input, context):
-        return PermissionDecision(behavior=PermissionBehavior.ALLOW)
+        return PermissionDecision(
+            behavior=PermissionBehavior.ALLOW,
+            message="External tool execution and user approval are enforced by the application gateway.",
+        )
 
 
 class MeteredModel(ChatModelBase):
@@ -128,6 +132,7 @@ def make_model(request: RuntimeRequest) -> OpenAIChatModel:
         stream=True,
         max_retries=0,
         client_kwargs={"timeout": 30.0, "max_retries": 0},
+        extra_body=basic_chat_options(access.base_url) or None,
     )
 
 

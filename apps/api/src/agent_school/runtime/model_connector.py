@@ -4,6 +4,7 @@ import json
 import httpx
 
 from agent_school.contracts import ModelAccess
+from agent_school.runtime.provider_options import basic_chat_options
 
 
 class ModelConnector:
@@ -27,7 +28,7 @@ class ModelConnector:
             response = await client.post(
                 access.base_url.rstrip("/") + "/chat/completions",
                 headers={"Authorization": "Bearer " + access.api_key.get_secret_value()},
-                json={"model": access.model, "stream": False, **body},
+                json={"model": access.model, "stream": False, **basic_chat_options(access.base_url), **body},
             )
             response.raise_for_status()
             message = response.json()["choices"][0]["message"]
