@@ -1,5 +1,5 @@
 "use client";
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -65,6 +65,14 @@ function Practice({ id }: { id: string }) {
   const [events, setEvents] = useState<Record<string, Event[]>>({});
   const [files, setFiles] = useState<Schema["FileInfo"][]>([]);
   const [preview, setPreview] = useState<Schema["FilePreview"] | null>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const previewTriggerRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    if (preview) {
+      previewRef.current?.scrollIntoView({ block: "center" });
+      previewRef.current?.focus({ preventScroll: true });
+    }
+  }, [preview]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profileId, setProfileId] = useState("");
   const [input, setInput] = useState("");
@@ -83,6 +91,15 @@ function Practice({ id }: { id: string }) {
   const [download, setDownload] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const endpoint = `/attempts/${pathId(id)}`;
+  async function openPreview(fileId: string, trigger: HTMLButtonElement) {
+    await action.act(async () => {
+      const value = await api<Schema["FilePreview"]>(
+        `${endpoint}/files/${pathId(fileId)}`,
+      );
+      previewTriggerRef.current = trigger;
+      setPreview(value);
+    });
+  }
   const refresh = useCallback(
     async (initial = false) => {
       const a = await api<Attempt>(endpoint);
@@ -310,14 +327,8 @@ function Practice({ id }: { id: string }) {
                     </label>
                     <button
                       className="text-button"
-                      onClick={() =>
-                        void action.act(async () =>
-                          setPreview(
-                            await api<Schema["FilePreview"]>(
-                              `${endpoint}/files/${pathId(m.id)}`,
-                            ),
-                          ),
-                        )
+                      onClick={(event) =>
+                        void openPreview(m.id, event.currentTarget)
                       }
                     >
                       预览原文
@@ -421,14 +432,8 @@ function Practice({ id }: { id: string }) {
                   <button
                     className="text-button"
                     disabled={action.busy}
-                    onClick={() =>
-                      void action.act(async () =>
-                        setPreview(
-                          await api<Schema["FilePreview"]>(
-                            `${endpoint}/files/${pathId(f.id)}`,
-                          ),
-                        ),
-                      )
+                    onClick={(event) =>
+                      void openPreview(f.id, event.currentTarget)
                     }
                   >
                     <FileText size={15} />
@@ -443,12 +448,21 @@ function Practice({ id }: { id: string }) {
                 </div>
               ))}
             {preview && (
-              <div className="file-preview">
+              <div
+                className="file-preview"
+                ref={previewRef}
+                role="region"
+                aria-label={`${preview.file.title}预览`}
+                tabIndex={-1}
+              >
                 <div>
                   <strong>{preview.file.title}</strong>
                   <button
                     className="text-button"
-                    onClick={() => setPreview(null)}
+                    onClick={() => {
+                      setPreview(null);
+                      previewTriggerRef.current?.focus();
+                    }}
                   >
                     关闭预览
                   </button>
