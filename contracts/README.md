@@ -1,6 +1,6 @@
 # 前后端接口契约 v0.1.0
 
-更新：2026-10-22。首版契约及前后端已实现；本地新增 Key 导入和模型列表操作，仍使用 v0.1.0，共 37 个 HTTP 操作。新增改动通过 `feat/key-manager-review-fixes` 分支交付、尚未合并到 main，交付状态见[版本状态](../docs/project-status.md)。样例用于结构验证，不代表外部模型实际运行。
+更新：2026-10-22。首版契约及前后端已实现；已加入 Key 导入和模型列表操作，仍使用 v0.1.0，共 37 个 HTTP 操作。新增模型操作已通过 PR #6 合并到 main，前端体验增量也已随 PR #7 合并，交付状态见[版本状态](../docs/project-status.md)。样例用于结构验证，不代表外部模型实际运行。
 
 ## 文件与唯一来源
 
@@ -250,6 +250,6 @@ git diff --exit-code -- types.d.ts
 
 validate 检查 OpenAPI、所有 JSON Schema、样例、事件副本一致性、端点参数、引用和代表性非法输入。动态竞态/权限/恢复由后端与浏览器测试验证，不能用 schema 校验代替。生成类型提交前需与 OpenAPI 同步；未提交的预期生成差异应审阅，不直接丢弃。
 
-字段、状态、事件名和语义变更必须同步说明、样例、生成类型并评估版本，同一个 PR 由双方审阅；本地新增两个操作为增量补充，health.contract_version 仍为 0.1.0。实现中遇到新需要先改契约，再改消费方；不得静默更名或用旧客户端假定所有未来字段兼容。
+字段、状态、事件名和语义变更必须同步说明、样例、生成类型并评估版本，同一个 PR 由双方审阅；新增两个操作为增量补充，health.contract_version 仍为 0.1.0。实现中遇到新需要先改契约，再改消费方；不得静默更名或用旧客户端假定所有未来字段兼容。
 
 格式依据：[OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html) 用于 HTTP 定义；SSE 的帧、id 和 Last-Event-ID 遵循 [WHATWG Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)。

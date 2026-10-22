@@ -1,6 +1,6 @@
 # 接口确定结果：v0.1.0
 
-首次确定：2026-10-17；同步：2026-10-22。范围：本地单用户 Agent 教学平台的 v0.1.0 接口。前后端已实现，新增 Key 导入/目录功能通过 `feat/key-manager-review-fixes` 分支交付，尚未合并到 main，详见[版本状态](../docs/project-status.md)。
+首次确定：2026-10-17；同步：2026-10-22。范围：本地单用户 Agent 教学平台的 v0.1.0 接口。前后端已实现，新增 Key 导入/目录功能已通过 PR #6 合并到 main，前端体验增量随 PR #7 合并，详见[版本状态](../docs/project-status.md)。
 
 完整说明见 [contracts/README.md](../contracts/README.md)。机器可读文件包括 [OpenAPI](../contracts/openapi.json)、[事件 Schema](../contracts/events.schema.json)、[课程模板 Schema](../contracts/lesson.schema.json) 和 [TypeScript 类型](../contracts/types.d.ts)。
 
@@ -19,4 +19,4 @@
 
 两端使用同一 JSON 契约：路由边界校验，内部使用 Pydantic，尚未全量切换模型导出。TypeScript 类型重新生成，discriminator 差异暂由前端边界适配；不手改生成文件。变更联动接口、事件副本、实现、测试和文档。
 
-2026-10-22 已通过 197 项 OpenAPI/JSON Schema、样例、非法输入及生成类型结构检查；动态行为另有 91 项后端、8 项前端及 15 项浏览器测试。外部 DeepSeek 后端实测及第四关限制见[独立记录](../docs/live-model-validation.md)，不以结构校验代替运行实测。契约复现命令见完整说明。
+2026-10-22 已通过 197 项 OpenAPI/JSON Schema、样例、非法输入及生成类型结构检查；动态行为另有 91 项后端、8 项前端及 26 项浏览器测试。外部 DeepSeek 后端实测及第四关限制见[独立记录](../docs/live-model-validation.md)，不以结构校验代替运行实测。契约复现命令见完整说明。

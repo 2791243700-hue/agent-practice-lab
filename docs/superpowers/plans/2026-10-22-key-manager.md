@@ -1,6 +1,6 @@
 # Key manager implementation plan
 
-**Status (2026-10-22):** Implemented and verified locally; delivery branch: `feat/key-manager-review-fixes`, not yet merged into main. See [current project status](../../project-status.md) for the merged baseline and remaining limitations.
+**Status (2026-10-22):** Implemented and verified locally; delivery branch: `feat/key-manager-review-fixes`, merged into main via PR #6; follow-up workspace changes merged via PR #7. See [current project status](../../project-status.md) for the merged baseline and remaining limitations.
 
 **Goal:** Let beginners paste a Key, choose a discovered model, and add, switch, rename or delete multiple in-memory Keys.
 

@@ -2,7 +2,7 @@
 
 初稿：2026-10-17；同步：2026-10-22。适用于两名开发者；A、B 为角色代号，前端协作者 188517 已获仓库写权限。
 
-状态：四关前后端已实现，PR #1—#5 已合并。公开仓库：[2791243700-hue/agent-practice-lab](https://github.com/2791243700-hue/agent-practice-lab)，默认分支 main。本次 Key 管理、界面与审查修复交付分支为 `feat/key-manager-review-fixes`，尚未合并到 main；准确基线、验证与待办见[版本状态](../docs/project-status.md)。下文阶段表保留原始分工，不表示仍需从零执行。
+状态：四关前后端已实现，PR #1—#7 已合并。公开仓库：[2791243700-hue/agent-practice-lab](https://github.com/2791243700-hue/agent-practice-lab)，默认分支 main。Key 管理和审查修复已通过 PR #6 合并，实训侧栏、顶部和流式交互已通过 PR #7 合并；接手直接获取 main；准确基线、验证与待办见[版本状态](../docs/project-status.md)。下文阶段表保留原始分工，不表示仍需从零执行。
 
 依据：[设计](local-agent-learning-design.md)、[四关导读](lesson-introductions.md)、[详细实施计划](local-agent-learning-implementation-plan.md)。保持本地优先、学生自备 Key、统一教学 Agent、每关先导读、过程与结果及理解验收的既定范围。
 
@@ -88,6 +88,6 @@ PR 说明至少包含：完成了什么、接口或课程规则是否变化、�
 
 仓库由 2791243700-hue 持有并公开，188517 已获得写权限。原始依赖链 PR #1—#3 已整理并合并，后续 #4/#5 修复亦已合并；不再从旧 feat/backend 基线建立新的前端交付。
 
-契约、后端和前端 CI 已接入。当前本地 197 项契约、91 项后端、8 项前端及 15 项浏览器测试通过，新增 Key 管理、界面调整、审查修复和文档通过 `feat/key-manager-review-fixes` 分支及 PR 交付，云端检查以对应提交为准。不得把已合并旧提交的 CI 当作本地新功能的结果。
+契约、后端和前端 CI 已接入。当前本地 197 项契约、91 项后端、8 项前端及 26 项浏览器测试通过，Key 管理、审查修复与工作区交互均已合并到 main，云端检查以对应提交为准；#7 前端 CI 合并时仍排队，不将其记为已通过。不得把已合并旧提交的 CI 当作本地新功能的结果。
 
 工作流参考：[GitHub 官方 GitHub flow](https://docs.github.com/en/get-started/using-github/github-flow)。

@@ -1,14 +1,14 @@
 # Agent Practice Lab：前后端开发交接
 
-更新：2026-10-22。适用于接手前端、后端、契约与课程的开发者。远程已合并基线与本地新增功能详见[版本状态](project-status.md)。
+更新：2026-10-22。适用于接手前端、后端、契约与课程的开发者。已合并主分支状态与验证边界详见[版本状态](project-status.md)。
 
 ## 当前代码与接收方式
 
-PR #1 契约、#2 后端、#3 前端、#4 DeepSeek/权限适配、#5 预览修复均已合并到 main，已核验基线为 `3214d75913f5a3a8276adfa6ad8bf6dfbe20721a`。原前端依赖 feat/backend 的合并顺序已执行完成，无需再次 retarget 或 cherry-pick 旧修复。
+PR #1 契约、#2 后端、#3 前端、#4 DeepSeek/权限适配、#5 预览修复均已合并到 main，历史基线为 `3214d75`；当前 main 已纳入下述 #6、#7，代码基线为 `a8f7438`。原前端依赖 feat/backend 的合并顺序已执行完成，无需再次 retarget 或 cherry-pick 旧修复。
 
-本次分支 `feat/key-manager-review-fixes` 汇总 Key 管理、界面、审查修复与文档更新；main 合并前不包含这些变更，接手时应检出该功能分支。通过 PR 查看差异和对应 CI；数据目录、凭据、日志及 Next.js 的开发生成路径不进入提交。
+PR #6 已将 Key 管理、界面、审查修复与文档更新合并到 main（`e5a3458`）。接手时直接获取 main。通过 PR 查看差异和对应 CI；数据目录、凭据、日志及 Next.js 的开发生成路径不进入提交。
 
-本轮前端体验增量另由 `feat/practice-workspace-interactions` 交付，基于该分支的 `b56182f`；目标为基础分支，以便单独审阅本轮差异。包含侧栏与板块折叠、紧凑顶部、生活情境示例、准备提醒，以及问题即时显示和流式滚动。后端接口及课件包未更改；启动、6 张截图与 8 项前端/26 项浏览器验证见[增量交付说明](practice-workspace-delivery.md)。PR #6 合并后再调整增量 PR 的目标和复核差异。
+前端体验增量已通过 PR #7 合并到 main（`a8f7438`），原开发基线为 `b56182f`。包含侧栏与板块折叠、紧凑顶部、生活情境示例、准备提醒，以及问题即时显示和流式滚动。后端接口及课件包未更改；启动、6 张截图与 8 项前端/26 项浏览器验证见[增量交付说明](practice-workspace-delivery.md)。两个 PR 的依赖合并已经完成，无需再 retarget 或 cherry-pick。
 
 ## 启动与测试入口
 
@@ -24,7 +24,7 @@ npm --prefix apps/web ci
 
 可用 `-Demo` 开演示，或 `-WebPort`、`-ApiPort`、`-DataDir` 创建独立实例；停止须使用相同数据目录。启动器传递私有的 AGENT_SCHOOL_API_ORIGIN、AGENT_SCHOOL_FRONTEND_ORIGIN、AGENT_SCHOOL_LOCAL_TOKEN；令牌不进入 NEXT_PUBLIC、浏览器、URL 或持久化配置。浏览器只访问同源 `/api/v1`，不要将启动地址的 127.0.0.1 随意换成 localhost。
 
-完整命令与最新证据见[后端说明](backend.md)、[后端验证](runtime-validation.md)、[前端验证](frontend-validation.md)。最近本地结果为 197 项契约、91 项后端、8 项前端、15 项浏览器测试通过，Ruff/格式/类型/生产构建通过；功能分支 CI 以对应 PR 实际结果为准。2026-10-19 DeepSeek 实测仅覆盖后端，第四关额外提供 ID 映射，见[独立记录](live-model-validation.md)。
+完整命令与最新证据见[后端说明](backend.md)、[后端验证](runtime-validation.md)、[前端验证](frontend-validation.md)。最近本地结果为 197 项契约、91 项后端、8 项前端、26 项浏览器测试通过，Ruff/格式/类型/生产构建通过；功能分支 CI 以对应 PR 实际结果为准。2026-10-19 DeepSeek 实测仅覆盖后端，第四关额外提供 ID 映射，见[独立记录](live-model-validation.md)。
 
 ## 新模型设置的契约
 
@@ -62,7 +62,7 @@ IdentityProvider/LocalIdentityProvider 目前只保留声明，服务、存储�
 2. 修复生成类型 discriminator，验证后去除前端 lib/types.ts 适配。
 3. 启动器增加前端 HTTP 就绪等待；当前首次访问可能需稍等刷新。
 4. 用真实服务商在新设置页验证导入、模型选择、兼容检查及浏览器四关闭环；目前新功能只有本地自动化。
-5. 按依赖顺序评审基础 PR #6 和前端体验增量 PR；各提交单独确认 CI。无登录、班级或线上部署实现，不能仅改监听地址就上线。
+5. PR #6、#7 已依次合并；跟进 main 的对应 CI，#7 前端检查在合并时仍排队，本地 26 项浏览器测试已通过。无登录、班级或线上部署实现，不能仅改监听地址就上线。
 
 ## 主要维护文件
 

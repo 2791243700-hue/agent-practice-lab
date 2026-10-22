@@ -1,6 +1,6 @@
 # 后端开发与联调
 
-更新：2026-10-22。后端本地实现 v0.1.0 的 37 个 HTTP 操作，已与前端接通课程、Key 管理、Agent 运行、授权、评分、下载和导出。已合并版本与本地新增功能的区别见[版本状态](project-status.md)。
+更新：2026-10-22。后端本地实现 v0.1.0 的 37 个 HTTP 操作，已与前端接通课程、Key 管理、Agent 运行、授权、评分、下载和导出。已合并的 main 版本与验证边界见[版本状态](project-status.md)。
 
 ## 准备
 
@@ -75,4 +75,4 @@ uv run --project apps/api uvicorn agent_school.main:app_factory --factory --host
 
 最近本地通过 91 项后端测试、197 项契约检查及 Ruff，见[后端验证报告](runtime-validation.md)。自动测试包含真实 SDK + 本地 HTTP 测试服务；2026-10-19 另有 DeepSeek 后端实测，四关正式提交通过但第四关依赖额外任务 ID 提示，详见[实测记录](live-model-validation.md)。新增 Key 导入/目录尚未用真实服务商复测，不能以旧实测代替。
 
-当前 8 项前端与 15 项浏览器回归通过；浏览器用本地脚本模型，真实外部模型的浏览器验收仍待执行。TypeScript discriminator 适配、第四关指导和启动器未等待前端 HTTP 就绪仍待完善。首版不提供线上身份系统、任意 shell、文件上传或自定义 MCP 执行。
+当前 8 项前端与 26 项浏览器回归通过；浏览器用本地脚本模型，真实外部模型的浏览器验收仍待执行。TypeScript discriminator 适配、第四关指导和启动器未等待前端 HTTP 就绪仍待完善。首版不提供线上身份系统、任意 shell、文件上传或自定义 MCP 执行。

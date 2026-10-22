@@ -48,7 +48,7 @@ npm --prefix apps/web ci
 
 使用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。浏览器只调用同源 `/api/v1`，Next.js 服务端代理转发内部令牌；Key 只在后端内存中保存。前端类型来自 `contracts/types.d.ts`，已知生成器 discriminator 差异的边界适配见前端验证文档。
 
-多个 Key 可切换、重命名、清除或删除；重启后保留非敏感配置，重新输入 Key。模型出现在列表中不等于支持实训所需工具，正式运行仍要求连接检查通过。学习记录右侧显示开始日期与红/绿通关状态，演示不计正式通过。2026-10-22 本地已通过 197 项契约检查、91 项后端、8 项前端和 15 项浏览器测试；外部 DeepSeek 后端实测及第四关的教学限制见[独立实测记录](docs/live-model-validation.md)。
+多个 Key 可切换、重命名、清除或删除；重启后保留非敏感配置，重新输入 Key。模型出现在列表中不等于支持实训所需工具，正式运行仍要求连接检查通过。学习记录右侧显示开始日期与红/绿通关状态，演示不计正式通过。2026-10-22 本地已通过 197 项契约检查、91 项后端、8 项前端和 26 项浏览器测试；外部 DeepSeek 后端实测及第四关的教学限制见[独立实测记录](docs/live-model-validation.md)。
 
 ## 双人协作
 
@@ -57,7 +57,7 @@ npm --prefix apps/web ci
 | A | 前端页面、课程内容、模拟接口、浏览器测试和使用说明 |
 | B | 后端接口、Agent 执行、数据存储、工具授权、规则评分和启动脚本 |
 
-前后端与四关闭环已合并；后续使用短期功能分支和 Pull Request 合并到 main。前端使用契约类型和测试样例，后端落实接口和业务约束；接口变更在同一 PR 同步契约、实现、测试和说明。本次 Key 管理、界面及审查修复通过 `feat/key-manager-review-fixes` 分支交付；合并前 clone main 不会获得这些改动。
+前后端与四关闭环已合并；后续使用短期功能分支和 Pull Request 合并到 main。前端使用契约类型和测试样例，后端落实接口和业务约束；接口变更在同一 PR 同步契约、实现、测试和说明。Key 管理与审查修复已通过 [PR #6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 合并，实训侧栏、紧凑顶部、辅助示例与即时流式对话已通过 [PR #7](https://github.com/2791243700-hue/agent-practice-lab/pull/7) 合并。直接获取 main 即包含上述功能；启动、截图及验证边界见[实训工作区交付](docs/practice-workspace-delivery.md)。
 
 ```powershell
 git clone https://github.com/2791243700-hue/agent-practice-lab.git
