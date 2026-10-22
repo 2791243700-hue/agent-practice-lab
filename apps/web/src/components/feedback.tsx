@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { CheckCircle2, CircleAlert } from "lucide-react";
-import { api, pathId } from "@/lib/api";
+import { pathId } from "@/lib/api";
 import type { Attempt, Lesson, Schema, Submission } from "@/lib/types";
 import { dateTime, ErrorBox, useAction } from "./ui";
 
@@ -20,7 +20,9 @@ export function SubmissionFeedback({ submission }: { submission: Submission }) {
         <div>
           <h3>{title}</h3>
           <p>
-            v{submission.lesson_version} · {dateTime(submission.created_at)}
+            <time dateTime={submission.created_at}>
+              {dateTime(submission.created_at)}
+            </time>
           </p>
         </div>
       </div>

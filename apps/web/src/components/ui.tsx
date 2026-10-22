@@ -10,7 +10,6 @@ import {
   History,
   Settings2,
   Sprout,
-  Wifi,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { errorText } from "@/lib/api";
@@ -76,23 +75,15 @@ export function Shell({ children }: { children: ReactNode }) {
             新手使用指南 <ArrowUpRight size={14} />
           </Link>
         </div>
-        <div className="sidebar-bottom">
-          <span className="local-dot" /> 本地学习空间<span>LOCAL FIRST</span>
-        </div>
       </aside>
       <div className="app-body">
         <header className="topbar">
           <span className="topbar-label">学习 / 实践 / 理解</span>
           <div>
-            <span className="local-pill">
-              <Wifi size={13} /> 本地运行
-            </span>
             <Link href="/help" aria-label="使用帮助">
-              <CircleHelp size={19} />
+              <CircleHelp size={19} aria-hidden="true" />
+              <span>帮助</span>
             </Link>
-            <span className="avatar" aria-label="本地学习者">
-              学
-            </span>
           </div>
         </header>
         <main id="main">{children}</main>

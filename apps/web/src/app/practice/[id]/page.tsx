@@ -1,7 +1,7 @@
 "use client";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
@@ -31,6 +31,7 @@ import {
   useAction,
 } from "@/components/ui";
 import { RunView } from "@/components/run-view";
+import { LearningStatus } from "@/components/learning-status";
 import { SubmissionFeedback, SubmissionPanel } from "@/components/feedback";
 
 async function historyEvents(run: Run): Promise<Event[]> {
@@ -53,9 +54,12 @@ export default function PracticePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  return <Practice key={id} id={id} />;
+  const preferred = useSearchParams().get("profile");
+  return (
+    <Practice key={`${id}/${preferred ?? ""}`} id={id} preferred={preferred} />
+  );
 }
-function Practice({ id }: { id: string }) {
+function Practice({ id, preferred }: { id: string; preferred: string | null }) {
   const router = useRouter();
   const action = useAction();
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -143,12 +147,15 @@ function Practice({ id }: { id: string }) {
       if (initial) {
         setSettings(a.settings);
         setSelectedFiles(a.selected_file_ids);
+        const readyProfiles = p.items.filter(
+          (profile) =>
+            profile.credential_status === "configured" &&
+            profile.connection_check.status === "passed",
+        );
         setProfileId(
-          p.items.find(
-            (p) =>
-              p.credential_status === "configured" &&
-              p.connection_check.status === "passed",
-          )?.id ?? "",
+          readyProfiles.find((profile) => profile.id === preferred)?.id ??
+            readyProfiles[0]?.id ??
+            "",
         );
         if (a.latest_submission_id)
           setFeedback(
@@ -158,7 +165,7 @@ function Practice({ id }: { id: string }) {
           );
       }
     },
-    [endpoint],
+    [endpoint, preferred],
   );
   useEffect(() => {
     let cancelled = false;
@@ -252,15 +259,19 @@ function Practice({ id }: { id: string }) {
       <Heading
         eyebrow={`EXPERIMENT ${String(lesson.order).padStart(2, "0")} / LEARNING IN ACTION`}
         title={lesson.title}
-        description={`v${attempt.lesson_version} · ${historical ? "历史实验，只读回看" : attempt.progress === "completed" ? "本实训已正式通过" : "按照任务尝试，完成后提交验收"}`}
       >
-        <span
-          className={`badge ${attempt.mode === "demo" ? "demo" : "success"}`}
-        >
-          {attempt.mode === "demo"
-            ? "演示模式 · 不计正式通过"
-            : "正式实训 · 使用自备模型"}
-        </span>
+        <div className="practice-summary">
+          <LearningStatus
+            mode={attempt.mode}
+            completed={attempt.progress === "completed"}
+            date={attempt.created_at}
+          />
+          <span
+            className={`badge ${attempt.mode === "demo" ? "demo" : "subtle"}`}
+          >
+            {attempt.mode === "demo" ? "演示练习" : "正式实训"}
+          </span>
+        </div>
       </Heading>
       <ErrorBox error={loadError} />
       <ErrorBox error={action.error} />
@@ -305,37 +316,39 @@ function Practice({ id }: { id: string }) {
           <section className="panel">
             <div className="eyebrow">02 / PREPARE</div>
             <h2>材料与 Agent 设置</h2>
+            <div className="material-list">
+              {lesson.materials.map((m) => (
+                <div key={m.id}>
+                  <label className="check-label">
+                    <input
+                      type="checkbox"
+                      disabled={historical || action.busy}
+                      checked={selectedFiles.includes(m.id)}
+                      onChange={(e) =>
+                        setSelectedFiles(
+                          e.target.checked
+                            ? [...selectedFiles, m.id]
+                            : selectedFiles.filter((x) => x !== m.id),
+                        )
+                      }
+                    />
+                    <FileText size={15} />
+                    {m.title}
+                  </label>
+                  <button
+                    className="text-button"
+                    disabled={action.busy}
+                    onClick={(event) =>
+                      void openPreview(m.id, event.currentTarget)
+                    }
+                  >
+                    预览原文
+                  </button>
+                </div>
+              ))}
+            </div>
             <fieldset disabled={historical || action.busy}>
               <legend className="sr-only">下一轮运行设置</legend>
-              <div className="material-list">
-                {lesson.materials.map((m) => (
-                  <div key={m.id}>
-                    <label className="check-label">
-                      <input
-                        type="checkbox"
-                        checked={selectedFiles.includes(m.id)}
-                        onChange={(e) =>
-                          setSelectedFiles(
-                            e.target.checked
-                              ? [...selectedFiles, m.id]
-                              : selectedFiles.filter((x) => x !== m.id),
-                          )
-                        }
-                      />
-                      <FileText size={15} />
-                      {m.title}
-                    </label>
-                    <button
-                      className="text-button"
-                      onClick={(event) =>
-                        void openPreview(m.id, event.currentTarget)
-                      }
-                    >
-                      预览原文
-                    </button>
-                  </div>
-                ))}
-              </div>
               <p className="field-help">
                 选中只是允许读取。实际读过与否，请查看工具执行结果。第一关直接使用任务内通知，无需读取工具。
               </p>

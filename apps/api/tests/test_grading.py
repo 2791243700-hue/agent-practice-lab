@@ -1,3 +1,10 @@
+import copy
+
+import pytest
+
+from agent_school.contracts import RuntimeEvent, ToolCall
+from agent_school.db import Store
+from agent_school.grading import Grader
 from conftest import create_attempt, post
 from test_approvals import permission_run
 from test_runs import start, wait_run
@@ -103,3 +110,123 @@ def test_permission_artifacts_need_denial_approval_and_consistent_frozen_files(c
         client.get("/api/v1/submissions/" + result["id"] + "/files/" + file["id"] + "/download").content
         == frozen
     )
+
+
+def two_save_runtime(client, monkeypatch):
+    """Exercise real approvals and filesystem writes for both save requests."""
+
+    async def stream(request, invoke_tool):
+        for index in range(2):
+            await invoke_tool(
+                ToolCall(
+                    id=f"save-{index}",
+                    name="save_todos",
+                    arguments={
+                        "items": [
+                            {
+                                "task_id": "submit-summary",
+                                "title": "总结",
+                                "due_date": "2026-11-04",
+                                "source_id": "notice-week",
+                            },
+                            {
+                                "task_id": "reserve-lab",
+                                "title": "预约",
+                                "due_date": "2026-11-06",
+                                "source_id": "notice-week",
+                            },
+                        ]
+                    },
+                )
+            )
+        yield RuntimeEvent(
+            kind="message.completed", payload={"message_id": "done", "role": "assistant", "content": "done"}
+        )
+
+    monkeypatch.setattr(client.app.state.school.runs.demo, "stream", stream)
+
+
+def check_grade_after_reopening_store(client, result):
+    school = copy.copy(client.app.state.school)
+    school.store = Store(school.config.data_dir)
+    try:
+        snapshot = school.store.get("snapshot", result["id"])
+        rules, _ = Grader(
+            school, snapshot["attempt"], snapshot["lesson"], result["answers"], snapshot["files"]
+        ).evaluate()
+        assert all(rule["passed"] for rule in rules if rule["required"]) == result["evaluation_passed"]
+    finally:
+        school.store.close()
+
+
+@pytest.mark.parametrize("cross_run", [False, True])
+def test_permission_rejects_approval_before_denial_even_with_equal_timestamps(client, monkeypatch, cross_run):
+    two_save_runtime(client, monkeypatch)
+    monkeypatch.setattr("agent_school.runs.now", lambda: "2026-10-22T00:00:00Z")
+    monkeypatch.setattr("agent_school.events.now", lambda: "2026-10-22T00:00:00Z")
+    attempt, run, pending = permission_run(client)
+    client.post("/api/v1/approvals/" + pending["id"] + "/decision", json={"decision": "approve"})
+    second = wait_run(
+        client, run["id"], lambda r: r["pending_approval"] and r["pending_approval"]["id"] != pending["id"]
+    )["pending_approval"]
+    client.post(
+        "/api/v1/approvals/" + second["id"] + "/decision",
+        json={"decision": "approve" if cross_run else "deny"},
+    )
+    wait_run(client, run["id"])
+    if cross_run:
+        later = start(client, attempt, "再检查保存权限", "later-permission-run")
+        for previous in (None, "next"):
+            pending = wait_run(
+                client,
+                later["id"],
+                lambda r: (
+                    r["pending_approval"] and (previous is None or r["pending_approval"]["id"] != denied_id)
+                ),
+            )["pending_approval"]
+            denied_id = pending["id"]
+            client.post("/api/v1/approvals/" + denied_id + "/decision", json={"decision": "deny"})
+        wait_run(client, later["id"])
+    result = submit(client, attempt, {})
+    assert not result["evaluation_passed"]
+    assert not next(rule for rule in result["rules"] if rule["rule_id"] == "todos-artifact")["passed"]
+    check_grade_after_reopening_store(client, result)
+
+
+def test_permission_accepts_later_run_approval_with_smaller_local_sequence_and_equal_times(
+    client, monkeypatch
+):
+    two_save_runtime(client, monkeypatch)
+    monkeypatch.setattr("agent_school.runs.now", lambda: "2026-10-22T00:00:00Z")
+    monkeypatch.setattr("agent_school.events.now", lambda: "2026-10-22T00:00:00Z")
+    attempt, run, pending = permission_run(client)
+    school = client.app.state.school
+    for index in range(30):
+        school.events.append(run["id"], "message.delta", {"message_id": "explanation", "delta": str(index)})
+    for index in range(2):
+        client.post("/api/v1/approvals/" + pending["id"] + "/decision", json={"decision": "deny"})
+        if index == 0:
+            previous_id = pending["id"]
+            pending = wait_run(
+                client,
+                run["id"],
+                lambda r: r["pending_approval"] and r["pending_approval"]["id"] != previous_id,
+            )["pending_approval"]
+    wait_run(client, run["id"])
+    later = start(client, attempt, "核对后重新保存", "later-approved-run")
+    for index in range(2):
+        pending = wait_run(
+            client,
+            later["id"],
+            lambda r: r["pending_approval"] and (index == 0 or r["pending_approval"]["id"] != previous_id),
+        )["pending_approval"]
+        previous_id = pending["id"]
+        client.post("/api/v1/approvals/" + pending["id"] + "/decision", json={"decision": "approve"})
+    wait_run(client, later["id"])
+    result = submit(client, attempt, {})
+    assert result["evaluation_passed"]
+    artifact_refs = next(rule for rule in result["rules"] if rule["rule_id"] == "todos-artifact")[
+        "evidence_refs"
+    ]
+    assert any(e.get("run_id") == later["id"] and e["id"] in artifact_refs for e in result["evidence"])
+    check_grade_after_reopening_store(client, result)

@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/model-profiles/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 选择服务商后获取模型列表并添加仅内存保存的 Key */
+        post: operations["connectProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -503,13 +520,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/model-profiles/{profile_id}/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 使用该配置的内存 Key 刷新服务商模型列表，不发起模型推理 */
+        get: operations["listProfileModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         Empty: Record<string, never>;
         /** @enum {string} */
-        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ORIGIN_REJECTED" | "LOCAL_TOKEN_INVALID" | "PROFILE_BUSY" | "CREDENTIAL_MISSING" | "MODEL_NOT_READY" | "MODEL_AUTH_FAILED" | "MODEL_TIMEOUT" | "MODEL_INCOMPATIBLE" | "MODEL_UNAVAILABLE" | "RUN_BUSY" | "ATTEMPT_BUSY" | "ATTEMPT_SUPERSEDED" | "REVISION_CONFLICT" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_IN_PROGRESS" | "APPROVAL_ALREADY_DECIDED" | "APPROVAL_EXPIRED" | "APPROVAL_INVALIDATED" | "CURSOR_INVALID" | "DEMO_DISABLED" | "MODE_MISMATCH" | "LIMIT_EXCEEDED" | "RUN_TIMEOUT" | "TOOL_ERROR" | "EXECUTION_FAILED" | "INTERNAL_ERROR";
+        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ORIGIN_REJECTED" | "LOCAL_TOKEN_INVALID" | "PROFILE_BUSY" | "CREDENTIAL_MISSING" | "MODEL_NOT_READY" | "MODEL_AUTH_FAILED" | "MODEL_TIMEOUT" | "MODEL_INCOMPATIBLE" | "MODEL_UNAVAILABLE" | "RUN_BUSY" | "ATTEMPT_BUSY" | "ATTEMPT_SUPERSEDED" | "REVISION_CONFLICT" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_IN_PROGRESS" | "APPROVAL_ALREADY_DECIDED" | "APPROVAL_EXPIRED" | "APPROVAL_INVALIDATED" | "CURSOR_INVALID" | "DEMO_DISABLED" | "MODE_MISMATCH" | "LIMIT_EXCEEDED" | "RUN_TIMEOUT" | "TOOL_ERROR" | "EXECUTION_FAILED" | "INTERNAL_ERROR" | "MODEL_CATALOG_UNSUPPORTED" | "MODEL_CATALOG_INVALID";
         FieldError: {
             path: string;
             message: string;
@@ -1292,6 +1326,28 @@ export interface components {
             has_more: boolean;
             last_seq: number;
         };
+        KeyConnectionCreate: {
+            /** @enum {string} */
+            provider_id: "deepseek" | "openai" | "openai-compatible";
+            api_key: string;
+            name?: string;
+            /** Format: uri */
+            base_url?: string;
+            model_id?: string;
+        };
+        ModelOption: {
+            id: string;
+            name?: string;
+        };
+        ModelCatalog: {
+            items: components["schemas"]["ModelOption"][];
+            /** @enum {string} */
+            source: "provider" | "manual";
+        };
+        KeyConnectionResult: {
+            profile: components["schemas"]["ModelProfile"];
+            catalog: components["schemas"]["ModelCatalog"];
+        };
     };
     responses: never;
     parameters: never;
@@ -1301,6 +1357,41 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    connectProfile: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeyConnectionCreate"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeyConnectionResult"];
+                };
+            };
+            /** @description 统一错误格式；HTTP 状态映射见 README */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -2605,6 +2696,37 @@ export interface operations {
                 };
                 content: {
                     "application/zip": string;
+                };
+            };
+            /** @description 统一错误格式；HTTP 状态映射见 README */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listProfileModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelCatalog"];
                 };
             };
             /** @description 统一错误格式；HTTP 状态映射见 README */

@@ -65,7 +65,7 @@ def create_app(config: Config | None = None):
                         body = json.loads(buffer)
                     except Exception:
                         raise AppError(message="请求不是有效的 JSON。") from None
-                    if operation["operationId"] != "setCredential":
+                    if operation["operationId"] not in ("setCredential", "connectProfile"):
                         body = request.app.state.school.credentials.redact(body)
                     schema_name = operation["requestBody"]["content"]["application/json"]["schema"][
                         "$ref"

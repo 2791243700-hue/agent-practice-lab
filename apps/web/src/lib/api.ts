@@ -27,7 +27,7 @@ export function errorText(error: unknown): string {
     : "无法连接本地服务，请检查启动状态后重试。";
 }
 export const pathId = encodeURIComponent;
-// Retain keys for ambiguous transport failures. No credentials use this cache.
+// Retain idempotency keys after ambiguous failures; cache body digests, never credential text.
 const pendingKeys = new Map<string, string>();
 export async function api<T>(
   path: string,
@@ -40,7 +40,15 @@ export async function api<T>(
 ): Promise<T> {
   const { method = "GET", body, idempotent, signal } = options;
   const fingerprint = idempotent
-    ? `${method}:${path}:${JSON.stringify(body)}`
+    ? `${method}:${path}:${Array.from(
+        new Uint8Array(
+          await crypto.subtle.digest(
+            "SHA-256",
+            new TextEncoder().encode(JSON.stringify(body)),
+          ),
+        ),
+        (byte) => byte.toString(16).padStart(2, "0"),
+      ).join("")}`
     : "";
   let key = fingerprint ? pendingKeys.get(fingerprint) : undefined;
   if (fingerprint && !key) {

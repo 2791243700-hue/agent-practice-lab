@@ -26,9 +26,27 @@ const provider = createServer(async (request, response) => {
     }
     return;
   }
-  if (request.headers.authorization !== "Bearer browser-test-only") {
+  if (
+    !["Bearer browser-test-only", "Bearer browser-test-secondary"].includes(
+      request.headers.authorization,
+    )
+  ) {
     response.writeHead(401, { "Content-Type": "application/json" });
     response.end('{"error":{"message":"invalid test credential"}}');
+    return;
+  }
+  if (request.method === "GET") {
+    response.writeHead(request.url === "/v1/models" ? 200 : 404, {
+      "Content-Type": "application/json",
+    });
+    response.end(
+      JSON.stringify({
+        data: [
+          { id: "browser-scripted-model" },
+          { id: "browser-scripted-alternate" },
+        ],
+      }),
+    );
     return;
   }
   const chunks = [];

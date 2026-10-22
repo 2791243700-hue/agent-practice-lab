@@ -13,7 +13,6 @@ class EventStore:
     def __init__(self, school):
         self.school = school
         self.store = school.store
-        self.signals = {}
 
     def append(self, run_id, kind, payload):
         with self.store.atomic():
@@ -30,9 +29,6 @@ class EventStore:
             }
             self.school.contracts.validate("StoredEvent", value, response=True)
             value = self.store.append_event(run_id, value)
-        signal = self.signals.get(run_id)
-        if signal:
-            signal.set()
         return value
 
     def history(self, run_id, after=0, limit=100):
@@ -57,7 +53,7 @@ class EventStore:
 
         async def frames():
             nonlocal after
-            # The subscriber owns its notification, so it cannot clear another subscriber's wakeup.
+            # Each subscriber reads its own cursor from the durable event sequence.
             while True:
                 page = self.history(run_id, after, 500)
                 for value in page["items"]:

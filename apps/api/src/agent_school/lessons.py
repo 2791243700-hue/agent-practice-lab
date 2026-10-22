@@ -50,11 +50,55 @@ class LessonCatalog:
 
     def publish(self, value):
         manifest = value["manifest"]
+        self.contracts.lesson_validator.validate(manifest)
+        if not value["intro"].strip() or not any(rule["required"] for rule in manifest["rules"]):
+            raise ValueError("Empty intro or no required grading rules")
+        self.validate_grading(manifest)
         key = manifest["id"] + "@" + manifest["version"]
         old = self.store.get("lesson", key, owner="system", missing_ok=True)
         if old is not None and old != value:
             raise ValueError("Cannot change published lesson version")
         self.store.put("lesson", key, value, owner="system")
+
+    def validate_grading(self, manifest):
+        form = manifest["answer_form"]
+        material_ids = {material["id"] for material in manifest["initial_files"]}
+        if form["kind"] == "facts" and any(
+            source["source_id"] not in material_ids for source in form["sources"]
+        ):
+            raise ValueError("Answer form references missing course material")
+        forms = {
+            "choice_answer": "choice",
+            "read_and_check_facts": "facts",
+            "lookup_and_check_course": "course",
+            "denied_without_write": "artifact",
+            "approved_todos_artifact": "artifact",
+        }
+        for rule in manifest["rules"]:
+            evaluator, params = rule["evaluator"], rule["params"]
+            if evaluator in forms and form["kind"] != forms[evaluator]:
+                raise ValueError("Answer form does not match grading evaluator")
+            if evaluator == "choice_answer" and (
+                params["question_id"] != form["question_id"]
+                or params["correct_option_id"] not in {option["id"] for option in form["options"]}
+            ):
+                raise ValueError("Grading answer is not available in choice form")
+            if evaluator == "lookup_and_check_course" and params["course_id"] != form["course_id"]:
+                raise ValueError("Grading course does not match answer form")
+            if evaluator == "read_and_check_facts":
+                if not set(params["required_source_ids"]) <= material_ids:
+                    raise ValueError("Grading requires missing course material")
+                tasks = {task["task_id"] for task in form["tasks"]}
+                sources = {source["source_id"] for source in form["sources"]}
+                facts = params["expected_facts"]
+                if len({fact["task_id"] for fact in facts}) != len(facts) or any(
+                    fact["task_id"] not in tasks or fact["source_id"] not in sources for fact in facts
+                ):
+                    raise ValueError("Grading facts are not available in answer form")
+            if evaluator == "approved_todos_artifact" and any(
+                item["source_id"] not in material_ids for item in params["expected_items"]
+            ):
+                raise ValueError("Grading artifact references missing course material")
 
     def get(self, lesson_id, version=None):
         if version is not None:
@@ -64,7 +108,10 @@ class LessonCatalog:
             not_found()
 
         def version_key(value):
-            return tuple(int(v) if v.isdigit() else v for v in value["manifest"]["version"].split("."))
+            version = value["manifest"]["version"]
+            # Every component has the same tuple shape; numeric releases sort
+            # above text at the same position. Raw spelling breaks numeric ties.
+            return tuple((1, int(v), "") if v.isdecimal() else (0, 0, v) for v in version.split(".")), version
 
         return max(values, key=version_key)
 

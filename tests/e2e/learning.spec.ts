@@ -101,25 +101,27 @@ test("第一关：模型设置、认证失败、两次运行、刷新续接、�
   await expect(page).toHaveURL(/\/practice\//);
   const attemptUrl = page.url();
   await page.getByRole("link", { name: "去设置 →" }).click();
-  await page.getByLabel("配置名称").fill("浏览器测试模型");
+  await page.getByRole("button", { name: "添加 Key", exact: true }).click();
+  await page
+    .getByLabel("服务商", { exact: true })
+    .selectOption("openai-compatible");
+  await page.getByLabel("Key 名称（可选）").fill("浏览器测试模型");
   await page.getByLabel("API 根地址").fill("http://127.0.0.1:8101/v1");
-  await page.getByLabel("模型名称").fill("browser-scripted-model");
-  await page.getByRole("button", { name: "保存连接信息", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "02 · 输入 API Key" }),
-  ).toBeVisible();
   await page
     .getByLabel("API Key", { exact: true })
     .fill("invalid-browser-test");
-  await page.getByRole("button", { name: "提交 Key", exact: true }).click();
+  await page
+    .getByRole("button", { name: "识别并获取模型", exact: true })
+    .click();
   await expect(page.getByLabel("API Key", { exact: true })).toHaveValue("");
-  await page.getByRole("checkbox", { name: /我知道连接检查/ }).check();
-  await page.getByRole("button", { name: "检查连接", exact: true }).click();
-  await expect(page.getByText("连接检查未通过", { exact: true })).toBeVisible();
   await expect(page.locator("main")).toContainText("MODEL_AUTH_FAILED");
   await page.getByLabel("API Key", { exact: true }).fill("browser-test-only");
-  await page.getByRole("button", { name: "提交 Key", exact: true }).click();
+  await page
+    .getByRole("button", { name: "识别并获取模型", exact: true })
+    .click();
+  await expect(page.getByLabel("选择模型", { exact: true })).toBeVisible();
   await expect(page.getByLabel("API Key", { exact: true })).toHaveValue("");
+  await page.getByRole("checkbox", { name: /我知道连接检查/ }).check();
   await page.getByRole("button", { name: "检查连接", exact: true }).click();
   await expect(page.getByText("连接检查通过", { exact: true })).toBeVisible();
   expect(
@@ -129,7 +131,9 @@ test("第一关：模型设置、认证失败、两次运行、刷新续接、�
   ).not.toContain("browser-test-only");
   await screenshot(page, "03-model-settings");
   await page.getByRole("link", { name: "返回实训 →" }).click();
-  await expect(page).toHaveURL(attemptUrl);
+  await expect(page).toHaveURL(
+    new RegExp(`${new URL(attemptUrl).pathname}(?:\\?|$)`),
+  );
   await send(page, "帮我看看这份课程通知");
   await expect(page.getByRole("button", { name: "停止本轮" })).toBeVisible();
   await page.reload();
@@ -171,7 +175,9 @@ test("第一关：模型设置、认证失败、两次运行、刷新续接、�
   await page.goto("/");
   await expect(page.getByText("已正式通过", { exact: true })).toHaveCount(1);
   await page.getByRole("link", { name: "继续实训" }).click();
-  await expect(page).toHaveURL(attemptUrl);
+  await expect(page).toHaveURL(
+    new RegExp(`${new URL(attemptUrl).pathname}(?:\\?|$)`),
+  );
   expect(pageErrors).toEqual([]);
 });
 
@@ -302,9 +308,9 @@ test("停止等待授权的运行，旧批准失效；清除 Key 后需重新检
     0,
   );
   await expect(page.getByText("请求已失效", { exact: true })).toBeVisible();
-  const profile = await testProfile(page);
+  await testProfile(page);
   await page.goto("/settings");
-  await page.getByLabel("选择已有配置").selectOption(profile.id);
+  await page.getByRole("button", { name: /^独立凭据恢复测试/ }).click();
   await page.getByRole("button", { name: "清除当前 Key", exact: true }).click();
   await expect(
     page.getByText("Key 已从本地后端内存清除。", { exact: true }),
@@ -376,7 +382,7 @@ test("演示后可另建正式实训，后端重启恢复中断记录并清除 K
   await page.getByRole("button", { name: "开始正式实训" }).click();
   await expect(page).not.toHaveURL(attemptUrl);
   await expect(
-    page.getByText("正式实训 · 使用自备模型", { exact: true }),
+    page.locator(".practice-summary").getByText("正式实训", { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "去设置 →" })).toBeVisible();
 });

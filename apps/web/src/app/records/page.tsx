@@ -4,13 +4,8 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { allPages, api, pathId } from "@/lib/api";
 import type { Attempt, Schema } from "@/lib/types";
-import {
-  dateTime,
-  ErrorBox,
-  Heading,
-  Loading,
-  useAction,
-} from "@/components/ui";
+import { LearningStatus } from "@/components/learning-status";
+import { ErrorBox, Heading, Loading, useAction } from "@/components/ui";
 export default function Records() {
   const [attempts, setAttempts] = useState<Attempt[] | null>(null);
   const [titles, setTitles] = useState<Record<string, string>>({});
@@ -55,14 +50,6 @@ export default function Records() {
                   {a.mode === "demo" ? "演示练习" : "正式实训"}
                 </span>
                 <h2>{titles[a.lesson_id] ?? a.lesson_id}</h2>
-                <p>
-                  v{a.lesson_version} · {dateTime(a.created_at)} ·{" "}
-                  {a.status === "superseded"
-                    ? "已重新开始，记录保留"
-                    : a.progress === "completed"
-                      ? "已正式通过"
-                      : "学习进行中"}
-                </p>
               </div>
               <Link
                 className="button secondary"
@@ -71,6 +58,11 @@ export default function Records() {
                 {a.status === "superseded" ? "回看记录" : "继续实训"}
                 <ArrowRight size={15} />
               </Link>
+              <LearningStatus
+                mode={a.mode}
+                completed={a.progress === "completed"}
+                date={a.created_at}
+              />
             </article>
           ))}
         </div>
