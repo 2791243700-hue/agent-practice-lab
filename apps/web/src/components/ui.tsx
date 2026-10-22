@@ -16,6 +16,7 @@ import { errorText } from "@/lib/api";
 
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
+  const practicePage = path.startsWith("/practice/");
   return (
     <div className="app-shell">
       <a className="skip" href="#main">
@@ -77,16 +78,20 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </aside>
       <div className="app-body">
-        <header className="topbar">
-          <span className="topbar-label">学习 / 实践 / 理解</span>
-          <div>
-            <Link href="/help" aria-label="使用帮助">
-              <CircleHelp size={19} aria-hidden="true" />
-              <span>帮助</span>
-            </Link>
-          </div>
-        </header>
-        <main id="main">{children}</main>
+        {!practicePage && (
+          <header className="topbar">
+            <span className="topbar-label">学习 / 实践 / 理解</span>
+            <div>
+              <Link href="/help" aria-label="使用帮助">
+                <CircleHelp size={19} aria-hidden="true" />
+                <span>帮助</span>
+              </Link>
+            </div>
+          </header>
+        )}
+        <main id="main" className={practicePage ? "practice-page" : undefined}>
+          {children}
+        </main>
         <footer className="footer">
           Agent Practice Lab <span>每一步操作，都值得理解。</span>
         </footer>

@@ -124,7 +124,23 @@ function ApprovalCard({
     </section>
   );
 }
+export function PendingMessage({ text }: { text: string }) {
+  return (
+    <article className="run-view" data-testid="pending-message">
+      <div className="message user-message">
+        <span className="message-author">你的任务说明</span>
+        <p>{text}</p>
+      </div>
+      <p className="reply-pending" role="status">
+        <span className="spinner" aria-hidden="true" />
+        正在发送任务…
+      </p>
+    </article>
+  );
+}
+
 export function RunView({ run, events }: { run: Run; events: Event[] }) {
+  const output = messages(events);
   const approvals = new Map<string, Approval>();
   for (const e of events)
     if (e.kind === "approval.requested" || e.kind === "approval.decided")
@@ -207,7 +223,20 @@ export function RunView({ run, events }: { run: Run; events: Event[] }) {
           readOnly={terminal(run.status)}
         />
       ))}
-      {messages(events).map((m) => (
+      {output.length === 0 &&
+        !terminal(run.status) &&
+        run.status !== "awaiting_approval" && (
+          <div
+            className="message assistant-message reply-pending"
+            role="status"
+          >
+            <span className="spinner" aria-hidden="true" />
+            {run.status === "queued"
+              ? "任务已接收，等待开始…"
+              : "Agent 正在准备回答…"}
+          </div>
+        )}
+      {output.map((m) => (
         <div className="message assistant-message" key={m.id}>
           <span className="message-author">
             <span className="agent-dot" /> 教学 Agent{" "}
