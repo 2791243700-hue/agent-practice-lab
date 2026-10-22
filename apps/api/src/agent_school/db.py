@@ -5,7 +5,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config as AlembicConfig
-from sqlalchemy import create_engine, delete, event, insert, select, update
+from sqlalchemy import create_engine, delete, event, insert, literal_column, select, update
 
 from agent_school.errors import not_found
 from agent_school.models import events, records
@@ -41,12 +41,39 @@ class Store:
             if getattr(self.local, "connection", None) is not None:
                 yield self.local.connection
             else:
-                with self.engine.begin() as connection:
-                    self.local.connection = connection
-                    try:
-                        yield connection
-                    finally:
-                        self.local.connection = None
+                callbacks = []
+                self.local.rollback_callbacks = callbacks
+                try:
+                    with self.engine.begin() as connection:
+                        self.local.connection = connection
+                        try:
+                            yield connection
+                        finally:
+                            self.local.connection = None
+                except BaseException as error:
+                    cleanup_error = None
+                    for callback in reversed(callbacks):
+                        try:
+                            callback()
+                        except BaseException as exc:
+                            cleanup_error = exc
+                    if cleanup_error is not None:
+                        raise cleanup_error from error
+                    raise
+                finally:
+                    self.local.rollback_callbacks = None
+
+    def on_rollback(self, callback):
+        """Compensate filesystem work if the owning outer transaction fails.
+
+        Nested atomic blocks share this queue; callbacks are discarded only
+        after the outer database commit succeeds, including response validation
+        and idempotency writes performed after a service returns.
+        """
+        callbacks = getattr(self.local, "rollback_callbacks", None)
+        if callbacks is None:
+            raise RuntimeError("Rollback cleanup requires an active transaction")
+        callbacks.append(callback)
 
     def get(self, kind, key, owner="local-owner", missing_ok=False):
         with self.atomic() as connection:
@@ -109,6 +136,22 @@ class Store:
                 select(events.c.data)
                 .where(events.c.run_id == run_id, events.c.owner_id == owner)
                 .order_by(events.c.seq)
+            ).all()
+        return copy.deepcopy([row[0] for row in rows])
+
+    def event_list_for_runs(self, run_ids, owner="local-owner"):
+        """Return durable append order across runs, including equal-clock events.
+
+        SQLite's internal rowid orders inserts in this append-only table. It stays
+        private to the repository; event cursors remain scoped to each run.
+        """
+        with self.atomic() as connection:
+            for run_id in run_ids:
+                self.get("run", run_id, owner)
+            rows = connection.execute(
+                select(events.c.data)
+                .where(events.c.run_id.in_(run_ids), events.c.owner_id == owner)
+                .order_by(literal_column("rowid"))
             ).all()
         return copy.deepcopy([row[0] for row in rows])
 

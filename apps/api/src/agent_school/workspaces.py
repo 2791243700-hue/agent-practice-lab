@@ -189,19 +189,46 @@ class WorkspaceStore:
         return result
 
     def freeze(self, attempt_id, snapshot_id):
-        frozen = []
-        for info in self.list(attempt_id):
-            original, data = self.read(attempt_id, info["id"], verify=False)
-            relative = f"snapshots/{snapshot_id}/{info['id']}"
-            target = self.safe(relative)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(data)
-            actual = hashlib.sha256(data).hexdigest()
-            frozen.append(
-                {
-                    "info": {**original, "sha256": actual, "size_bytes": len(data)},
-                    "relative": relative,
-                    "consistent": actual == original["sha256"],
-                }
-            )
-        return frozen
+        # A snapshot is owned exclusively by this invocation, never reused.
+        folder = self.snapshot_folder(snapshot_id)
+        folder.mkdir(parents=True, exist_ok=False)
+        try:
+            frozen = []
+            for info in self.list(attempt_id):
+                original, data = self.read(attempt_id, info["id"], verify=False)
+                relative = f"snapshots/{snapshot_id}/{info['id']}"
+                self.safe(relative).write_bytes(data)
+                actual = hashlib.sha256(data).hexdigest()
+                frozen.append(
+                    {
+                        "info": {**original, "sha256": actual, "size_bytes": len(data)},
+                        "relative": relative,
+                        "consistent": actual == original["sha256"],
+                    }
+                )
+            return frozen
+        except BaseException:
+            self.discard_snapshot(snapshot_id)
+            raise
+
+    def snapshot_folder(self, snapshot_id):
+        if not snapshot_id or len(Path(snapshot_id).parts) != 1 or snapshot_id in (".", ".."):
+            raise AppError("TOOL_ERROR", "快照路径不被允许。", 409)
+        return self.safe("snapshots/" + snapshot_id)
+
+    def discard_snapshot(self, snapshot_id):
+        folder = self.snapshot_folder(snapshot_id)
+        if not folder.exists():
+            return
+        # Validate the resolved boundary and all descendants before recursive
+        # deletion. Never traverse a symlink or a Windows junction.
+        root = self.root.resolve()
+        if folder.resolve().parent != (root / "snapshots").resolve() or not folder.resolve().is_relative_to(
+            root
+        ):
+            raise AppError("TOOL_ERROR", "快照越过实验边界。", 409)
+        for directory, subdirs, files in os.walk(folder, followlinks=False):
+            self.safe(Path(directory).relative_to(self.root).as_posix())
+            for name in [*subdirs, *files]:
+                self.safe((Path(directory) / name).relative_to(self.root).as_posix())
+        shutil.rmtree(folder)

@@ -469,7 +469,9 @@
         "RUN_TIMEOUT",
         "TOOL_ERROR",
         "EXECUTION_FAILED",
-        "INTERNAL_ERROR"
+        "INTERNAL_ERROR",
+        "MODEL_CATALOG_UNSUPPORTED",
+        "MODEL_CATALOG_INVALID"
       ]
     },
     "ErrorResponse": {

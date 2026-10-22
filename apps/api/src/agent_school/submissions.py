@@ -17,34 +17,44 @@ class SubmissionService:
         revision(attempt, body["expected_attempt_revision"])
         self.school.idle(attempt)
         lesson = self.school.catalog.get(attempt["lesson_id"], attempt["lesson_version"])
+        grader = Grader(self.school, attempt, lesson, body["answers"], [])
+        grader.validate_answers()
         key = new_id("submission")
         frozen = self.school.workspace.freeze(attempt["id"], key)
-        grader = Grader(self.school, attempt, lesson, body["answers"], frozen)
-        rules, evidence = grader.evaluate()
-        required = [r for r in rules if r["required"]]
-        evaluation_passed = bool(required) and all(r["passed"] for r in required)
-        passed = attempt["mode"] == "live" and evaluation_passed
-        value = {
-            "id": key,
-            "attempt_id": attempt["id"],
-            "lesson_version": attempt["lesson_version"],
-            "mode": attempt["mode"],
-            "passed": passed,
-            "evaluation_passed": evaluation_passed,
-            "created_at": now(),
-            "rules": rules,
-            "evidence": evidence,
-            "answers": body["answers"],
-        }
-        self.store.put("submission", key, value)
-        self.store.put(
-            "snapshot",
-            key,
-            {"attempt_id": attempt["id"], "files": frozen, "lesson": lesson, "attempt": attempt},
-        )
-        attempt.update(latest_submission_id=key, progress="completed" if passed else attempt["progress"])
-        self.store.put("attempt", attempt["id"], attempt)
-        return value
+        try:
+            grader.frozen = frozen
+            rules, evidence = grader.evaluate()
+            required = [r for r in rules if r["required"]]
+            evaluation_passed = bool(required) and all(r["passed"] for r in required)
+            passed = attempt["mode"] == "live" and evaluation_passed
+            value = {
+                "id": key,
+                "attempt_id": attempt["id"],
+                "lesson_version": attempt["lesson_version"],
+                "mode": attempt["mode"],
+                "passed": passed,
+                "evaluation_passed": evaluation_passed,
+                "created_at": now(),
+                "rules": rules,
+                "evidence": evidence,
+                "answers": body["answers"],
+            }
+            with self.store.atomic():
+                self.store.on_rollback(lambda: self.school.workspace.discard_snapshot(key))
+                self.store.put("submission", key, value)
+                self.store.put(
+                    "snapshot",
+                    key,
+                    {"attempt_id": attempt["id"], "files": frozen, "lesson": lesson, "attempt": attempt},
+                )
+                attempt.update(
+                    latest_submission_id=key, progress="completed" if passed else attempt["progress"]
+                )
+                self.store.put("attempt", attempt["id"], attempt)
+            return value
+        except BaseException:
+            self.school.workspace.discard_snapshot(key)
+            raise
 
     def download(self, submission_id, file_id):
         self.store.get("submission", submission_id)

@@ -162,12 +162,20 @@ class School:
         return value
 
     async def prepare(self, operation, path, params, body):
+        if operation == "connectProfile":
+            return await self.profiles.prepare_connect(body)
+        if operation == "listProfileModels":
+            return await self.profiles.models(path["profile_id"])
         if operation == "checkConnection":
             return await self.profiles.check(path["profile_id"], body)
         if operation == "resetAttempt":
             await self.runs.prepare_reset(path["attempt_id"], body)
 
     async def dispatch(self, operation, path, params, body, prepared=None):
+        if operation == "connectProfile":
+            return self.profiles.connect(prepared)
+        if operation == "listProfileModels":
+            return prepared
         if operation == "getHealth":
             return {"status": "ok", "contract_version": "0.1.0"}
         if operation == "getMe":

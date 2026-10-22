@@ -4,12 +4,65 @@ import json
 import httpx
 
 from agent_school.contracts import ModelAccess
+from agent_school.errors import AppError
 from agent_school.runtime.provider_options import basic_chat_options
 
 
 class ModelConnector:
     def __init__(self, client: httpx.AsyncClient | None = None):
         self.client = client
+
+    async def list_models(self, access: ModelAccess):
+        client = self.client or httpx.AsyncClient(timeout=10, follow_redirects=False)
+        secret = access.api_key.get_secret_value()
+        try:
+            response = await client.get(
+                access.base_url.rstrip("/") + "/models",
+                headers={"Authorization": "Bearer " + secret},
+                follow_redirects=False,
+            )
+            if response.status_code in (401, 403):
+                raise AppError("MODEL_AUTH_FAILED", "服务商未接受这个 Key，请核对服务商和凭据。", 401)
+            if response.status_code in (404, 405, 501):
+                raise AppError(
+                    "MODEL_CATALOG_UNSUPPORTED", "该接口不提供模型列表，可选择兼容接口并手动填写模型。"
+                )
+            if response.status_code >= 500 or response.status_code == 429:
+                raise AppError("MODEL_UNAVAILABLE", "暂时无法获取模型列表，请稍后重试。", 503, True)
+            if response.status_code != 200 or len(response.content) > 2_000_000:
+                raise ValueError()
+            data = response.json()["data"]
+            if not isinstance(data, list):
+                raise ValueError()
+            models = {}
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                model = item.get("id")
+                if not isinstance(model, str) or not model.strip() or len(model) > 200 or secret in model:
+                    continue
+                if any(ord(char) < 32 or ord(char) == 127 for char in model):
+                    continue
+                value = {"id": model}
+                if isinstance(item.get("name"), str):
+                    value["name"] = item["name"].replace(secret, "[redacted]")[:200]
+                models[model] = value
+            if not models:
+                raise ValueError()
+            return {"items": [models[key] for key in sorted(models)[:1000]], "source": "provider"}
+        except AppError:
+            raise
+        except (httpx.TimeoutException, TimeoutError):
+            raise AppError("MODEL_TIMEOUT", "获取模型列表超时，请稍后重试。", 504, True) from None
+        except httpx.RequestError:
+            raise AppError("MODEL_UNAVAILABLE", "无法连接选定的模型服务商。", 503, True) from None
+        except (ValueError, KeyError, TypeError, IndexError):
+            raise AppError(
+                "MODEL_CATALOG_INVALID", "服务商未返回有效的可选模型；兼容接口可改为手动指定模型。"
+            ) from None
+        finally:
+            if self.client is None:
+                await client.aclose()
 
     async def check(self, access: ModelAccess):
         from agent_school.service import now

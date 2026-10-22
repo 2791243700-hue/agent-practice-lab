@@ -19,10 +19,10 @@ class Grader:
         ]
         self.events = [
             e
-            for run in self.runs
-            for e in school.store.event_list(run["id"])
+            for e in school.store.event_list_for_runs([run["id"] for run in self.runs])
             if e["attempt_id"] == attempt["id"] and e["mode"] == attempt["mode"]
         ]
+        self.event_order = {(e["run_id"], e["seq"]): index for index, e in enumerate(self.events)}
         self.evidence = []
         self.evidence_keys = {}
         self.details = {}
@@ -106,6 +106,33 @@ class Grader:
         elif kind == "course" and self.answers["course_id"] != form["course_id"]:
             raise AppError(message="请核对本关指定的课程。")
 
+    def valid_denials(self):
+        for event, req in self.tool_events("save_todos", "denied"):
+            result = event["payload"]["result"]
+            inspection = self.school.store.get(
+                "inspection", event["run_id"] + "~" + result["call_id"], missing_ok=True
+            )
+            decision = next(
+                (
+                    e
+                    for e in self.events
+                    if e["run_id"] == event["run_id"]
+                    and e["kind"] == "approval.decided"
+                    and e["payload"]["approval"]["call_id"] == result["call_id"]
+                    and e["payload"]["approval"]["status"] == "denied"
+                    and e["payload"]["approval"]["arguments"] == req["payload"]["call"]["arguments"]
+                    and req["seq"] < e["seq"] < event["seq"]
+                ),
+                None,
+            )
+            if (
+                inspection
+                and inspection["passed"]
+                and inspection["before_hashes"] == inspection["after_hashes"]
+                and decision
+            ):
+                yield event, decision, inspection
+
     def evaluate_rule(self, rule):
         kind, params = rule["evaluator"], rule["params"]
         refs = []
@@ -187,33 +214,11 @@ class Grader:
                 self.details[rule["id"]] = "尚未找到指定课程的成功查询记录，请让 Agent 先调用查询工具。"
             return match is not None and self.answers == params, refs + [self.answer_ref()]
         if kind == "denied_without_write":
-            for event, req in self.tool_events("save_todos", "denied"):
-                result = event["payload"]["result"]
-                inspection = self.school.store.get(
-                    "inspection", event["run_id"] + "~" + result["call_id"], missing_ok=True
-                )
-                decision = next(
-                    (
-                        e
-                        for e in self.events
-                        if e["run_id"] == event["run_id"]
-                        and e["kind"] == "approval.decided"
-                        and e["payload"]["approval"]["call_id"] == result["call_id"]
-                        and e["payload"]["approval"]["status"] == "denied"
-                        and e["seq"] < event["seq"]
-                    ),
-                    None,
-                )
-                if (
-                    inspection
-                    and inspection["passed"]
-                    and inspection["before_hashes"] == inspection["after_hashes"]
-                    and decision
-                ):
-                    entry = {k: inspection[k] for k in ("check", "passed", "before_hashes", "after_hashes")}
-                    value = {"id": new_id("evidence"), "kind": "inspection", **entry}
-                    self.evidence.append(value)
-                    return True, [self.ev(event), self.ev(decision), value["id"]]
+            for event, decision, inspection in self.valid_denials():
+                entry = {k: inspection[k] for k in ("check", "passed", "before_hashes", "after_hashes")}
+                value = {"id": new_id("evidence"), "kind": "inspection", **entry}
+                self.evidence.append(value)
+                return True, [self.ev(event), self.ev(decision), value["id"]]
             return False, []
         if kind == "approved_todos_artifact":
             artifacts = [f for f in self.frozen if f["info"]["kind"] == "artifact"]
@@ -222,6 +227,12 @@ class Grader:
             ids = {f["info"]["id"] for f in artifacts}
             match = None
             for event, req in self.tool_events("save_todos"):
+                if not any(
+                    self.event_order[(denied["run_id"], denied["seq"])]
+                    < self.event_order[(req["run_id"], req["seq"])]
+                    for denied, _, _ in self.valid_denials()
+                ):
+                    continue
                 files = event["payload"]["result"]["data"]["files"]
                 if {f["id"] for f in files} != ids:
                     continue
@@ -239,7 +250,7 @@ class Grader:
                         and e["payload"]["approval"]["call_id"] == event["payload"]["result"]["call_id"]
                         and e["payload"]["approval"]["status"] == "approved"
                         and e["payload"]["approval"]["arguments"] == req["payload"]["call"]["arguments"]
-                        and e["seq"] < event["seq"]
+                        and req["seq"] < e["seq"] < event["seq"]
                     ),
                     None,
                 )

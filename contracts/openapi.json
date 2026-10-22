@@ -12,6 +12,60 @@
     }
   ],
   "paths": {
+    "/model-profiles/connect": {
+      "post": {
+        "operationId": "connectProfile",
+        "summary": "选择服务商后获取模型列表并添加仅内存保存的 Key",
+        "tags": [
+          "model-profiles"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyConnectionResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "统一错误格式；HTTP 状态映射见 README",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyConnectionCreate"
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "operationId": "getHealth",
@@ -1959,6 +2013,48 @@
           }
         }
       }
+    },
+    "/model-profiles/{profile_id}/models": {
+      "get": {
+        "operationId": "listProfileModels",
+        "summary": "使用该配置的内存 Key 刷新服务商模型列表，不发起模型推理",
+        "tags": [
+          "model-profiles"
+        ],
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelCatalog"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "统一错误格式；HTTP 状态映射见 README",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1999,7 +2095,9 @@
           "RUN_TIMEOUT",
           "TOOL_ERROR",
           "EXECUTION_FAILED",
-          "INTERNAL_ERROR"
+          "INTERNAL_ERROR",
+          "MODEL_CATALOG_UNSUPPORTED",
+          "MODEL_CATALOG_INVALID"
         ]
       },
       "FieldError": {
@@ -5351,6 +5449,104 @@
           "next_after_seq",
           "has_more",
           "last_seq"
+        ]
+      },
+      "KeyConnectionCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "provider_id": {
+            "type": "string",
+            "enum": [
+              "deepseek",
+              "openai",
+              "openai-compatible"
+            ]
+          },
+          "api_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "writeOnly": true
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048
+          },
+          "model_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "provider_id",
+          "api_key"
+        ]
+      },
+      "ModelOption": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "ModelCatalog": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelOption"
+            },
+            "minItems": 1,
+            "maxItems": 1000
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "provider",
+              "manual"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "source"
+        ]
+      },
+      "KeyConnectionResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/ModelProfile"
+          },
+          "catalog": {
+            "$ref": "#/components/schemas/ModelCatalog"
+          }
+        },
+        "required": [
+          "profile",
+          "catalog"
         ]
       }
     }

@@ -2,7 +2,7 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**当前状态：v0.1.0 本地前后端已接入。** 浏览器内可阅读四关导读、配置自备模型、运行实训、批准或拒绝保存、查看产物、提交验收和导出学习记录。不提供登录或线上部署。外部真实模型实测状态单独记录，脚本模型测试不代表服务商验证。
+**当前状态（2026-10-22）：v0.1.0 本地前后端已接入。** 浏览器内可阅读四关导读、管理多个自备 Key、选择模型、运行实训、批准或拒绝保存、查看产物、提交验收和导出学习记录。不提供登录或线上部署。[当前版本与文档索引](docs/project-status.md) 区分已合并基线与功能分支中的新增改动，并记录验证范围和已知限制。
 
 ## 本地启动（Windows）
 
@@ -16,7 +16,7 @@ npm --prefix apps/web ci
 # 停止：.\scripts\stop.ps1
 ```
 
-无需 Key 即可阅读课程。正式运行时，到“模型设置”填写服务商 API 根地址、模型 ID 和自备 Key，并主动进行连接检查。检查最多调用模型三次，可能消耗额度；不要把 Key 发到聊天或 PR。启动器自动将同一私有令牌交给前后端，不能只单独运行 npm dev。
+无需 Key 即可阅读课程。正式运行时，到“模型设置”添加自备 Key，确认服务商，获取模型列表后选择模型并主动检查连接。DeepSeek、OpenAI 自动填写官方地址；其他兼容接口保留自定义地址和手动模型入口。Key 格式只用于建议，无法判断时需选择服务商；不会逐家试探。连接检查最多调用模型三次，可能消耗额度。不要把 Key 发到聊天或 PR。启动器自动将同一私有令牌交给前后端，不能只单独运行 npm dev。首次页面启动较慢时稍等后刷新。
 
 使用 `scripts/start.ps1 -Demo` 可开启无 Key 演示；演示记录始终不计正式通过。安装、恢复、错误排查见[新手使用说明](docs/user-guide.md)；开发检查、截图见[前端验证](docs/frontend-validation.md)；真实模型测试见[独立实测记录](docs/live-model-validation.md)。
 
@@ -40,13 +40,15 @@ npm --prefix apps/web ci
 - [四关导读](outputs/lesson-introductions.md)
 - [分阶段实施计划](outputs/local-agent-learning-implementation-plan.md)
 - [双人分工与 GitHub 协作](outputs/two-person-github-collaboration-plan.md)
-- [v0.1.0 接口契约与调用规则](contracts/README.md)（35 个 HTTP 操作、11 类事件）
+- [v0.1.0 接口契约与调用规则](contracts/README.md)（37 个 HTTP 操作、11 类事件）
 - [机器可读 OpenAPI](contracts/openapi.json)与[生成的 TypeScript 类型](contracts/types.d.ts)
 - [后端安装、启动与前端联调](docs/backend.md)
 - [后端验证报告](docs/runtime-validation.md)
 - [前端向后端开发者交接](docs/backend-handoff.md)
 
 使用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。浏览器只调用同源 `/api/v1`，Next.js 服务端代理转发内部令牌；Key 只在后端内存中保存。前端类型来自 `contracts/types.d.ts`，已知生成器 discriminator 差异的边界适配见前端验证文档。
+
+多个 Key 可切换、重命名、清除或删除；重启后保留非敏感配置，重新输入 Key。模型出现在列表中不等于支持实训所需工具，正式运行仍要求连接检查通过。学习记录右侧显示开始日期与红/绿通关状态，演示不计正式通过。2026-10-22 本地已通过 197 项契约检查、91 项后端、8 项前端和 15 项浏览器测试；外部 DeepSeek 后端实测及第四关的教学限制见[独立实测记录](docs/live-model-validation.md)。
 
 ## 双人协作
 
@@ -55,7 +57,7 @@ npm --prefix apps/web ci
 | A | 前端页面、课程内容、模拟接口、浏览器测试和使用说明 |
 | B | 后端接口、Agent 执行、数据存储、工具授权、规则评分和启动脚本 |
 
-以 contracts/ 中的 v0.1.0 契约开始并行开发；先完成第一关闭环，再扩展其余三关。前端使用类型和模拟样例，后端落实接口和业务约束。使用短期功能分支和 Pull Request 合并到 main。
+前后端与四关闭环已合并；后续使用短期功能分支和 Pull Request 合并到 main。前端使用契约类型和测试样例，后端落实接口和业务约束；接口变更在同一 PR 同步契约、实现、测试和说明。本次 Key 管理、界面及审查修复通过 `feat/key-manager-review-fixes` 分支交付；合并前 clone main 不会获得这些改动。
 
 ```powershell
 git clone https://github.com/2791243700-hue/agent-practice-lab.git

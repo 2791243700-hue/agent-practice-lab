@@ -80,7 +80,7 @@ function LessonContent({
           <Heading
             eyebrow={`EXPERIMENT ${String(lesson.order).padStart(2, "0")} / 阅读导读`}
             title={lesson.title}
-            description={`课程版本 ${lesson.version} · 无需配置模型即可阅读`}
+            description="无需配置模型即可阅读"
           />
           <div className="intro-layout">
             <article className="panel intro-content">

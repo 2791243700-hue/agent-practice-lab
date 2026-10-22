@@ -4,13 +4,28 @@
 
 **Goal:** 构建浏览器内完成导读、配置、Agent 实训、授权、提交和反馈的本地单用户教学应用。
 
-**Architecture:** Next.js 前端通过同源 API 转发连接单进程 FastAPI，AgentScope SDK 经 AgentRuntime 适配层运行。SQLite 保存版本化课程、尝试、事件和提交，本地工作区保存材料及产物，Key 仅保存在后端内存。身份、运行、凭据、存储和调度通过接口隔离，为线上功能保留扩展位置。
+**Architecture:** Next.js 前端通过同源 API 转发连接单进程 FastAPI，AgentScope SDK 经 AgentRuntime 适配层运行。SQLite 保存版本化课程、尝试、事件和提交，本地工作区保存材料及产物，Key 仅保存在后端内存。运行、凭据、存储和调度按模块组织；身份协议只保留声明，当前服务与存储仍固定使用 local-owner，尚未注入可替换身份实现。
 
 **Tech Stack:** Next.js、TypeScript、FastAPI、AgentScope（先验证 v2.0.10）、Python 3.11/3.12、SQLAlchemy、Alembic、SQLite、SSE、pytest、Playwright。
 
 **Spec:** [已确认设计](local-agent-learning-design.md)，以及 [四关导读](lesson-introductions.md)。执行者先读这两份文档。
 
-日期：2026-10-17。状态：实施计划完成，v0.1.0 接口契约已制定并通过结构校验；应用功能尚未执行，下述应用验证命令均为待运行命令。HTTP 字段、状态和边界行为以 [接口契约](../contracts/README.md) 为准。
+初稿：2026-10-17；进度同步：2026-10-22。四关应用和本地启停已实现，PR #1—#5 已合并；新增 Key 管理、界面与审查修复通过 `feat/key-manager-review-fixes` 分支交付，尚未合并。HTTP 字段、状态和边界行为以[现行契约](../contracts/README.md)为准，精确交付状态见[版本状态](../docs/project-status.md)。
+
+## 当前执行结果
+
+| 原任务 | 当前交付 |
+| --- | --- |
+| 1：SDK 探针 | AgentScope 2.0.10 适配、读取/保存/拒绝/取消及错误测试已实现 |
+| 2：课程与实验 | 四关 1.0.0 导读、材料、归档、归属和独立实验已实现；第四关任务 ID 指导待新版本修正 |
+| 3：模型与凭据 | 内存凭据和兼容检查已实现；本地新增官方服务商定位、目录及多 Key 管理 |
+| 4—6：工具/运行/验收 | 受控工具、逐次授权、恢复、规则评分、不可变快照和导出已接通 |
+| 7：浏览器闭环 | 四关、恢复、授权、预览及设置已实现，15 项浏览器测试通过；真实服务商浏览器验收仍待执行 |
+| 8：本地交付 | 启停和文档已提供；启动器前端 HTTP 就绪等待尚待完善 |
+
+2026-10-22 本地验证为 197 项契约、91 项后端、8 项前端及 15 项浏览器测试通过，Ruff/格式/类型/生产构建通过。2026-10-19 DeepSeek 后端四关实测通过，但第四关额外给出任务 ID 映射；新 Key 导入/列表未做外部实测。详见[后端报告](../docs/runtime-validation.md)、[前端报告](../docs/frontend-validation.md)、[实测边界](../docs/live-model-validation.md)。
+
+以下任务框保留原始实施拆分，不追溯勾选当时每条“先失败再通过/逐步提交”的过程，也不作为当前未完成清单。文件名和方法签名是最初建议，实际服务聚合与路径以当前源码和契约为准；不要重建重复模块。当前剩余工作以版本状态页为准。
 
 ## Global Constraints
 
@@ -77,7 +92,7 @@
 
 返回 DTO 在双人并行开发前由开发者 B 定义最小版本：RunView 至少含 id、attempt_id、mode、status、last_seq；ApprovalView 含 id、run_id、call_id、arguments、decision、expires_at；SubmissionView 含 id、attempt_id、lesson_version、passed、rules、created_at；文件引用只包含服务端 ID、相对展示路径和哈希，不向浏览器暴露任意绝对路径。LessonDefinition 字段对应模板，SnapshotRef 为不可变目录引用与哈希，AttemptEvidence 包含当前尝试的真实运行、工具及授权记录。
 
-现已提供 contracts/openapi.json、events.schema.json、lesson.schema.json、types.d.ts 和 examples/，可作为双方开发基线。后端未实现期间，以 JSON 契约为规范来源；开发者 B 实施时落实为 Pydantic 模型，再切换为模型导出并保持 v0.1.0 行为一致。开发者 A 使用生成类型及样例编写模拟响应。SSE 每种事件有明确 payload schema。接口变更同时更新契约、示例及消费方；双方确认后合并。
+现有 contracts/openapi.json、events.schema.json、lesson.schema.json、types.d.ts 和 examples/ 是双方基线。JSON 契约继续为规范来源，路由校验、内部 Pydantic DTO 已实现，全量模型导出延后。前端复用生成类型及样例，discriminator 差异暂由边界适配处理。SSE 每种事件有明确 payload schema。接口变更同时更新契约、示例及消费方；双方确认后合并。
 
 v0.1.0 的补充约定：Attempt.mode 创建后固定；Run 从 Attempt 继承模式，live 要求 profile_id、demo 要求 null。Submission.evaluation_passed 表示规则检查通过，passed 仅表示真实实训正式通过。新增实训与运行历史、事件分页、提交快照附件和导出下载接口。设置采用 expected_revision，创建类操作使用 Idempotency-Key。其他精确字段及错误码见接口契约，不按下文服务方法签名自行推导 HTTP 请求体。
 
@@ -200,4 +215,4 @@ answers 按课时分别校验：关 1 为 question_id、option_id；关 2 为 fa
 - 设计覆盖：导读与版本归任务 2/7，身份和登录扩展归 2/7，凭据归 3，执行边界归 4，运行与恢复归 5，验收/快照/导出归 6，浏览器交互归 7，Windows 启停与交付归 8。
 - 类型一致：AgentRuntime、ModelAccess、RuntimeEvent、StoredEvent、RuleResult 在共用契约定义，跨任务沿用；Approval 与 Workspace 的具体返回 DTO 在所属任务定义。
 - 五项 Review Focus 均已映射到具体测试。使用可注入时钟验证超时，不为测试阻塞等待。
-- 本计划不安装或修改应用；所有测试与命令状态均为待执行。
+- 本计划保留最初的任务设计；应用现已实施。当前已完成与待办见上方执行结果，不将历史未勾选框解释为所有测试尚未执行。

@@ -18,6 +18,12 @@ def unchecked():
     }
 
 
+PROVIDERS = {
+    "deepseek": ("DeepSeek", "https://api.deepseek.com"),
+    "openai": ("OpenAI", "https://api.openai.com/v1"),
+}
+
+
 class ModelProfiles:
     def __init__(self, school):
         self.school = school
@@ -77,14 +83,87 @@ class ModelProfiles:
             provider=value["provider"], base_url=value["base_url"], model=value["model"], api_key=secret
         )
 
+    async def prepare_connect(self, body):
+        provider_id = body["provider_id"]
+        secret = body["api_key"].strip()
+        if not secret:
+            raise AppError(message="请输入 API Key。")
+        if provider_id in PROVIDERS:
+            if "base_url" in body or "model_id" in body:
+                raise AppError(message="官方服务会自动填写地址并获取模型。")
+            label, base_url = PROVIDERS[provider_id]
+        else:
+            label, base_url = "兼容接口", body.get("base_url", "")
+        self.validate_url(base_url)
+        if secret in base_url or secret in body.get("model_id", ""):
+            raise AppError(message="接口地址和模型名称不能包含 Key。")
+        if self.school.slot is not None:
+            raise AppError("RUN_BUSY", "请等待当前运行或检查结束后添加 Key。", 409, True)
+        self.school.slot = "catalog"
+        try:
+            access = ModelAccess(base_url=base_url, model="discovery", api_key=SecretStr(secret))
+            catalog = (
+                {"items": [{"id": body["model_id"]}], "source": "manual"}
+                if body.get("model_id")
+                else await self.connector.list_models(access)
+            )
+            name = body.get("name")
+            if not name:
+                index = 1
+                names = {p["name"] for p in self.store.list("profile")}
+                while f"{label} Key {index}" in names:
+                    index += 1
+                name = f"{label} Key {index}"
+            return {
+                "profile": {
+                    "name": self.credentials.redact(name.replace(secret, "[redacted]")),
+                    "provider": "openai-compatible",
+                    "base_url": base_url,
+                    "model": catalog["items"][0]["id"],
+                },
+                "secret": SecretStr(secret),
+                "catalog": catalog,
+            }
+        finally:
+            self.school.slot = None
+
+    def connect(self, prepared):
+        value = self.create(prepared["profile"])
+        try:
+            self.credentials.set("local-owner", value["id"], prepared["secret"])
+            value["credential_status"] = "configured"
+            self.store.put("profile", value["id"], value)
+            return {"profile": value, "catalog": prepared["catalog"]}
+        except BaseException:
+            self.credentials.delete("local-owner", value["id"])
+            raise
+
+    async def models(self, key):
+        self.available(key)
+        value = self.store.get("profile", key)
+        secret = self.credentials.get("local-owner", key)
+        if self.school.slot is not None:
+            raise AppError("RUN_BUSY", "请等待当前运行或检查结束后刷新模型。", 409, True)
+        self.school.slot = "catalog"
+        self.school.busy_profile = key
+        try:
+            return await self.connector.list_models(
+                ModelAccess(base_url=value["base_url"], model=value["model"], api_key=secret)
+            )
+        finally:
+            self.school.slot = None
+            self.school.busy_profile = None
+
     def mutate(self, operation, key, body, params):
         from agent_school.service import now
 
         self.available(key)
         value = self.store.get("profile", key)
         revision(value, (body or params)["expected_revision"])
+        reset_check = True
         if operation == "updateProfile":
             self.validate_url(body["base_url"])
+            reset_check = any(value[field] != body[field] for field in ("provider", "base_url", "model"))
             value.update({k: v for k, v in body.items() if k != "expected_revision"})
         elif operation == "setCredential":
             self.credentials.set("local-owner", key, SecretStr(body["api_key"]))
@@ -96,7 +175,7 @@ class ModelProfiles:
         value.update(
             revision=value["revision"] + 1,
             credential_status="configured" if self.credentials.configured(key) else "missing",
-            connection_check=unchecked(),
+            connection_check=unchecked() if reset_check else value["connection_check"],
             updated_at=now(),
         )
         return self.store.put("profile", key, value)
