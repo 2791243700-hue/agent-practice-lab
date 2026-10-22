@@ -10,7 +10,23 @@ const web = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const root = resolve(web, "../..");
 const token = randomBytes(32).toString("hex");
 const data = mkdtempSync(resolve(tmpdir(), "agent-school-browser-"));
+let advanceStream = null;
 const provider = createServer(async (request, response) => {
+  if (
+    request.url === "/__test/stream/next" &&
+    request.method === "POST" &&
+    request.headers["x-test-control"] === "browser-test-control"
+  ) {
+    if (!advanceStream) {
+      response.writeHead(409);
+      response.end("no active test stream");
+      return;
+    }
+    advanceStream();
+    response.writeHead(200);
+    response.end("advanced");
+    return;
+  }
   if (
     request.url === "/__test/restart-backend" &&
     request.method === "POST" &&
@@ -78,6 +94,42 @@ const provider = createServer(async (request, response) => {
       model: "browser-scripted-model",
       choices: [{ index: 0, delta, finish_reason: null }],
     });
+    if (JSON.stringify(body.messages).includes("交互流式测试")) {
+      const parts = [1, 2, 3].map(
+        (step) =>
+          `\n\n### 实时片段${step}\n\n` +
+          Array.from(
+            { length: 20 },
+            (_, index) =>
+              `- 第 ${step} 段的第 ${index + 1} 项：这是逐段到达的模型输出，用于检查视野是否跟随最新内容。`,
+          ).join("\n") +
+          "\n",
+      );
+      let index = 0;
+      const advance = () => {
+        if (index < parts.length) {
+          response.write(
+            `data: ${JSON.stringify(chunk({ role: "assistant", content: parts[index++] }))}\n\n`,
+          );
+        } else {
+          const end = chunk({});
+          end.choices[0].finish_reason = "stop";
+          end.usage = {
+            prompt_tokens: 10,
+            completion_tokens: 300,
+            total_tokens: 310,
+          };
+          response.end(`data: ${JSON.stringify(end)}\n\ndata: [DONE]\n\n`);
+          if (advanceStream === advance) advanceStream = null;
+        }
+      };
+      advanceStream = advance;
+      response.on("close", () => {
+        if (advanceStream === advance) advanceStream = null;
+      });
+      advance();
+      return;
+    }
     response.write(
       `data: ${JSON.stringify(chunk({ role: "assistant", content: "正在根据课程通知整理。" }))}\n\n`,
     );

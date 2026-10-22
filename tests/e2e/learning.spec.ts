@@ -381,9 +381,7 @@ test("演示后可另建正式实训，后端重启恢复中断记录并清除 K
   await page.goto("/lessons/04-permission");
   await page.getByRole("button", { name: "开始正式实训" }).click();
   await expect(page).not.toHaveURL(attemptUrl);
-  await expect(
-    page.locator(".practice-summary").getByText("正式实训", { exact: true }),
-  ).toBeVisible();
+  await expect(page.locator(".practice-crumbs")).toContainText("正式实训");
   await expect(page.getByRole("link", { name: "去设置 →" })).toBeVisible();
 });
 

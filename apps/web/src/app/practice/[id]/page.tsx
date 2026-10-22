@@ -1,5 +1,12 @@
 "use client";
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import {
+  use,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -10,6 +17,12 @@ import {
   Send,
   Square,
   RotateCcw,
+  Lightbulb,
+  CircleAlert,
+  PanelLeftClose,
+  PanelLeftOpen,
+  CircleHelp,
+  Info,
 } from "lucide-react";
 import { allPages, api, pathId } from "@/lib/api";
 import { activeRun, eventRun, mergeEvent, streamEvents } from "@/lib/events";
@@ -23,16 +36,25 @@ import type {
   Schema,
   Submission,
 } from "@/lib/types";
+import { ErrorBox, Loading, Markdown, useAction } from "@/components/ui";
+import { PendingMessage, RunView } from "@/components/run-view";
 import {
-  ErrorBox,
-  Heading,
-  Loading,
-  Markdown,
-  useAction,
-} from "@/components/ui";
-import { RunView } from "@/components/run-view";
-import { LearningStatus } from "@/components/learning-status";
+  CompletionStatus,
+  formatLearningDate,
+} from "@/components/learning-status";
+import { PracticePanel } from "@/components/practice-panel";
 import { SubmissionFeedback, SubmissionPanel } from "@/components/feedback";
+
+const practiceExamples: Record<string, string> = {
+  "01-task":
+    "想让助手安排周末时，只说“帮我做个计划”太笼统。可以补充：“我周六下午有两小时，想在家休息，请安排两项轻松的活动，并说明各需多久。”你可以观察：补充目标、时间和要求后，结果有什么变化。",
+  "02-context":
+    "想让助手列购物清单，可以先提供冰箱里的食材清单，并要求“根据这份清单，只列出还缺的食材”。随后检查它是否真的读取了清单，有没有把家里已有的东西再次列入。",
+  "03-tools":
+    "假设助手有图书库存查询工具，你让它查一本书是否可借。要查看它是否传入了正确的书名、查询是否成功，以及最后的回答是否与返回结果一致。只说“有库存”还不够。",
+  "04-permission":
+    "假设助手准备保存一份旅行打包清单，你发现漏了雨伞，可以先拒绝这次保存，请它补充后再检查新的请求。确认后批准，最后打开实际生成的文件，看看雨伞是否真的加进去了。",
+};
 
 async function historyEvents(run: Run): Promise<Event[]> {
   const result: Event[] = [];
@@ -69,6 +91,12 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
   const [events, setEvents] = useState<Record<string, Event[]>>({});
   const [files, setFiles] = useState<Schema["FileInfo"][]>([]);
   const [preview, setPreview] = useState<Schema["FilePreview"] | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [panels, setPanels] = useState({
+    mission: true,
+    preparation: true,
+    artifacts: true,
+  });
   const previewRef = useRef<HTMLDivElement>(null);
   const previewTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -80,6 +108,10 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profileId, setProfileId] = useState("");
   const [input, setInput] = useState("");
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
+  const historyEndRef = useRef<HTMLDivElement>(null);
+  const followingOutputRef = useRef(false);
   const [settings, setSettings] = useState<Schema["Settings"]>({
     system_instruction: "",
     temperature: 0.3,
@@ -101,6 +133,8 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
         `${endpoint}/files/${pathId(fileId)}`,
       );
       previewTriggerRef.current = trigger;
+      setSidebarOpen(true);
+      setPanels((old) => ({ ...old, artifacts: true }));
       setPreview(value);
     });
   }
@@ -207,6 +241,20 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
     // Only a run identity changes the subscription; cursor advances inside streamEvents.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, refresh]);
+  useLayoutEffect(() => {
+    const history = historyRef.current;
+    const end = historyEndRef.current;
+    if (!history || !end) return;
+    const live = Boolean(activeId || pendingMessage);
+    history.scrollTo({ top: history.scrollHeight, behavior: "instant" });
+    if (live || followingOutputRef.current) {
+      const bounds = end.getBoundingClientRect();
+      if (bounds.bottom > window.innerHeight - 24 || bounds.top < 16) {
+        end.scrollIntoView({ block: "nearest", behavior: "instant" });
+      }
+    }
+    followingOutputRef.current = live;
+  }, [runs, events, pendingMessage, activeId]);
   if (!attempt || !lesson)
     return (
       <>
@@ -230,6 +278,10 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
     attempt.mode === "demo" ||
     (selectedProfile?.connection_check.status === "passed" &&
       selectedProfile.credential_status === "configured");
+  const example = practiceExamples[lesson.id];
+  const readsMaterials = lesson.allowed_tools.includes("read_material");
+  const missingMaterials = readsMaterials && selectedFiles.length === 0;
+  const preparationPending = dirty || missingMaterials;
   async function submit(answers: Schema["Answers"]) {
     const result = await api<Submission>("/submissions", {
       method: "POST",
@@ -245,34 +297,67 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
   }
   return (
     <>
-      <div className="practice-breadcrumb">
-        <Link className="back-link" href="/">
-          <ArrowLeft size={15} />
-          全部课程
-        </Link>
-        <span>/ 第 {lesson.order} 关 / 实训</span>
-        <button className="text-button" onClick={() => setIntro((v) => !v)}>
-          <BookOpen size={15} />
-          {intro ? "收起导读" : "查看本关介绍"}
-        </button>
-      </div>
-      <Heading
-        eyebrow={`EXPERIMENT ${String(lesson.order).padStart(2, "0")} / LEARNING IN ACTION`}
-        title={lesson.title}
-      >
-        <div className="practice-summary">
-          <LearningStatus
-            mode={attempt.mode}
-            completed={attempt.progress === "completed"}
-            date={attempt.created_at}
-          />
-          <span
-            className={`badge ${attempt.mode === "demo" ? "demo" : "subtle"}`}
-          >
-            {attempt.mode === "demo" ? "演示练习" : "正式实训"}
-          </span>
+      <header className="practice-header">
+        <div className="practice-header-nav">
+          <nav className="practice-crumbs" aria-label="课程位置">
+            <Link className="back-link" href="/">
+              <ArrowLeft size={15} />
+              全部课程
+            </Link>
+            <span>
+              / 第 {lesson.order} 关 ·{" "}
+              {attempt.mode === "demo" ? "演示练习" : "正式实训"}
+            </span>
+          </nav>
+          <div className="practice-header-actions">
+            <button className="text-button" onClick={() => setIntro((v) => !v)}>
+              <BookOpen size={15} />
+              {intro ? "收起导读" : "查看本关介绍"}
+            </button>
+            <Link href="/help" aria-label="使用帮助">
+              <CircleHelp size={16} aria-hidden="true" />
+              帮助
+            </Link>
+          </div>
         </div>
-      </Heading>
+        <div className="practice-heading-row">
+          <h1>{lesson.title}</h1>
+          <div className="practice-heading-status">
+            <CompletionStatus
+              mode={attempt.mode}
+              completed={attempt.progress === "completed"}
+            />
+            <details
+              className="practice-info"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector("summary")?.focus();
+                }
+              }}
+            >
+              <summary aria-label="实训信息" title="实训信息">
+                <Info size={19} aria-hidden="true" />
+              </summary>
+              <div className="practice-info-popover">
+                <strong>实训信息</strong>
+                <dl>
+                  <dt>开始日期（上海时间）</dt>
+                  <dd>
+                    <time dateTime={attempt.created_at}>
+                      {formatLearningDate(attempt.created_at)}
+                    </time>
+                  </dd>
+                  <dt>课程版本</dt>
+                  <dd>{attempt.lesson_version}</dd>
+                  <dt>运行模式</dt>
+                  <dd>{attempt.mode === "demo" ? "演示练习" : "正式实训"}</dd>
+                </dl>
+              </div>
+            </details>
+          </div>
+        </div>
+      </header>
       <ErrorBox error={loadError} />
       <ErrorBox error={action.error} />
       {attempt.mode === "demo" && (
@@ -298,203 +383,269 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
           <Markdown text={lesson.intro_markdown} />
         </article>
       )}
-      <div className="practice-layout">
-        <aside className="practice-controls">
-          <section className="panel task-panel">
-            <div className="eyebrow">01 / YOUR MISSION</div>
-            <h2>这一关，做什么？</h2>
-            <Markdown text={lesson.task_markdown} />
-            <details>
-              <summary>完成标准</summary>
-              <ul>
-                {lesson.completion_criteria.map((c) => (
-                  <li key={c}>{c}</li>
+      <div
+        className={`practice-layout${sidebarOpen ? "" : " sidebar-collapsed"}`}
+      >
+        <aside
+          className={`practice-sidebar${sidebarOpen ? "" : " is-collapsed"}`}
+          aria-label="任务与设置侧栏"
+        >
+          <button
+            type="button"
+            className="practice-sidebar-toggle"
+            aria-label={
+              sidebarOpen ? "收起任务与设置侧栏" : "展开任务与设置侧栏"
+            }
+            title={sidebarOpen ? "收起任务与设置侧栏" : "展开任务与设置侧栏"}
+            aria-expanded={sidebarOpen}
+            aria-controls="practice-sidebar-content"
+            onClick={() => setSidebarOpen((old) => !old)}
+          >
+            {sidebarOpen ? (
+              <PanelLeftClose size={20} aria-hidden="true" />
+            ) : (
+              <PanelLeftOpen size={20} aria-hidden="true" />
+            )}
+            <span hidden={!sidebarOpen}>任务与设置</span>
+          </button>
+          <div
+            className="practice-controls"
+            id="practice-sidebar-content"
+            hidden={!sidebarOpen}
+          >
+            <PracticePanel
+              id="practice-mission"
+              className="task-panel"
+              title="这一关，做什么？"
+              eyebrow="01 / YOUR MISSION"
+              open={panels.mission}
+              onToggle={() =>
+                setPanels((old) => ({ ...old, mission: !old.mission }))
+              }
+            >
+              <Markdown text={lesson.task_markdown} />
+              {example && (
+                <div className="mission-example">
+                  <h3>
+                    <Lightbulb size={17} aria-hidden="true" />
+                    举一个小例子
+                  </h3>
+                  <Markdown text={example} />
+                </div>
+              )}
+              <details>
+                <summary>完成标准</summary>
+                <ul>
+                  {lesson.completion_criteria.map((c) => (
+                    <li key={c}>{c}</li>
+                  ))}
+                </ul>
+              </details>
+            </PracticePanel>
+            <PracticePanel
+              className="preparation-panel"
+              id="practice-preparation"
+              title="材料与 Agent 设置"
+              eyebrow="02 / PREPARE"
+              open={panels.preparation}
+              onToggle={() =>
+                setPanels((old) => ({ ...old, preparation: !old.preparation }))
+              }
+            >
+              <div className="material-list">
+                {lesson.materials.map((m) => (
+                  <div key={m.id}>
+                    <label className="check-label">
+                      <input
+                        type="checkbox"
+                        disabled={historical || action.busy}
+                        checked={selectedFiles.includes(m.id)}
+                        onChange={(e) =>
+                          setSelectedFiles(
+                            e.target.checked
+                              ? [...selectedFiles, m.id]
+                              : selectedFiles.filter((x) => x !== m.id),
+                          )
+                        }
+                      />
+                      <FileText size={15} />
+                      {m.title}
+                    </label>
+                    <button
+                      className="text-button"
+                      disabled={action.busy}
+                      onClick={(event) =>
+                        void openPreview(m.id, event.currentTarget)
+                      }
+                    >
+                      预览原文
+                    </button>
+                  </div>
                 ))}
-              </ul>
-            </details>
-          </section>
-          <section className="panel">
-            <div className="eyebrow">02 / PREPARE</div>
-            <h2>材料与 Agent 设置</h2>
-            <div className="material-list">
-              {lesson.materials.map((m) => (
-                <div key={m.id}>
-                  <label className="check-label">
-                    <input
-                      type="checkbox"
-                      disabled={historical || action.busy}
-                      checked={selectedFiles.includes(m.id)}
-                      onChange={(e) =>
-                        setSelectedFiles(
-                          e.target.checked
-                            ? [...selectedFiles, m.id]
-                            : selectedFiles.filter((x) => x !== m.id),
+              </div>
+              <fieldset disabled={historical || action.busy}>
+                <legend className="sr-only">下一轮运行设置</legend>
+                <p className="field-help">
+                  {readsMaterials
+                    ? "选中只是允许读取。实际读过与否，请查看工具执行结果。"
+                    : "本关不需要读取文件，可以保留默认的材料选择。"}
+                </p>
+                <details>
+                  <summary>调整 Agent 的工作方式</summary>
+                  <label>
+                    系统指令
+                    <textarea
+                      maxLength={2000}
+                      rows={4}
+                      value={settings.system_instruction}
+                      disabled={
+                        !lesson.settings_policy.editable_fields.includes(
+                          "system_instruction",
                         )
                       }
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          system_instruction: e.target.value,
+                        })
+                      }
                     />
-                    <FileText size={15} />
-                    {m.title}
                   </label>
-                  <button
-                    className="text-button"
-                    disabled={action.busy}
-                    onClick={(event) =>
-                      void openPreview(m.id, event.currentTarget)
-                    }
-                  >
-                    预览原文
-                  </button>
-                </div>
-              ))}
-            </div>
-            <fieldset disabled={historical || action.busy}>
-              <legend className="sr-only">下一轮运行设置</legend>
+                  <label>
+                    变化程度（temperature）：{settings.temperature}
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={settings.temperature}
+                      disabled={
+                        !lesson.settings_policy.editable_fields.includes(
+                          "temperature",
+                        )
+                      }
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          temperature: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </label>
+                  <p className="field-help">
+                    数值越低通常越稳定，不保证内容正确。
+                  </p>
+                </details>
+                <button
+                  className="button secondary full"
+                  disabled={historical || action.busy || !dirty}
+                  onClick={() =>
+                    void action.act(async () => {
+                      const a = await api<Attempt>(endpoint, {
+                        method: "PATCH",
+                        body: {
+                          expected_revision: attempt.revision,
+                          settings,
+                          selected_file_ids: selectedFiles,
+                        } satisfies Schema["AttemptUpdate"],
+                      });
+                      setAttempt(a);
+                    })
+                  }
+                >
+                  {dirty ? "保存下一轮设置" : "设置已同步"}
+                </button>
+              </fieldset>
               <p className="field-help">
-                选中只是允许读取。实际读过与否，请查看工具执行结果。第一关直接使用任务内通知，无需读取工具。
+                修改仅影响下一轮；当前运行使用已冻结的设置。
               </p>
-              <details>
-                <summary>调整 Agent 的工作方式</summary>
-                <label>
-                  系统指令
-                  <textarea
-                    maxLength={2000}
-                    rows={4}
-                    value={settings.system_instruction}
-                    disabled={
-                      !lesson.settings_policy.editable_fields.includes(
-                        "system_instruction",
-                      )
-                    }
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        system_instruction: e.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  变化程度（temperature）：{settings.temperature}
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={settings.temperature}
-                    disabled={
-                      !lesson.settings_policy.editable_fields.includes(
-                        "temperature",
-                      )
-                    }
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        temperature: Number(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-                <p className="field-help">
-                  数值越低通常越稳定，不保证内容正确。
+              <div className="tools-allowed">
+                <strong>本关可用工具</strong>
+                <p>
+                  {lesson.allowed_tools.length
+                    ? lesson.allowed_tools.join(" / ")
+                    : "本关先练习任务表达，不调用工具。"}
                 </p>
-              </details>
-              <button
-                className="button secondary full"
-                disabled={historical || action.busy || !dirty}
-                onClick={() =>
-                  void action.act(async () => {
-                    const a = await api<Attempt>(endpoint, {
-                      method: "PATCH",
-                      body: {
-                        expected_revision: attempt.revision,
-                        settings,
-                        selected_file_ids: selectedFiles,
-                      } satisfies Schema["AttemptUpdate"],
-                    });
-                    setAttempt(a);
-                  })
-                }
-              >
-                {dirty ? "保存下一轮设置" : "设置已同步"}
-              </button>
-            </fieldset>
-            <p className="field-help">
-              修改仅影响下一轮；当前运行使用已冻结的设置。
-            </p>
-            <div className="tools-allowed">
-              <strong>本关可用工具</strong>
-              <p>
-                {lesson.allowed_tools.length
-                  ? lesson.allowed_tools.join(" / ")
-                  : "本关先练习任务表达，不调用工具。"}
-              </p>
-            </div>
-          </section>
-          <section className="panel artifact-panel">
-            <div className="eyebrow">OUTPUT / CHECK THE RESULT</div>
-            <h2>产物与原文预览</h2>
-            {files.filter((f) => f.kind === "artifact").length === 0 && (
-              <p className="muted small">
-                尚无产物。第四关批准保存并实际执行成功后会出现在这里。
-              </p>
-            )}
-            {files
-              .filter((f) => f.kind === "artifact")
-              .map((f) => (
-                <div className="file-row" key={f.id}>
-                  <button
-                    className="text-button"
-                    disabled={action.busy}
-                    onClick={(event) =>
-                      void openPreview(f.id, event.currentTarget)
-                    }
-                  >
-                    <FileText size={15} />
-                    {f.title}
-                  </button>
+              </div>
+            </PracticePanel>
+            <PracticePanel
+              id="practice-artifacts"
+              className="artifact-panel"
+              title="产物与原文预览"
+              eyebrow="OUTPUT / CHECK THE RESULT"
+              open={panels.artifacts}
+              onToggle={() =>
+                setPanels((old) => ({ ...old, artifacts: !old.artifacts }))
+              }
+            >
+              {files.filter((f) => f.kind === "artifact").length === 0 && (
+                <p className="muted small">
+                  尚无产物。第四关批准保存并实际执行成功后会出现在这里。
+                </p>
+              )}
+              {files
+                .filter((f) => f.kind === "artifact")
+                .map((f) => (
+                  <div className="file-row" key={f.id}>
+                    <button
+                      className="text-button"
+                      disabled={action.busy}
+                      onClick={(event) =>
+                        void openPreview(f.id, event.currentTarget)
+                      }
+                    >
+                      <FileText size={15} />
+                      {f.title}
+                    </button>
+                    <a
+                      aria-label={`下载 ${f.title}`}
+                      href={`/api/v1${endpoint}/files/${pathId(f.id)}/download`}
+                    >
+                      <Download size={16} />
+                    </a>
+                  </div>
+                ))}
+              {preview && (
+                <div
+                  className="file-preview"
+                  ref={previewRef}
+                  role="region"
+                  aria-label={`${preview.file.title}预览`}
+                  tabIndex={-1}
+                >
+                  <div>
+                    <strong>{preview.file.title}</strong>
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        setPreview(null);
+                        const trigger = previewTriggerRef.current;
+                        if (trigger?.closest("#practice-preparation")) {
+                          setSidebarOpen(true);
+                          setPanels((old) => ({ ...old, preparation: true }));
+                        }
+                        requestAnimationFrame(() => trigger?.focus());
+                      }}
+                    >
+                      关闭预览
+                    </button>
+                  </div>
+                  <pre>{preview.content}</pre>
+                  {preview.truncated && (
+                    <p className="notice warning">
+                      预览已截断，仅显示前 20000 字符。请下载完整文件。
+                    </p>
+                  )}
                   <a
-                    aria-label={`下载 ${f.title}`}
-                    href={`/api/v1${endpoint}/files/${pathId(f.id)}/download`}
+                    className="text-button"
+                    href={`/api/v1${endpoint}/files/${pathId(preview.file.id)}/download`}
                   >
-                    <Download size={16} />
+                    下载完整文件 <Download size={14} />
                   </a>
                 </div>
-              ))}
-            {preview && (
-              <div
-                className="file-preview"
-                ref={previewRef}
-                role="region"
-                aria-label={`${preview.file.title}预览`}
-                tabIndex={-1}
-              >
-                <div>
-                  <strong>{preview.file.title}</strong>
-                  <button
-                    className="text-button"
-                    onClick={() => {
-                      setPreview(null);
-                      previewTriggerRef.current?.focus();
-                    }}
-                  >
-                    关闭预览
-                  </button>
-                </div>
-                <pre>{preview.content}</pre>
-                {preview.truncated && (
-                  <p className="notice warning">
-                    预览已截断，仅显示前 20000 字符。请下载完整文件。
-                  </p>
-                )}
-                <a
-                  className="text-button"
-                  href={`/api/v1${endpoint}/files/${pathId(preview.file.id)}/download`}
-                >
-                  下载完整文件 <Download size={14} />
-                </a>
-              </div>
-            )}
-          </section>
+              )}
+            </PracticePanel>
+          </div>
         </aside>
         <div className="practice-main">
           <section className="panel conversation">
@@ -505,8 +656,13 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
               </div>
               <span className="small muted">{runs.length} 轮尝试</span>
             </div>
-            <div className="conversation-history">
-              {!runs.length && (
+            <div
+              className="conversation-history"
+              ref={historyRef}
+              role="region"
+              aria-label="对话记录"
+            >
+              {!runs.length && !pendingMessage && (
                 <div className="conversation-empty">
                   <span className="agent-mark">✳</span>
                   <h3>先用自己的话，说出你的任务。</h3>
@@ -520,6 +676,14 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
               {runs.map((run) => (
                 <RunView key={run.id} run={run} events={events[run.id] ?? []} />
               ))}
+              {pendingMessage !== null && (
+                <PendingMessage text={pendingMessage} />
+              )}
+              <div
+                ref={historyEndRef}
+                className="conversation-end"
+                aria-hidden="true"
+              />
             </div>
             {connection && (
               <p className="stream-status" role="status">
@@ -577,22 +741,43 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
+                    if (
+                      preparationPending ||
+                      !ready ||
+                      active ||
+                      syncing ||
+                      action.busy ||
+                      pendingMessage !== null ||
+                      !input.trim()
+                    )
+                      return;
                     void action.act(async () => {
-                      const run = await api<Run>("/runs", {
-                        method: "POST",
-                        idempotent: true,
-                        body: {
-                          attempt_id: id,
-                          expected_attempt_revision: attempt.revision,
-                          profile_id:
-                            attempt.mode === "demo" ? null : profileId,
-                          input_text: input.trim(),
-                        } satisfies Schema["RunCreate"],
-                      });
-                      setRuns((old) =>
-                        old.some((r) => r.id === run.id) ? old : [...old, run],
-                      );
+                      const text = input.trim();
+                      setPendingMessage(text);
                       setInput("");
+                      try {
+                        const run = await api<Run>("/runs", {
+                          method: "POST",
+                          idempotent: true,
+                          body: {
+                            attempt_id: id,
+                            expected_attempt_revision: attempt.revision,
+                            profile_id:
+                              attempt.mode === "demo" ? null : profileId,
+                            input_text: text,
+                          } satisfies Schema["RunCreate"],
+                        });
+                        setRuns((old) =>
+                          old.some((r) => r.id === run.id)
+                            ? old
+                            : [...old, run],
+                        );
+                      } catch (error) {
+                        setInput(text);
+                        throw error;
+                      } finally {
+                        setPendingMessage(null);
+                      }
                     });
                   }}
                 >
@@ -639,7 +824,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                           !ready ||
                           action.busy ||
                           syncing ||
-                          dirty ||
+                          preparationPending ||
                           !input.trim()
                         }
                       >
@@ -648,10 +833,35 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                       </button>
                     )}
                   </div>
-                  {dirty && (
-                    <p className="small amber-text">
-                      有未保存的材料或设置，请先保存下一轮设置。
-                    </p>
+                  {preparationPending && (
+                    <div
+                      className="composer-preparation notice warning"
+                      role="status"
+                    >
+                      <CircleAlert size={17} aria-hidden="true" />
+                      <span>
+                        {missingMaterials
+                          ? "发送前，请先在第 2 板块选择材料并保存。"
+                          : "材料或设置尚未保存，请先完成第 2 板块。"}{" "}
+                        <a
+                          href="#practice-preparation"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            setSidebarOpen(true);
+                            setPanels((old) => ({ ...old, preparation: true }));
+                            requestAnimationFrame(() => {
+                              const section = document.getElementById(
+                                "practice-preparation",
+                              );
+                              section?.scrollIntoView({ block: "start" });
+                              section?.focus({ preventScroll: true });
+                            });
+                          }}
+                        >
+                          前往设置 ↑
+                        </a>
+                      </span>
+                    </div>
                   )}
                 </form>
               </div>
@@ -661,7 +871,14 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             attempt={attempt}
             lesson={lesson}
             history={submissions}
-            disabled={!!active || historical || dirty || syncing}
+            disabled={
+              !!active ||
+              historical ||
+              dirty ||
+              syncing ||
+              action.busy ||
+              pendingMessage !== null
+            }
             onSubmit={submit}
             onView={async (id) =>
               setFeedback(await api<Submission>(`/submissions/${pathId(id)}`))

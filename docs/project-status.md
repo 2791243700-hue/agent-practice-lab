@@ -6,6 +6,8 @@
 
 本次交付分支：[`feat/key-manager-review-fixes`](https://github.com/2791243700-hue/agent-practice-lab/tree/feat/key-manager-review-fixes)；当前尚未合并到 main，PR 和云端 CI 以 GitHub 实际状态为准。
 
+后续前端体验增量分支：`feat/practice-workspace-interactions`，基于 PR #6 的 `b56182f`，目标为上述基础分支。包含生活情境示例、输入区准备提醒、左侧可收起工作区、紧凑顶部及实训信息、立即显示问题与流式跟随。完整说明及截图见[实训工作区交付](practice-workspace-delivery.md)。本轮未改动后端、接口、课件包或评分。
+
 公开仓库：[2791243700-hue/agent-practice-lab](https://github.com/2791243700-hue/agent-practice-lab)。契约、后端、前端、DeepSeek 适配和预览修复已通过 PR [#1](https://github.com/2791243700-hue/agent-practice-lab/pull/1)、[#2](https://github.com/2791243700-hue/agent-practice-lab/pull/2)、[#3](https://github.com/2791243700-hue/agent-practice-lab/pull/3)、[#4](https://github.com/2791243700-hue/agent-practice-lab/pull/4)、[#5](https://github.com/2791243700-hue/agent-practice-lab/pull/5) 合并。已核验的 main 基线为 `3214d75913f5a3a8276adfa6ad8bf6dfbe20721a`。
 
 当前本地工作目录在该基线上新增以下功能，通过 `feat/key-manager-review-fixes` 分支交付、尚未合并到 main；不能用 main 的旧 CI 结果代表这些改动：
@@ -20,7 +22,8 @@
 
 | 范围 | 最近完成的结果 | 边界 |
 | --- | --- | --- |
-| 2026-10-22 本地自动化 | 197 项契约结构检查、91 项后端测试、8 项前端测试、15 项浏览器测试通过；Ruff、格式、类型和生产构建通过 | 模型使用 MockTransport 或本地脚本服务，无私人 Key；浏览器回归使用本机 Chrome，构建在隔离目录执行 |
+| PR #6 基线本地自动化 | 197 项契约结构检查、91 项后端测试、8 项前端测试、15 项浏览器测试通过；Ruff、格式、类型和生产构建通过 | 模型使用 MockTransport 或本地脚本服务，无私人 Key；浏览器回归使用本机 Chrome，构建在隔离目录执行 |
+| 本轮前端体验增量 | 8 项前端、26 项浏览器测试、Web 格式、类型和生产构建通过 | Playwright Chromium、临时数据和本地分段模型；没有私人 Key 实测，未重跑后端测试 |
 | 已合并 PR #1—#5 | 合并时对应检查通过 | 属于各自提交；新增功能的云端 CI 以本次 PR 对应提交为准 |
 | 2026-10-19 外部模型 | DeepSeek 文本/工具检查及四关后端正式提交通过 | 第四关额外提供了任务 ID 映射；未完成真实服务商的浏览器或零经验学生独立验收 |
 | 新增 Key 管理的外部验证 | 尚未执行 | 未使用真实 DeepSeek/OpenAI Key 验证新增导入与列表流程 |

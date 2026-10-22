@@ -1273,16 +1273,6 @@ input[type="range"] {
   background: #fef3f2;
   border-color: #fda29b;
 }
-.practice-summary {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-  margin-left: auto;
-}
-.page-heading:has(> .practice-summary) {
-  flex-wrap: wrap;
-}
 .empty {
   text-align: center;
   padding: 60px 20px;
@@ -1291,19 +1281,109 @@ input[type="range"] {
   color: var(--muted);
   font-size: 12px;
 }
-.practice-breadcrumb {
+.practice-page {
+  padding-top: 24px;
+}
+.practice-header {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 20px;
+  margin-bottom: 22px;
+}
+.practice-header-nav {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-height: 32px;
+}
+.practice-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 11px;
   color: var(--muted);
-  margin-bottom: 25px;
 }
-.practice-breadcrumb .back-link {
+.practice-crumbs .back-link {
   margin: 0;
 }
-.practice-breadcrumb .text-button {
+.practice-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   margin-left: auto;
+}
+.practice-header-actions .text-button,
+.practice-header-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.practice-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+}
+.practice-heading-row h1 {
+  min-width: 0;
+  font-size: clamp(22px, 2vw, 28px);
+  margin: 0;
+}
+.practice-heading-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.practice-info {
+  position: relative;
+}
+.practice-info > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  border-radius: 7px;
+  list-style: none;
+}
+.practice-info > summary::-webkit-details-marker {
+  display: none;
+}
+.practice-info > summary:hover,
+.practice-info[open] > summary {
+  background: var(--mint);
+  margin-bottom: 0;
+}
+.practice-info-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: 250px;
+  max-width: calc(100vw - 36px);
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 10px 30px #20373118;
+  font-size: 12px;
+}
+.practice-info-popover dl {
+  margin: 12px 0 0;
+}
+.practice-info-popover dt {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 10px;
+}
+.practice-info-popover dd {
+  margin: 2px 0 0;
 }
 .practice-layout {
   display: grid;
@@ -1311,12 +1391,78 @@ input[type="range"] {
   gap: 22px;
   align-items: start;
 }
+.practice-layout.sidebar-collapsed {
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 16px;
+}
+.practice-main,
+.practice-sidebar {
+  min-width: 0;
+}
+.practice-sidebar.is-collapsed {
+  position: sticky;
+  top: 16px;
+}
+.practice-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+}
+.practice-sidebar-toggle:hover {
+  background: var(--mint);
+}
+.is-collapsed .practice-sidebar-toggle {
+  justify-content: center;
+  padding: 9px;
+}
+.practice-sidebar .practice-controls[hidden],
+.practice-sidebar-toggle > [hidden] {
+  display: none;
+}
 .practice-controls .panel {
   padding: 22px;
 }
 .practice-controls h2 {
   font-size: 16px;
   margin-bottom: 15px;
+}
+.practice-controls .practice-panel-heading {
+  margin: 0;
+}
+.practice-panel-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.practice-panel-toggle svg {
+  color: var(--green);
+}
+.practice-panel-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.practice-panel-content:not([hidden]) {
+  padding-top: 15px;
+}
+.practice-collapsible > [hidden] {
+  display: none;
 }
 .practice-controls .markdown p,
 .practice-controls .markdown li {
@@ -1327,6 +1473,40 @@ input[type="range"] {
 }
 .task-panel {
   background: #f1f4e9;
+}
+.mission-example {
+  background: #fffef8;
+  border: 1px solid #dce3cf;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 18px 0;
+}
+.mission-example h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.mission-example .markdown p:last-child {
+  margin-bottom: 0;
+}
+.preparation-panel {
+  scroll-margin-top: 24px;
+}
+.composer-preparation {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 12px;
+}
+.composer-preparation svg {
+  margin-top: 2px;
+}
+.composer-preparation {
+  margin-bottom: 0;
 }
 .material-list > div {
   display: flex;
@@ -1387,6 +1567,17 @@ input[type="range"] {
   max-height: 780px;
   overflow-y: auto;
   scrollbar-width: thin;
+  overflow-anchor: none;
+}
+.conversation-end {
+  height: 1px;
+}
+.reply-pending {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 12px;
 }
 .conversation-empty {
   text-align: center;
@@ -1843,6 +2034,17 @@ input[type="range"] {
   }
 }
 @media (max-width: 900px) {
+  .practice-layout.sidebar-collapsed {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .practice-sidebar.is-collapsed {
+    position: static;
+  }
+  .is-collapsed .practice-sidebar-toggle {
+    width: 40px;
+    margin-bottom: 0;
+  }
   .sidebar {
     width: 180px;
   }
@@ -2160,16 +2362,40 @@ input[type="range"] {
   .artifact-panel {
     grid-column: auto;
   }
-  .practice-breadcrumb {
-    font-size: 9px;
-    gap: 6px;
-    flex-wrap: wrap;
+  .practice-page {
+    padding-top: 16px;
   }
-  .practice-breadcrumb .text-button {
+  .practice-header {
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+  }
+  .practice-crumbs {
+    gap: 7px;
     font-size: 10px;
   }
-  .practice-breadcrumb .back-link {
+  .practice-crumbs .back-link {
     font-size: 10px;
+  }
+  .practice-header-actions {
+    gap: 12px;
+  }
+  .practice-header-actions .text-button,
+  .practice-header-actions a {
+    font-size: 10px;
+    gap: 4px;
+  }
+  .practice-header-actions svg {
+    width: 14px;
+  }
+  .practice-heading-row {
+    gap: 10px;
+  }
+  .practice-heading-status {
+    gap: 4px;
+  }
+  .practice-heading-status .completion-pill {
+    font-size: 11px;
+    padding: 5px 7px;
   }
   .practice-controls .panel {
     padding: 22px;
