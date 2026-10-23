@@ -52,6 +52,9 @@ class School:
 
         self.submissions = SubmissionService(self)
         self.exports = ExportService(self)
+        from agent_school.tips import TipsService
+
+        self.tips = TipsService(self)
 
     def completed(self, lesson_id, version):
         attempts = {
@@ -162,6 +165,8 @@ class School:
         return value
 
     async def prepare(self, operation, path, params, body):
+        if operation == "generateRunTips":
+            return await self.tips.generate(path["run_id"], body)
         if operation == "connectProfile":
             return await self.profiles.prepare_connect(body)
         if operation == "listProfileModels":
@@ -172,6 +177,10 @@ class School:
             await self.runs.prepare_reset(path["attempt_id"], body)
 
     async def dispatch(self, operation, path, params, body, prepared=None):
+        if operation == "generateRunTips":
+            return prepared
+        if operation == "getRunTips":
+            return self.tips.get(path["run_id"])
         if operation == "connectProfile":
             return self.profiles.connect(prepared)
         if operation == "listProfileModels":

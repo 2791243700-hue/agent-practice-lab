@@ -1,10 +1,18 @@
 # 当前版本与文档索引
 
-同步日期：2026-10-22。本文记录已合并的 main 状态与验证边界，其他文档的“当前”均以此范围为准。
+本轮上传前最终验证（2026-10-23）：137 项后端、15 项前端、42 项完整浏览器回归、204 项契约检查通过，Ruff、格式、TypeScript 和隔离生产构建通过。交付分支为 feat/practice-tips-and-feedback，尚未合并 main；后续分阶段记录保留原测试数字，当前结果与截图见[本轮交付记录](practice-updates-2026-10-23.md)。
+
+同步日期：2026-10-23。本文区分已合并 main 基线与本轮功能分支，验证结论仅适用于对应版本。
+
+## 本轮分支增量（2026-10-23，尚未合并 main）
+
+新增按需模型 Tips：每轮结束后默认收起，首次生成经明确确认，使用所选模型分析目标差距和下一步建议。结果按运行持久保存，缓存读取无需 Key；不参与正式通关。主回答采用简洁结果指令，历史原文不裁剪。同时包含顶部重置环境入口和 Markdown 表格显示修复。提交结果已改为自动弹窗，下一关或留在当前关卡由学生选择，历史记录按需查看；刷新不自动弹出。当前本地契约 39 操作、92 schema、11 类事件；接口细节见[契约说明](../contracts/README.md)，使用方式见[使用说明](user-guide.md)。以下 main 状态为此前已合并基线。
+
+交付分支：[feat/practice-tips-and-feedback](https://github.com/2791243700-hue/agent-practice-lab/tree/feat/practice-tips-and-feedback)；变更说明、截图和最终验证见[本轮交付记录](practice-updates-2026-10-23.md)。上传前核对 main 为 `55ce473`，本轮不直接合并 main；云端 CI 以新 PR 的对应提交为准。
 
 ## 代码交付状态
 
-PR [#6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 与 [#7](https://github.com/2791243700-hue/agent-practice-lab/pull/7) 已依次合并到 main。#6 合并提交为 `e5a3458`，#7 合并提交为 `a8f7438`；后续文档同步提交在此基线上追加。安装和接手直接使用 main，无需再切换功能分支。
+PR [#6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 与 [#7](https://github.com/2791243700-hue/agent-practice-lab/pull/7) 已依次合并到 main。#6 合并提交为 `e5a3458`，#7 合并提交为 `a8f7438`；后续文档同步提交在此基线上追加。获取这部分已合并基线可直接使用 main；体验本轮 Tips 和结果弹窗需切换到上文交付分支。
 
 前端体验增量原分支为 `feat/practice-workspace-interactions`，基于 `b56182f` 开发；PR #6 合并后，#7 已改为以 main 为目标并完成合并。包含生活情境示例、输入区准备提醒、左侧可收起工作区、紧凑顶部及实训信息、立即显示问题与流式跟随。完整说明及截图见[实训工作区交付](practice-workspace-delivery.md)。本轮未改动后端、接口、课件包或评分。
 

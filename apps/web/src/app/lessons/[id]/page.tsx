@@ -20,14 +20,24 @@ export default function LessonPage({
   const { id } = use(params);
   const query = useSearchParams();
   const version = query.get("version");
-  return <LessonContent key={`${id}/${version}`} id={id} version={version} />;
+  const profile = query.get("profile");
+  return (
+    <LessonContent
+      key={`${id}/${version}/${profile}`}
+      id={id}
+      version={version}
+      profile={profile}
+    />
+  );
 }
 function LessonContent({
   id,
   version,
+  profile,
 }: {
   id: string;
   version: string | null;
+  profile: string | null;
 }) {
   const router = useRouter();
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -60,7 +70,9 @@ function LessonContent({
           mode,
         } satisfies Schema["AttemptCreate"],
       });
-      router.push(`/practice/${pathId(a.id)}`);
+      router.push(
+        `/practice/${pathId(a.id)}${mode === "live" && profile ? `?profile=${pathId(profile)}` : ""}`,
+      );
     });
   }
   const recent = attempts.find(
@@ -107,7 +119,7 @@ function LessonContent({
                 {recent ? (
                   <Link
                     className="button full"
-                    href={`/practice/${pathId(recent.id)}`}
+                    href={`/practice/${pathId(recent.id)}${recent.mode === "live" && profile ? `?profile=${pathId(profile)}` : ""}`}
                   >
                     继续{recent.mode === "demo" ? "演示" : ""}实训{" "}
                     <ArrowRight size={16} />

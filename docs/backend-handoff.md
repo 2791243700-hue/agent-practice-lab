@@ -1,5 +1,7 @@
 # Agent Practice Lab：前后端开发交接
 
+2026-10-23 通过 feat/practice-tips-and-feedback 分支交付，尚未合并 main：新增按需模型 Tips（GET/POST `/runs/{run_id}/tips`），当前本地 39 个 HTTP 操作、92 个 schema；缓存按运行持久保存，独立于正式评分。用量与异常/中断处理见[契约说明](../contracts/README.md)，使用边界见[版本状态](project-status.md)。下文 2026-10-22 的数字与验证记录属于已合并历史基线。
+
 更新：2026-10-22。适用于接手前端、后端、契约与课程的开发者。已合并主分支状态与验证边界详见[版本状态](project-status.md)。
 
 ## 当前代码与接收方式

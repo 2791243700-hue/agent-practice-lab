@@ -537,13 +537,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runs/{run_id}/tips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 读取本轮已保存的模型学习建议，不触发模型调用 */
+        get: operations["getRunTips"];
+        put?: never;
+        /** 明确点击后单次调用模型生成建议；缓存后不重复调用，不参与正式评分 */
+        post: operations["generateRunTips"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         Empty: Record<string, never>;
         /** @enum {string} */
-        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ORIGIN_REJECTED" | "LOCAL_TOKEN_INVALID" | "PROFILE_BUSY" | "CREDENTIAL_MISSING" | "MODEL_NOT_READY" | "MODEL_AUTH_FAILED" | "MODEL_TIMEOUT" | "MODEL_INCOMPATIBLE" | "MODEL_UNAVAILABLE" | "RUN_BUSY" | "ATTEMPT_BUSY" | "ATTEMPT_SUPERSEDED" | "REVISION_CONFLICT" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_IN_PROGRESS" | "APPROVAL_ALREADY_DECIDED" | "APPROVAL_EXPIRED" | "APPROVAL_INVALIDATED" | "CURSOR_INVALID" | "DEMO_DISABLED" | "MODE_MISMATCH" | "LIMIT_EXCEEDED" | "RUN_TIMEOUT" | "TOOL_ERROR" | "EXECUTION_FAILED" | "INTERNAL_ERROR" | "MODEL_CATALOG_UNSUPPORTED" | "MODEL_CATALOG_INVALID";
+        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ORIGIN_REJECTED" | "LOCAL_TOKEN_INVALID" | "PROFILE_BUSY" | "CREDENTIAL_MISSING" | "MODEL_NOT_READY" | "MODEL_AUTH_FAILED" | "MODEL_TIMEOUT" | "MODEL_INCOMPATIBLE" | "MODEL_UNAVAILABLE" | "RUN_BUSY" | "ATTEMPT_BUSY" | "ATTEMPT_SUPERSEDED" | "REVISION_CONFLICT" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_IN_PROGRESS" | "APPROVAL_ALREADY_DECIDED" | "APPROVAL_EXPIRED" | "APPROVAL_INVALIDATED" | "CURSOR_INVALID" | "DEMO_DISABLED" | "MODE_MISMATCH" | "LIMIT_EXCEEDED" | "RUN_TIMEOUT" | "TOOL_ERROR" | "EXECUTION_FAILED" | "INTERNAL_ERROR" | "MODEL_CATALOG_UNSUPPORTED" | "MODEL_CATALOG_INVALID" | "TIPS_INVALID" | "TIPS_UNCERTAIN";
         FieldError: {
             path: string;
             message: string;
@@ -1347,6 +1365,27 @@ export interface components {
         KeyConnectionResult: {
             profile: components["schemas"]["ModelProfile"];
             catalog: components["schemas"]["ModelCatalog"];
+        };
+        RunTipsCreate: {
+            profile_id: string;
+            expected_profile_revision: number;
+        };
+        RunTips: {
+            run_id: string;
+            attempt_id: string;
+            profile_id: string;
+            model: string;
+            /** Format: date-time */
+            created_at: string;
+            assessment: string;
+            gaps: string[];
+            next_steps: string[];
+            evidence: string[];
+            usage: components["schemas"]["Usage"];
+            context_truncated: boolean;
+        };
+        RunTipsResult: {
+            tips: components["schemas"]["RunTips"] | null;
         };
     };
     responses: never;
@@ -2727,6 +2766,83 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelCatalog"];
+                };
+            };
+            /** @description 统一错误格式；HTTP 状态映射见 README */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getRunTips: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunTipsResult"];
+                };
+            };
+            /** @description 统一错误格式；HTTP 状态映射见 README */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    generateRunTips: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunTipsCreate"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunTips"];
+                };
+            };
+            /** @description 成功 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description 统一错误格式；HTTP 状态映射见 README */

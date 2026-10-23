@@ -1,5 +1,7 @@
 # 后端开发与联调
 
+2026-10-23 通过 feat/practice-tips-and-feedback 分支交付，尚未合并 main：新增按需模型 Tips（GET/POST `/runs/{run_id}/tips`），当前本地 39 个 HTTP 操作、92 个 schema；缓存按运行持久保存，独立于正式评分。用量与异常/中断处理见[契约说明](../contracts/README.md)，使用边界见[版本状态](project-status.md)。下文 2026-10-22 的数字与验证记录属于已合并历史基线。
+
 更新：2026-10-22。后端本地实现 v0.1.0 的 37 个 HTTP 操作，已与前端接通课程、Key 管理、Agent 运行、授权、评分、下载和导出。已合并的 main 版本与验证边界见[版本状态](project-status.md)。
 
 ## 准备

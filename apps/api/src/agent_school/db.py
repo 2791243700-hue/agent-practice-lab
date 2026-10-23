@@ -129,6 +129,20 @@ class Store:
             self.put("run", run_id, run, owner)
         return value
 
+    def list_in_creation_order(self, kind, owner="local-owner"):
+        """Durable insertion order; record updates keep their SQLite rowid.
+
+        Do not infer chronology from clocks or random IDs when selecting the
+        evidence available up to an earlier run.
+        """
+        with self.atomic() as connection:
+            rows = connection.execute(
+                select(records.c.data)
+                .where(records.c.kind == kind, records.c.owner_id == owner)
+                .order_by(literal_column("rowid"))
+            ).all()
+        return copy.deepcopy([row[0] for row in rows])
+
     def event_list(self, run_id, owner="local-owner"):
         self.get("run", run_id, owner)
         with self.atomic() as connection:
