@@ -10,15 +10,17 @@ from fastapi.responses import JSONResponse, Response
 
 from agent_school.config import Config
 from agent_school.errors import AppError, error_body
+from agent_school.schema import Contracts
 from agent_school.service import School, fingerprint
 
 
 def create_app(config: Config | None = None):
     config = config or Config.from_env()
+    contracts = Contracts(config.root)
 
     @asynccontextmanager
     async def lifespan(app):
-        app.state.school = School(config)
+        app.state.school = School(config, contracts=contracts)
         app.state.idempotency_locks = {}
         try:
             yield
@@ -44,9 +46,6 @@ def create_app(config: Config | None = None):
         response.headers["Cache-Control"] = "no-store"
         return response
 
-    from agent_school.schema import Contracts
-
-    contracts = Contracts(config.root)
     app.openapi = lambda: copy.deepcopy(contracts.openapi)
 
     def make_endpoint(operation):

@@ -2,7 +2,7 @@
 
 Next.js App Router + TypeScript。课程、评分和身份通过现有后端获取，页面不复制评分逻辑，不修改已发布课程。
 
-2026-10-22：当前本地包含 Key 优先配置、服务商模型列表和多个内存 Key 管理；学习记录显示日期与红/绿正式通关状态，顶栏提供“帮助”。main 基线和本次功能分支改动见[版本状态](../../docs/project-status.md)。操作步骤见[新手说明](../../docs/user-guide.md)。
+2026-10-23：当前分支新增按需模型 Tips、提交结果弹窗、保留所选模型的重置和 Markdown 表格显示；新改动未合并 main，见[本轮交付](../../docs/practice-updates-2026-10-23.md)。既有功能包含 Key 优先配置、服务商模型列表和多个内存 Key 管理；学习记录显示日期与红/绿正式通关状态，顶栏提供“帮助”。main 基线和本次功能分支改动见[版本状态](../../docs/project-status.md)。操作步骤见[新手说明](../../docs/user-guide.md)。
 
 从仓库根目录安装：`npm --prefix apps/web ci`。使用 `scripts/start.ps1` 一起启动前后端；原启动器已支持本目录的 `npm run dev -- --hostname … --port …`。
 

@@ -12,6 +12,7 @@ import {
   Sprout,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { errorText } from "@/lib/api";
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -103,7 +104,18 @@ export function Markdown({ text }: { text: string }) {
   return (
     <div className="markdown">
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
         components={{
+          table: ({ children }) => (
+            <div
+              className="table-scroll"
+              role="region"
+              aria-label="表格（可横向滚动）"
+              tabIndex={0}
+            >
+              <table>{children}</table>
+            </div>
+          ),
           img: () => null,
           a: ({ children, href }) => (
             <a href={href} target="_blank" rel="noreferrer">

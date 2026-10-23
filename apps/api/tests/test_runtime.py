@@ -11,7 +11,7 @@ import pytest
     ],
 )
 async def test_sdk_probe_enforces_tool_boundary(scenario, tool_calls, writes, state):
-    from agent_school.runtime.probe import probe_runtime
+    from runtime_probe import probe_runtime
 
     result = await probe_runtime(scenario)
     assert len(result.tool_calls) == tool_calls
@@ -21,7 +21,7 @@ async def test_sdk_probe_enforces_tool_boundary(scenario, tool_calls, writes, st
 
 
 async def test_sdk_probe_approval_executes_once():
-    from agent_school.runtime.probe import probe_runtime
+    from runtime_probe import probe_runtime
 
     result = await probe_runtime("approve")
     assert result.writes == 1

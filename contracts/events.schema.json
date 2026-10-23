@@ -471,7 +471,9 @@
         "EXECUTION_FAILED",
         "INTERNAL_ERROR",
         "MODEL_CATALOG_UNSUPPORTED",
-        "MODEL_CATALOG_INVALID"
+        "MODEL_CATALOG_INVALID",
+        "TIPS_INVALID",
+        "TIPS_UNCERTAIN"
       ]
     },
     "ErrorResponse": {

@@ -5,7 +5,13 @@ import { pathId } from "@/lib/api";
 import type { Attempt, Lesson, Schema, Submission } from "@/lib/types";
 import { dateTime, ErrorBox, useAction } from "./ui";
 
-export function SubmissionFeedback({ submission }: { submission: Submission }) {
+export function SubmissionFeedback({
+  submission,
+  onViewEvent,
+}: {
+  submission: Submission;
+  onViewEvent?: (runId: string, seq: number) => void;
+}) {
   const title = submission.passed
     ? "正式通过，做得有依据。"
     : submission.mode === "demo"
@@ -55,7 +61,17 @@ export function SubmissionFeedback({ submission }: { submission: Submission }) {
                             下载提交时快照：{e.file.title}
                           </a>
                         ) : "run_id" in e ? (
-                          <a href={`#event-${e.run_id}-${e.event_seq}`}>
+                          <a
+                            href={`#event-${e.run_id}-${e.event_seq}`}
+                            onClick={
+                              onViewEvent
+                                ? (event) => {
+                                    event.preventDefault();
+                                    onViewEvent(e.run_id, e.event_seq);
+                                  }
+                                : undefined
+                            }
+                          >
                             查看运行事件 #{e.event_seq}
                           </a>
                         ) : "answers" in e ? (

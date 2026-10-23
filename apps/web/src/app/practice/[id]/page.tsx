@@ -43,7 +43,8 @@ import {
   formatLearningDate,
 } from "@/components/learning-status";
 import { PracticePanel } from "@/components/practice-panel";
-import { SubmissionFeedback, SubmissionPanel } from "@/components/feedback";
+import { SubmissionPanel } from "@/components/feedback";
+import { SubmissionDialog } from "@/components/submission-dialog";
 
 const practiceExamples: Record<string, string> = {
   "01-task":
@@ -121,9 +122,11 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
     [],
   );
   const [feedback, setFeedback] = useState<Submission | null>(null);
+  const feedbackTriggerRef = useRef<HTMLElement | null>(null);
   const [connection, setConnection] = useState("");
   const [intro, setIntro] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
+  const resetTriggerRef = useRef<HTMLButtonElement>(null);
   const [download, setDownload] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const endpoint = `/attempts/${pathId(id)}`;
@@ -191,12 +194,6 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             readyProfiles[0]?.id ??
             "",
         );
-        if (a.latest_submission_id)
-          setFeedback(
-            await api<Submission>(
-              `/submissions/${pathId(a.latest_submission_id)}`,
-            ),
-          );
       }
     },
     [endpoint, preferred],
@@ -283,6 +280,10 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
   const missingMaterials = readsMaterials && selectedFiles.length === 0;
   const preparationPending = dirty || missingMaterials;
   async function submit(answers: Schema["Answers"]) {
+    feedbackTriggerRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const result = await api<Submission>("/submissions", {
       method: "POST",
       idempotent: true,
@@ -310,6 +311,19 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             </span>
           </nav>
           <div className="practice-header-actions">
+            {!historical && (
+              <button
+                ref={resetTriggerRef}
+                className="text-button"
+                disabled={action.busy}
+                aria-expanded={resetConfirm}
+                aria-controls="reset-environment-confirmation"
+                onClick={() => setResetConfirm((v) => !v)}
+              >
+                <RotateCcw size={15} />
+                重置环境
+              </button>
+            )}
             <button className="text-button" onClick={() => setIntro((v) => !v)}>
               <BookOpen size={15} />
               {intro ? "收起导读" : "查看本关介绍"}
@@ -360,6 +374,50 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
       </header>
       <ErrorBox error={loadError} />
       <ErrorBox error={action.error} />
+      {resetConfirm && !historical && (
+        <div
+          id="reset-environment-confirmation"
+          className="notice warning"
+          role="region"
+          aria-label="重置当前关卡环境"
+        >
+          <p>
+            重置将先停止当前任务，再创建同版本、同模式的全新实训，恢复默认材料和
+            Agent 设置。旧消息、提交和产物仍可回看，模型 Key
+            保留；未保存的输入会丢弃，已发生的模型费用无法撤销。
+          </p>
+          <button
+            className="button"
+            disabled={action.busy}
+            onClick={() =>
+              void action.act(async () => {
+                const a = await api<Attempt>(`${endpoint}/reset`, {
+                  method: "POST",
+                  idempotent: true,
+                  body: { expected_revision: attempt.revision },
+                });
+                const profileQuery =
+                  a.mode === "live" && profileId
+                    ? `?profile=${pathId(profileId)}`
+                    : "";
+                router.push(`/practice/${pathId(a.id)}${profileQuery}`);
+              })
+            }
+          >
+            确认重置环境
+          </button>
+          <button
+            className="text-button"
+            disabled={action.busy}
+            onClick={() => {
+              setResetConfirm(false);
+              resetTriggerRef.current?.focus();
+            }}
+          >
+            取消
+          </button>
+        </div>
+      )}
       {attempt.mode === "demo" && (
         <div className="notice warning">
           这是确定性演示，用来熟悉操作。演示检查通过不会计入正式课程完成。
@@ -674,7 +732,18 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                 </div>
               )}
               {runs.map((run) => (
-                <RunView key={run.id} run={run} events={events[run.id] ?? []} />
+                <RunView
+                  key={run.id}
+                  run={run}
+                  events={events[run.id] ?? []}
+                  tipsProfile={selectedProfile}
+                  tipsDisabled={
+                    !!active ||
+                    syncing ||
+                    action.busy ||
+                    pendingMessage !== null
+                  }
+                />
               ))}
               {pendingMessage !== null && (
                 <PendingMessage text={pendingMessage} />
@@ -880,19 +949,44 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
               pendingMessage !== null
             }
             onSubmit={submit}
-            onView={async (id) =>
-              setFeedback(await api<Submission>(`/submissions/${pathId(id)}`))
-            }
+            onView={async (id) => {
+              feedbackTriggerRef.current =
+                document.activeElement instanceof HTMLElement
+                  ? document.activeElement
+                  : null;
+              setFeedback(await api<Submission>(`/submissions/${pathId(id)}`));
+            }}
           />
           {feedback && (
-            <section className="panel">
-              <SubmissionFeedback submission={feedback} />
-            </section>
+            <SubmissionDialog
+              submission={feedback}
+              lesson={lesson}
+              profileId={attempt.mode === "live" ? profileId : undefined}
+              onClose={() => setFeedback(null)}
+              returnFocusTo={feedbackTriggerRef.current}
+              onViewEvent={(runId, seq) => {
+                setFeedback(null);
+                requestAnimationFrame(() => {
+                  const target = document.getElementById(
+                    `event-${runId}-${seq}`,
+                  );
+                  if (!target) return;
+                  const details = target.closest("details");
+                  if (details) details.open = true;
+                  target.tabIndex = -1;
+                  target.focus({ preventScroll: true });
+                  target.scrollIntoView({ block: "center" });
+                });
+              }}
+            />
           )}
           <section className="practice-utilities">
             <div>
-              <strong>保留这次学习，或重新尝试</strong>
-              <p>导出不会包含模型连接配置或 Key。重新开始会保留这份旧记录。</p>
+              <strong>保留这次学习</strong>
+              <p>
+                导出不会包含模型连接配置或
+                Key。需要重新练习时，可使用页面顶部的“重置环境”。
+              </p>
             </div>
             <div className="button-row">
               <button
@@ -915,50 +1009,11 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                 <Download size={15} />
                 导出学习记录
               </button>
-              {!historical && (
-                <button
-                  className="text-button"
-                  disabled={action.busy}
-                  onClick={() => setResetConfirm((v) => !v)}
-                >
-                  <RotateCcw size={14} />
-                  重新开始
-                </button>
-              )}
             </div>
             {download && (
               <a className="button secondary" href={download}>
                 学习记录已就绪，下载 ZIP
               </a>
-            )}
-            {resetConfirm && (
-              <div className="notice warning">
-                <p>
-                  将先停止当前任务，再创建同版本的新实训。旧消息、提交和产物仍可回看；停止不能撤销已发生的模型费用或保存。
-                </p>
-                <button
-                  className="button"
-                  disabled={action.busy}
-                  onClick={() =>
-                    void action.act(async () => {
-                      const a = await api<Attempt>(`${endpoint}/reset`, {
-                        method: "POST",
-                        idempotent: true,
-                        body: { expected_revision: attempt.revision },
-                      });
-                      router.push(`/practice/${pathId(a.id)}`);
-                    })
-                  }
-                >
-                  确认重新开始
-                </button>
-                <button
-                  className="text-button"
-                  onClick={() => setResetConfirm(false)}
-                >
-                  继续当前实验
-                </button>
-              </div>
             )}
           </section>
         </div>

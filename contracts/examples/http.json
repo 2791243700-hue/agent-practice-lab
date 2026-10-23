@@ -558,6 +558,40 @@
         "has_more": true,
         "last_seq": 12
       }
+    },
+    {
+      "name": "run-tips-not-generated",
+      "schema": "RunTipsResult",
+      "value": {
+        "tips": null
+      }
+    },
+    {
+      "name": "run-tips-model-advice",
+      "schema": "RunTips",
+      "value": {
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "profile_id": "profile-example",
+        "model": "example-tool-model",
+        "created_at": "2026-10-23T00:00:00Z",
+        "assessment": "已提供任务结果，尚需核对来源。",
+        "gaps": [
+          "尚未核对结果中的来源。"
+        ],
+        "next_steps": [
+          "打开材料核对来源后提交验收。"
+        ],
+        "evidence": [
+          "本轮回答已列出两项任务。"
+        ],
+        "usage": {
+          "model_calls": 1,
+          "input_tokens": null,
+          "output_tokens": null
+        },
+        "context_truncated": false
+      }
     }
   ]
 }

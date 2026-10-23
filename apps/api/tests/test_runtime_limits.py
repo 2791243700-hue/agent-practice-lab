@@ -4,7 +4,7 @@ from agentscope.model import ChatResponse
 
 from agent_school.contracts import ChatMessage, RuntimeRequest, ToolResult, ToolSpec
 from agent_school.runtime.agentscope_runtime import AgentScopeRuntime, RuntimeFailure
-from agent_school.runtime.probe import ScriptedModel
+from runtime_probe import ScriptedModel
 
 
 async def test_sdk_cannot_make_an_eleventh_model_call():

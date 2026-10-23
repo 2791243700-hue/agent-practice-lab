@@ -6,6 +6,7 @@ import { messages } from "@/lib/events";
 import type { Approval, Event, Run } from "@/lib/types";
 import { runLabels, terminal, toolLabels } from "@/lib/types";
 import { dateTime, ErrorBox, Markdown, useAction } from "./ui";
+import { RunTips, type RunTipsOptions } from "./run-tips";
 function ApprovalCard({
   initial,
   events,
@@ -139,7 +140,11 @@ export function PendingMessage({ text }: { text: string }) {
   );
 }
 
-export function RunView({ run, events }: { run: Run; events: Event[] }) {
+export function RunView({
+  run,
+  events,
+  ...tipsOptions
+}: { run: Run; events: Event[] } & RunTipsOptions) {
   const output = messages(events);
   const approvals = new Map<string, Approval>();
   for (const e of events)
@@ -261,6 +266,9 @@ export function RunView({ run, events }: { run: Run; events: Event[] }) {
         <div className="notice warning">
           本地服务重启使本轮中断。记录已保留，请重新配置 Key 后主动开启新一轮。
         </div>
+      )}
+      {terminal(run.status) && (
+        <RunTips key={run.id} runId={run.id} {...tipsOptions} />
       )}
       <details className="run-snapshot">
         <summary>本轮配置与事件记录（{events.length}）</summary>

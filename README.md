@@ -2,9 +2,11 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**当前状态（2026-10-22）：v0.1.0 本地前后端已接入。** 浏览器内可阅读四关导读、管理多个自备 Key、选择模型、运行实训、批准或拒绝保存、查看产物、提交验收和导出学习记录。不提供登录或线上部署。[当前版本与文档索引](docs/project-status.md) 记录已合并的 main 状态、验证范围和已知限制。
+**当前状态（2026-10-23，通过 feat/practice-tips-and-feedback 分支交付，尚未合并 main）：v0.1.0 本地前后端已接入。** 浏览器内可阅读四关导读、管理多个自备 Key、选择模型、运行实训、批准或拒绝保存、查看产物、提交验收和导出学习记录。不提供登录或线上部署。[当前版本与文档索引](docs/project-status.md) 区分 main 基线与本轮功能分支，记录验证范围和已知限制。
 
 ## 本地启动（Windows）
+
+体验本轮功能时，克隆仓库后先运行 `git switch feat/practice-tips-and-feedback`。该分支的 Tips、结果弹窗等增量尚未合并 main。
 
 需要 Node.js 22+、Python 3.11/3.12 和 uv。在仓库根目录：
 
@@ -19,6 +21,12 @@ npm --prefix apps/web ci
 无需 Key 即可阅读课程。正式运行时，到“模型设置”添加自备 Key，确认服务商，获取模型列表后选择模型并主动检查连接。DeepSeek、OpenAI 自动填写官方地址；其他兼容接口保留自定义地址和手动模型入口。Key 格式只用于建议，无法判断时需选择服务商；不会逐家试探。连接检查最多调用模型三次，可能消耗额度。不要把 Key 发到聊天或 PR。启动器自动将同一私有令牌交给前后端，不能只单独运行 npm dev。首次页面启动较慢时稍等后刷新。
 
 使用 `scripts/start.ps1 -Demo` 可开启无 Key 演示；演示记录始终不计正式通过。安装、恢复、错误排查见[新手使用说明](docs/user-guide.md)；开发检查、截图见[前端验证](docs/frontend-validation.md)；真实模型测试见[独立实测记录](docs/live-model-validation.md)。
+
+本轮交付分支：[feat/practice-tips-and-feedback](https://github.com/2791243700-hue/agent-practice-lab/tree/feat/practice-tips-and-feedback)；[功能、截图和验证记录](docs/practice-updates-2026-10-23.md)。
+
+## 本地 Tips 学习建议
+
+每轮结束后可展开 Tips，确认发送内容和额外额度消耗后，用当前选定模型生成与目标的差距及下一步建议。结果保存后可重复查看，无需再次请求模型；正式通关仍由现有验收决定。新运行采用简洁任务结果指令，历史回答不裁剪。具体边界见[使用说明](docs/user-guide.md)和[接口契约](contracts/README.md)。
 
 ## 首版范围
 
@@ -40,7 +48,7 @@ npm --prefix apps/web ci
 - [四关导读](outputs/lesson-introductions.md)
 - [分阶段实施计划](outputs/local-agent-learning-implementation-plan.md)
 - [双人分工与 GitHub 协作](outputs/two-person-github-collaboration-plan.md)
-- [v0.1.0 接口契约与调用规则](contracts/README.md)（37 个 HTTP 操作、11 类事件）
+- [v0.1.0 接口契约与调用规则](contracts/README.md)（当前本地 39 个 HTTP 操作、11 类事件）
 - [机器可读 OpenAPI](contracts/openapi.json)与[生成的 TypeScript 类型](contracts/types.d.ts)
 - [后端安装、启动与前端联调](docs/backend.md)
 - [后端验证报告](docs/runtime-validation.md)

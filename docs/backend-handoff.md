@@ -1,12 +1,14 @@
 # Agent Practice Lab：前后端开发交接
 
-更新：2026-10-22。适用于接手前端、后端、契约与课程的开发者。已合并主分支状态与验证边界详见[版本状态](project-status.md)。
+2026-10-23 通过 feat/practice-tips-and-feedback 分支交付，尚未合并 main：新增按需模型 Tips（GET/POST `/runs/{run_id}/tips`），当前本地 39 个 HTTP 操作、92 个 schema；缓存按运行持久保存，独立于正式评分。用量与异常/中断处理见[契约说明](../contracts/README.md)，使用边界见[版本状态](project-status.md)。下文 2026-10-22 的数字与验证记录属于已合并历史基线。
+
+历史基线（2026-10-22）：适用于接手前端、后端、契约与课程的开发者。已合并主分支状态与验证边界详见[版本状态](project-status.md)。
 
 ## 当前代码与接收方式
 
 PR #1 契约、#2 后端、#3 前端、#4 DeepSeek/权限适配、#5 预览修复均已合并到 main，历史基线为 `3214d75`；当前 main 已纳入下述 #6、#7，代码基线为 `a8f7438`。原前端依赖 feat/backend 的合并顺序已执行完成，无需再次 retarget 或 cherry-pick 旧修复。
 
-PR #6 已将 Key 管理、界面、审查修复与文档更新合并到 main（`e5a3458`）。接手时直接获取 main。通过 PR 查看差异和对应 CI；数据目录、凭据、日志及 Next.js 的开发生成路径不进入提交。
+PR #6 已将 Key 管理、界面、审查修复与文档更新合并到 main（`e5a3458`）。接手历史基线可获取 main；当前 Tips、重置和弹窗功能请使用 feat/practice-tips-and-feedback 分支（PR #9）。通过 PR 查看差异和对应 CI；数据目录、凭据、日志及 Next.js 的开发生成路径不进入提交。
 
 前端体验增量已通过 PR #7 合并到 main（`a8f7438`），原开发基线为 `b56182f`。包含侧栏与板块折叠、紧凑顶部、生活情境示例、准备提醒，以及问题即时显示和流式滚动。后端接口及课件包未更改；启动、6 张截图与 8 项前端/26 项浏览器验证见[增量交付说明](practice-workspace-delivery.md)。两个 PR 的依赖合并已经完成，无需再 retarget 或 cherry-pick。
 
@@ -24,7 +26,7 @@ npm --prefix apps/web ci
 
 可用 `-Demo` 开演示，或 `-WebPort`、`-ApiPort`、`-DataDir` 创建独立实例；停止须使用相同数据目录。启动器传递私有的 AGENT_SCHOOL_API_ORIGIN、AGENT_SCHOOL_FRONTEND_ORIGIN、AGENT_SCHOOL_LOCAL_TOKEN；令牌不进入 NEXT_PUBLIC、浏览器、URL 或持久化配置。浏览器只访问同源 `/api/v1`，不要将启动地址的 127.0.0.1 随意换成 localhost。
 
-完整命令与最新证据见[后端说明](backend.md)、[后端验证](runtime-validation.md)、[前端验证](frontend-validation.md)。最近本地结果为 197 项契约、91 项后端、8 项前端、26 项浏览器测试通过，Ruff/格式/类型/生产构建通过；功能分支 CI 以对应 PR 实际结果为准。2026-10-19 DeepSeek 实测仅覆盖后端，第四关额外提供 ID 映射，见[独立记录](live-model-validation.md)。
+完整命令与最新证据见[后端说明](backend.md)、[后端验证](runtime-validation.md)、[前端验证](frontend-validation.md)。2026-10-22 基线验证为 197 项契约、91 项后端、8 项前端、26 项浏览器测试通过，Ruff/格式/类型/生产构建通过；功能分支 CI 以对应 PR 实际结果为准。2026-10-19 DeepSeek 实测仅覆盖后端，第四关额外提供 ID 映射，见[独立记录](live-model-validation.md)。
 
 ## 新模型设置的契约
 
@@ -78,3 +80,7 @@ IdentityProvider/LocalIdentityProvider 目前只保留声明，服务、存储�
 | content/lessons/、scripts/ | 版本化课程和本地启停 |
 
 跨端更改先同步契约，课件变更发布新版本。问题交接附提交/课程版本、mode、资源 ID、事件序号、错误码和最短复现，先检查日志与截图无凭据。
+
+## 内部结构清理（2026-10-23）
+
+HTTP 边界和业务服务共享 Contracts 实例，避免重复读取和构建契约校验器；直接创建 School 的测试仍支持自动加载。离线 SDK 模拟器移至 `apps/api/tests/runtime_probe.py`，不再随生产包安装。对外 HTTP 操作、字段和状态码保持兼容，核对结果见[清理记录](cleanup-2026-10-23.md)。

@@ -10,8 +10,8 @@ test("历史实验保持只读，材料原文仍可预览与下载", async ({ pa
   await page.getByRole("button", { name: "保存下一轮设置" }).click();
   await expect(page.getByRole("button", { name: "设置已同步" })).toBeDisabled();
   const oldUrl = page.url();
-  await page.getByRole("button", { name: "重新开始", exact: true }).click();
-  await page.getByRole("button", { name: "确认重新开始", exact: true }).click();
+  await page.getByRole("button", { name: "重置环境", exact: true }).click();
+  await page.getByRole("button", { name: "确认重置环境", exact: true }).click();
   await expect(page).not.toHaveURL(oldUrl);
   await page.goto(oldUrl);
   await expect(

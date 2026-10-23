@@ -2055,6 +2055,119 @@
           }
         }
       }
+    },
+    "/runs/{run_id}/tips": {
+      "get": {
+        "operationId": "getRunTips",
+        "summary": "读取本轮已保存的模型学习建议，不触发模型调用",
+        "tags": [
+          "runs"
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunTipsResult"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "统一错误格式；HTTP 状态映射见 README",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "generateRunTips",
+        "summary": "明确点击后单次调用模型生成建议；缓存后不重复调用，不参与正式评分",
+        "tags": [
+          "runs"
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunTips"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "统一错误格式；HTTP 状态映射见 README",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunTipsCreate"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2097,7 +2210,9 @@
           "EXECUTION_FAILED",
           "INTERNAL_ERROR",
           "MODEL_CATALOG_UNSUPPORTED",
-          "MODEL_CATALOG_INVALID"
+          "MODEL_CATALOG_INVALID",
+          "TIPS_INVALID",
+          "TIPS_UNCERTAIN"
         ]
       },
       "FieldError": {
@@ -5547,6 +5662,122 @@
         "required": [
           "profile",
           "catalog"
+        ]
+      },
+      "RunTipsCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "expected_profile_revision": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "profile_id",
+          "expected_profile_revision"
+        ]
+      },
+      "RunTips": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "attempt_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "profile_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "assessment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1200
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1200
+            },
+            "maxItems": 6
+          },
+          "next_steps": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1200
+            },
+            "maxItems": 6,
+            "minItems": 1
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1200
+            },
+            "maxItems": 6
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          },
+          "context_truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run_id",
+          "attempt_id",
+          "profile_id",
+          "model",
+          "created_at",
+          "assessment",
+          "gaps",
+          "next_steps",
+          "evidence",
+          "usage",
+          "context_truncated"
+        ]
+      },
+      "RunTipsResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tips": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RunTips"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "tips"
         ]
       }
     }
