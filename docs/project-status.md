@@ -1,6 +1,8 @@
 # 当前版本与文档索引
 
-本轮上传前最终验证（2026-10-23）：137 项后端、15 项前端、42 项完整浏览器回归、204 项契约检查通过，Ruff、格式、TypeScript 和隔离生产构建通过。交付分支为 feat/practice-tips-and-feedback，尚未合并 main；后续分阶段记录保留原测试数字，当前结果与截图见[本轮交付记录](practice-updates-2026-10-23.md)。
+PR #9 上传时验证（2026-10-23）：137 项后端、15 项前端、42 项完整浏览器回归、204 项契约检查通过，Ruff、格式、TypeScript 和隔离生产构建通过。交付分支为 feat/practice-tips-and-feedback，尚未合并 main；后续分阶段记录保留原测试数字，当前结果与截图见[本轮交付记录](practice-updates-2026-10-23.md)。
+
+本地后续清理（2026-10-23）：共享契约对象、测试模拟器移出生产包、合并重复样式；139 项后端、15 项前端与 204 项契约检查通过。清理随 PR #9 分支交付，详见[清理记录](cleanup-2026-10-23.md)。
 
 同步日期：2026-10-23。本文区分已合并 main 基线与本轮功能分支，验证结论仅适用于对应版本。
 
@@ -8,15 +10,15 @@
 
 新增按需模型 Tips：每轮结束后默认收起，首次生成经明确确认，使用所选模型分析目标差距和下一步建议。结果按运行持久保存，缓存读取无需 Key；不参与正式通关。主回答采用简洁结果指令，历史原文不裁剪。同时包含顶部重置环境入口和 Markdown 表格显示修复。提交结果已改为自动弹窗，下一关或留在当前关卡由学生选择，历史记录按需查看；刷新不自动弹出。当前本地契约 39 操作、92 schema、11 类事件；接口细节见[契约说明](../contracts/README.md)，使用方式见[使用说明](user-guide.md)。以下 main 状态为此前已合并基线。
 
-交付分支：[feat/practice-tips-and-feedback](https://github.com/2791243700-hue/agent-practice-lab/tree/feat/practice-tips-and-feedback)；变更说明、截图和最终验证见[本轮交付记录](practice-updates-2026-10-23.md)。上传前核对 main 为 `55ce473`，本轮不直接合并 main；云端 CI 以新 PR 的对应提交为准。
+交付分支：[feat/practice-tips-and-feedback](https://github.com/2791243700-hue/agent-practice-lab/tree/feat/practice-tips-and-feedback)；变更说明、截图和最终验证见[本轮交付记录](practice-updates-2026-10-23.md)。已上传 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9)，提交 `2627428`，目标 main 为 `55ce473`。2026-10-23 再次查询 PR 仍未合并；此次文档与冗余清理为该分支后续增量，云端 CI 以各提交为准。
 
 ## 代码交付状态
 
 PR [#6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 与 [#7](https://github.com/2791243700-hue/agent-practice-lab/pull/7) 已依次合并到 main。#6 合并提交为 `e5a3458`，#7 合并提交为 `a8f7438`；后续文档同步提交在此基线上追加。获取这部分已合并基线可直接使用 main；体验本轮 Tips 和结果弹窗需切换到上文交付分支。
 
-前端体验增量原分支为 `feat/practice-workspace-interactions`，基于 `b56182f` 开发；PR #6 合并后，#7 已改为以 main 为目标并完成合并。包含生活情境示例、输入区准备提醒、左侧可收起工作区、紧凑顶部及实训信息、立即显示问题与流式跟随。完整说明及截图见[实训工作区交付](practice-workspace-delivery.md)。本轮未改动后端、接口、课件包或评分。
+前端体验增量原分支为 `feat/practice-workspace-interactions`，基于 `b56182f` 开发；PR #6 合并后，#7 已改为以 main 为目标并完成合并。包含生活情境示例、输入区准备提醒、左侧可收起工作区、紧凑顶部及实训信息、立即显示问题与流式跟随。完整说明及截图见[实训工作区交付](practice-workspace-delivery.md)。该次 PR #7 未改动后端、接口、课件包或评分。
 
-公开仓库：[2791243700-hue/agent-practice-lab](https://github.com/2791243700-hue/agent-practice-lab)。契约、后端、前端、DeepSeek 适配和预览修复已通过 PR [#1](https://github.com/2791243700-hue/agent-practice-lab/pull/1)、[#2](https://github.com/2791243700-hue/agent-practice-lab/pull/2)、[#3](https://github.com/2791243700-hue/agent-practice-lab/pull/3)、[#4](https://github.com/2791243700-hue/agent-practice-lab/pull/4)、[#5](https://github.com/2791243700-hue/agent-practice-lab/pull/5) 合并。上述为历史基线 `3214d75`；当前已合并代码基线为 `a8f7438`（见上文）。
+公开仓库：[2791243700-hue/agent-practice-lab](https://github.com/2791243700-hue/agent-practice-lab)。契约、后端、前端、DeepSeek 适配和预览修复已通过 PR [#1](https://github.com/2791243700-hue/agent-practice-lab/pull/1)、[#2](https://github.com/2791243700-hue/agent-practice-lab/pull/2)、[#3](https://github.com/2791243700-hue/agent-practice-lab/pull/3)、[#4](https://github.com/2791243700-hue/agent-practice-lab/pull/4)、[#5](https://github.com/2791243700-hue/agent-practice-lab/pull/5) 合并。上述为历史基线 `3214d75`；功能基线为 `a8f7438`，后续文档合并至 `55ce473`。
 
 在历史基线 `3214d75` 上新增并已合并的功能包括：
 
@@ -47,7 +49,7 @@ PR [#6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 与 [#7](ht
 3. 启动器等待 API 健康，但未等待前端 HTTP 就绪，首次页面可能需要稍等刷新。
 4. 登录、班级、线上部署、多用户调度、任意代码执行和文件上传均未实现。身份接口仅为预留声明，尚未接入固定 local-owner 链路；运行、凭据和存储模块保留扩展位置。
 
-内部整理建议：可另行让 HTTP 边界与 School 共享契约对象，并将仅供测试使用的 runtime/probe.py 移至测试辅助目录。当前没有因此发现重复 HTTP 接口；原有配置创建入口、资源查询、扩展协议声明及类型边界适配继续保留，调整前需核对契约与调用方。
+内部整理已在当前工作区完成：HTTP 边界与 School 共享契约对象，离线模拟器移至 tests/runtime_probe.py；原有配置创建入口、资源查询、扩展协议声明及类型边界适配保留。范围与验证见[清理记录](cleanup-2026-10-23.md)。
 
 ## 文档入口
 

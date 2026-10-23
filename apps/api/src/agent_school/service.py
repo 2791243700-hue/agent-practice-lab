@@ -21,9 +21,9 @@ def fingerprint(value):
 
 
 class School:
-    def __init__(self, config):
+    def __init__(self, config, contracts: Contracts | None = None):
         self.config = config
-        self.contracts = Contracts(config.root)
+        self.contracts = contracts if contracts is not None else Contracts(config.root)
         from agent_school.instance import InstanceLock
 
         self.instance_lock = InstanceLock(config.data_dir)

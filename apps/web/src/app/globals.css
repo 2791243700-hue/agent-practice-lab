@@ -1520,12 +1520,10 @@ input[type="range"] {
   font-size: 12px;
   line-height: 1.7;
   margin-top: 12px;
+  margin-bottom: 0;
 }
 .composer-preparation svg {
   margin-top: 2px;
-}
-.composer-preparation {
-  margin-bottom: 0;
 }
 .material-list > div {
   display: flex;

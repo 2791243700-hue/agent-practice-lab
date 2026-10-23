@@ -2,7 +2,7 @@
 
 2026-10-23 通过 feat/practice-tips-and-feedback 分支交付，尚未合并 main：新增按需模型 Tips（GET/POST `/runs/{run_id}/tips`），当前本地 39 个 HTTP 操作、92 个 schema；缓存按运行持久保存，独立于正式评分。用量与异常/中断处理见[契约说明](../contracts/README.md)，使用边界见[版本状态](project-status.md)。下文 2026-10-22 的数字与验证记录属于已合并历史基线。
 
-更新：2026-10-22。后端本地实现 v0.1.0 的 37 个 HTTP 操作，已与前端接通课程、Key 管理、Agent 运行、授权、评分、下载和导出。已合并的 main 版本与验证边界见[版本状态](project-status.md)。
+历史基线（2026-10-22）：后端本地实现 v0.1.0 的 37 个 HTTP 操作，已与前端接通课程、Key 管理、Agent 运行、授权、评分、下载和导出。已合并的 main 版本与验证边界见[版本状态](project-status.md)。
 
 ## 准备
 
@@ -78,3 +78,7 @@ uv run --project apps/api uvicorn agent_school.main:app_factory --factory --host
 最近本地通过 91 项后端测试、197 项契约检查及 Ruff，见[后端验证报告](runtime-validation.md)。自动测试包含真实 SDK + 本地 HTTP 测试服务；2026-10-19 另有 DeepSeek 后端实测，四关正式提交通过但第四关依赖额外任务 ID 提示，详见[实测记录](live-model-validation.md)。新增 Key 导入/目录尚未用真实服务商复测，不能以旧实测代替。
 
 当前 8 项前端与 26 项浏览器回归通过；浏览器用本地脚本模型，真实外部模型的浏览器验收仍待执行。TypeScript discriminator 适配、第四关指导和启动器未等待前端 HTTP 就绪仍待完善。首版不提供线上身份系统、任意 shell、文件上传或自定义 MCP 执行。
+
+## 内部结构清理（2026-10-23）
+
+HTTP 边界和业务服务共享 Contracts 实例，避免重复读取和构建契约校验器；直接创建 School 的测试仍支持自动加载。离线 SDK 模拟器移至 `apps/api/tests/runtime_probe.py`，不再随生产包安装。对外 HTTP 操作、字段和状态码保持兼容，核对结果见[清理记录](cleanup-2026-10-23.md)。

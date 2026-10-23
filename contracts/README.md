@@ -14,7 +14,7 @@
 | [examples/events.json](examples/events.json) | 拒绝后批准、过期、取消、重启中断、模型失败、读取和查询等模拟事件序列 |
 | [examples/lesson-manifest.json](examples/lesson-manifest.json) | 第四关的课程模板格式示例，非完整课程包 |
 
-OpenAPI 与本说明是现有实现的规范来源，FastAPI 路由按 JSON 契约校验请求和响应，内部 DTO 使用 Pydantic，尚未全量切换为模型导出。事件 schema 是 OpenAPI 的 StoredEvent 及其依赖的独立副本，验证脚本检查两者一致。调整生成方式时须保持既有线上字段和行为，不维护两套各自变化的定义。
+OpenAPI 与本说明是现有实现的规范来源，FastAPI 路由与 School 共用同一个 Contracts 对象，按 JSON 契约校验请求和响应，内部 DTO 使用 Pydantic，尚未全量切换为模型导出。事件 schema 是 OpenAPI 的 StoredEvent 及其依赖的独立副本，验证脚本检查两者一致。调整生成方式时须保持既有线上字段和行为，不维护两套各自变化的定义。
 
 HTTP 字段结构以 OpenAPI 为准；跨字段、并发和权限规则以本说明为准。冲突必须修正文档与 schema 后再合并，不由两端各自解释。本次对既有计划的具体化包括：固定 Attempt.mode、演示成绩单独表示、分页历史、版本冲突处理、提交快照下载和全局幂等约定。
 
@@ -267,3 +267,5 @@ validate 检查 OpenAPI、所有 JSON Schema、样例、事件副本一致性、
 - Tips 是模型建议，不参与正式验收，不修改运行、授权、提交或历史。其用量在 RunTips.usage 单列，不计入执行运行的 Usage；不代表账户完整账单。
 
 2026-10-23 补充：Tips 界面不显示单独的依据段落。新生成仅要求 assessment、gaps、next_steps；为兼容既有 RunTips 响应，evidence 字段保留，新结果固定为空数组。服务商额外返回的依据会丢弃，旧缓存仍可读但不显示该部分。
+
+内部整理不删除对外兼容接口或旧数据字段。路由与分发操作的一致性由 `apps/api/tests/test_contract_wiring.py` 验证；TypeScript 类型仍由 `npm run types` 生成。当前核对结果见[清理记录](../docs/cleanup-2026-10-23.md)。
