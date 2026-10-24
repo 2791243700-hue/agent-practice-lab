@@ -871,6 +871,8 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             attempt={attempt}
             lesson={lesson}
             history={submissions}
+            runs={runs}
+            events={events}
             disabled={
               !!active ||
               historical ||
@@ -886,6 +888,14 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
           />
           {feedback && (
             <section className="panel">
+              {lesson.id === "01-task" && (
+                <>
+                  <h2>历史验收结果（原版本）</h2>
+                  <p className="small muted">
+                    这是此前提交生成的结果，不是本次复盘的评分。旧记录和通关状态保持不变。
+                  </p>
+                </>
+              )}
               <SubmissionFeedback submission={feedback} />
             </section>
           )}

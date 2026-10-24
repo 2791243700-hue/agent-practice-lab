@@ -2,8 +2,16 @@
 import { useState } from "react";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { pathId } from "@/lib/api";
-import type { Attempt, Lesson, Schema, Submission } from "@/lib/types";
+import type {
+  Attempt,
+  Event,
+  Lesson,
+  Run,
+  Schema,
+  Submission,
+} from "@/lib/types";
 import { dateTime, ErrorBox, useAction } from "./ui";
+import { ConversationReview } from "./conversation-review";
 
 export function SubmissionFeedback({ submission }: { submission: Submission }) {
   const title = submission.passed
@@ -81,6 +89,8 @@ export function SubmissionPanel({
   attempt,
   lesson,
   history,
+  runs,
+  events,
   disabled,
   onSubmit,
   onView,
@@ -88,6 +98,8 @@ export function SubmissionPanel({
   attempt: Attempt;
   lesson: Lesson;
   history: Schema["SubmissionSummary"][];
+  runs: Run[];
+  events: Record<string, Event[]>;
   disabled: boolean;
   onSubmit: (answers: Schema["Answers"]) => Promise<void>;
   onView: (id: string) => Promise<void>;
@@ -100,155 +112,194 @@ export function SubmissionPanel({
   >({});
   const [session, setSession] = useState("");
   const [room, setRoom] = useState("");
+  // Reflection stays local until its versioned submission contract is agreed.
+  // Do not translate review completion into the retired choice answer.
+  const showReview = lesson.id === "01-task" && form.kind === "choice";
+  const titles = {
+    choice: "核对理解，提交验收",
+    facts: "核对事实与来源",
+    course: "核对工具与查询结果",
+    artifact: "核对授权与保存产物",
+  };
+  const guidance = {
+    choice: "运行完成只是一步。请核对材料和结果，再提交本次实训的证据与答案。",
+    facts: "系统会核对实际读取记录、日期与原文来源；只勾选材料不代表已经读取。",
+    course:
+      "系统会核对真实查询记录、课程编号、日期与教室；口头说已查到不能代替工具结果。",
+    artifact:
+      "系统会核对拒绝未写入、后续批准、保存结果与产物内容；批准不等于已经保存。",
+  };
   return (
     <section className="panel" id="submit">
       <div className="panel-heading">
         <div>
           <div className="eyebrow">CHECK YOUR UNDERSTANDING</div>
-          <h2>核对理解，提交验收</h2>
+          <h2>
+            {showReview ? "对照两轮尝试，完成复盘验收" : titles[form.kind]}
+          </h2>
         </div>
         <span
           className={`badge ${attempt.mode === "demo" ? "demo" : "subtle"}`}
         >
-          {attempt.mode === "demo" ? "演示评测" : "正式验收"}
+          {showReview
+            ? "本地预览"
+            : attempt.mode === "demo"
+              ? "演示评测"
+              : "正式验收"}
         </span>
       </div>
-      <p className="small muted">
-        运行完成只是一步。请核对材料和结果，再提交本次实训的证据与答案。
-      </p>
+      {showReview ? (
+        <ConversationReview
+          attempt={attempt}
+          runs={runs}
+          events={events}
+          disabled={disabled || action.busy}
+        />
+      ) : (
+        <p className="small muted">{guidance[form.kind]}</p>
+      )}
       <ErrorBox error={action.error} />
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          let answers: Schema["Answers"] = {};
-          if (form.kind === "choice")
-            answers = { question_id: form.question_id, option_id: option };
-          if (form.kind === "facts")
-            answers = {
-              facts: form.tasks.map((t) => ({
-                task_id: t.task_id,
-                due_date: facts[t.task_id]?.due_date ?? "",
-                source_id: facts[t.task_id]?.source_id ?? "",
-              })),
-            };
-          if (form.kind === "course")
-            answers = {
-              course_id: form.course_id,
-              session_date: session,
-              room,
-            };
-          void action.act(() => onSubmit(answers));
-        }}
-      >
-        <fieldset disabled={disabled || action.busy}>
-          <legend className="sr-only">本关作答</legend>
-          {form.kind === "choice" && (
-            <>
-              <p>
-                <strong>{form.prompt}</strong>
-              </p>
-              {form.options.map((o) => (
-                <label className="option" key={o.id}>
-                  <input
-                    required
-                    type="radio"
-                    name="understanding"
-                    value={o.id}
-                    checked={option === o.id}
-                    onChange={() => setOption(o.id)}
-                  />
-                  {o.label}
-                </label>
-              ))}
-            </>
+      {!showReview && (
+        <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              let answers: Schema["Answers"] = {};
+              if (form.kind === "choice")
+                answers = { question_id: form.question_id, option_id: option };
+              if (form.kind === "facts")
+                answers = {
+                  facts: form.tasks.map((t) => ({
+                    task_id: t.task_id,
+                    due_date: facts[t.task_id]?.due_date ?? "",
+                    source_id: facts[t.task_id]?.source_id ?? "",
+                  })),
+                };
+              if (form.kind === "course")
+                answers = {
+                  course_id: form.course_id,
+                  session_date: session,
+                  room,
+                };
+              void action.act(() => onSubmit(answers));
+            }}
+          >
+            <fieldset disabled={disabled || action.busy}>
+              <legend className="sr-only">本关作答</legend>
+              {form.kind === "choice" && (
+                <>
+                  <p>
+                    <strong>{form.prompt}</strong>
+                  </p>
+                  {form.options.map((o) => (
+                    <label className="option" key={o.id}>
+                      <input
+                        required
+                        type="radio"
+                        name="understanding"
+                        value={o.id}
+                        checked={option === o.id}
+                        onChange={() => setOption(o.id)}
+                      />
+                      {o.label}
+                    </label>
+                  ))}
+                </>
+              )}
+              {form.kind === "facts" &&
+                form.tasks.map((t) => (
+                  <div className="fact-row" key={t.task_id}>
+                    <strong>{t.label}</strong>
+                    <label>
+                      截止日期
+                      <input
+                        type="date"
+                        required
+                        value={facts[t.task_id]?.due_date ?? ""}
+                        onChange={(e) =>
+                          setFacts({
+                            ...facts,
+                            [t.task_id]: {
+                              due_date: e.target.value,
+                              source_id: facts[t.task_id]?.source_id ?? "",
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      依据来源
+                      <select
+                        required
+                        value={facts[t.task_id]?.source_id ?? ""}
+                        onChange={(e) =>
+                          setFacts({
+                            ...facts,
+                            [t.task_id]: {
+                              due_date: facts[t.task_id]?.due_date ?? "",
+                              source_id: e.target.value,
+                            },
+                          })
+                        }
+                      >
+                        <option value="">请根据原文选择</option>
+                        {form.sources.map((s) => (
+                          <option key={s.source_id} value={s.source_id}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                ))}
+              {form.kind === "course" && (
+                <>
+                  <p>{form.prompt}</p>
+                  <div className="form-grid">
+                    <label>
+                      课程日期
+                      <input
+                        required
+                        type="date"
+                        value={session}
+                        onChange={(e) => setSession(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      教室
+                      <input
+                        required
+                        maxLength={120}
+                        value={room}
+                        onChange={(e) => setRoom(e.target.value)}
+                        placeholder="根据查询结果填写"
+                      />
+                    </label>
+                  </div>
+                </>
+              )}
+              {form.kind === "artifact" && (
+                <p>{form.prompt} 提交时会冻结当前产物和操作记录。</p>
+              )}
+              <button className="button" disabled={disabled || action.busy}>
+                {action.busy ? "正在验收…" : "提交验收"}
+              </button>
+            </fieldset>
+          </form>
+          {disabled && (
+            <p className="small muted">
+              当前实训运行未结束，或已经重新开始。运行结束后才可提交。
+            </p>
           )}
-          {form.kind === "facts" &&
-            form.tasks.map((t) => (
-              <div className="fact-row" key={t.task_id}>
-                <strong>{t.label}</strong>
-                <label>
-                  截止日期
-                  <input
-                    type="date"
-                    required
-                    value={facts[t.task_id]?.due_date ?? ""}
-                    onChange={(e) =>
-                      setFacts({
-                        ...facts,
-                        [t.task_id]: {
-                          due_date: e.target.value,
-                          source_id: facts[t.task_id]?.source_id ?? "",
-                        },
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  依据来源
-                  <select
-                    required
-                    value={facts[t.task_id]?.source_id ?? ""}
-                    onChange={(e) =>
-                      setFacts({
-                        ...facts,
-                        [t.task_id]: {
-                          due_date: facts[t.task_id]?.due_date ?? "",
-                          source_id: e.target.value,
-                        },
-                      })
-                    }
-                  >
-                    <option value="">请根据原文选择</option>
-                    {form.sources.map((s) => (
-                      <option key={s.source_id} value={s.source_id}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            ))}
-          {form.kind === "course" && (
-            <>
-              <p>{form.prompt}</p>
-              <div className="form-grid">
-                <label>
-                  课程日期
-                  <input
-                    required
-                    type="date"
-                    value={session}
-                    onChange={(e) => setSession(e.target.value)}
-                  />
-                </label>
-                <label>
-                  教室
-                  <input
-                    required
-                    maxLength={120}
-                    value={room}
-                    onChange={(e) => setRoom(e.target.value)}
-                    placeholder="根据查询结果填写"
-                  />
-                </label>
-              </div>
-            </>
-          )}
-          {form.kind === "artifact" && (
-            <p>{form.prompt} 提交时会冻结当前产物和操作记录。</p>
-          )}
-          <button className="button" disabled={disabled || action.busy}>
-            {action.busy ? "正在验收…" : "提交验收"}
-          </button>
-        </fieldset>
-      </form>
-      {disabled && (
-        <p className="small muted">
-          当前实训运行未结束，或已经重新开始。运行结束后才可提交。
-        </p>
+        </>
       )}
       <details className="history">
         <summary>历史提交（{history.length}）</summary>
+        {showReview && (
+          <p className="small muted">
+            这里保留此前按原版本生成的成绩和证据；本页复盘不会新增或覆盖正式成绩。
+          </p>
+        )}
         {!history.length && <p className="muted small">尚无提交。</p>}
         {history.map((s) => (
           <button

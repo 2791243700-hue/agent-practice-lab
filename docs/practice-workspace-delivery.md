@@ -1,5 +1,7 @@
 # 实训工作区交付与验证
 
+本文保留 PR #7 和 26 项浏览器测试的历史交付。2026-10-24 首页与第一关验收 UI 的新变化、30 项浏览器结果及评分边界见[复盘交付](reflection-assessment-delivery.md)，不能把旧第一关提交界面视为当前 UI。
+
 日期：2026-10-22。交付：[PR #7](https://github.com/2791243700-hue/agent-practice-lab/pull/7)，现已合并至 main（`a8f7438`）。
 
 本次前端增量基于 PR [#6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 的 `b56182f` 开发。#6 已先合并到 main（`e5a3458`），随后 #7 的目标从基础分支调整为 main 并完成合并。接收时直接获取 main。
