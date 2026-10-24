@@ -2,7 +2,7 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**当前状态（2026-10-22）：v0.1.0 本地前后端已接入。** 浏览器内可阅读四关导读、管理多个自备 Key、选择模型、运行实训、批准或拒绝保存、查看产物、提交验收和导出学习记录。不提供登录或线上部署。[当前版本与文档索引](docs/project-status.md) 记录已合并的 main 状态、验证范围和已知限制。
+**当前状态（2026-10-24）：v0.1.0 本地前后端已接入，第一关采用复盘验收预览。** 可阅读四关、管理自备 Key、运行实训、审批和查看产物、回看历史与导出记录。第一关已移除旧单选提交入口，新复盘尚未接入正式评分，完成后不会新生成通关成绩；第二至四关继续按真实事件及内容正式验收。无需登录，不提供线上部署。完整范围见[版本状态](docs/project-status.md)。
 
 ## 本地启动（Windows）
 
@@ -21,6 +21,8 @@ npm --prefix apps/web ci
 使用 `scripts/start.ps1 -Demo` 可开启无 Key 演示；演示记录始终不计正式通过。安装、恢复、错误排查见[新手使用说明](docs/user-guide.md)；开发检查、截图见[前端验证](docs/frontend-validation.md)；真实模型测试见[独立实测记录](docs/live-model-validation.md)。
 
 ## 首版范围
+
+首页在至少一把 Key 已配置后隐藏准备提示，全部凭据缺失后恢复。第一关四步复盘可引用、标亮并下载对话依据；草稿刷新或离开后清空，不在原有 ZIP 中。功能、截图与验证见[本次交付](docs/reflection-assessment-delivery.md)，正式接入见[后端工作清单](docs/reflection-assessment-backend-handoff.md)。
 
 - 本地运行、浏览器操作；学生自行申请并配置模型服务 API Key。
 - 使用统一教学 Agent，每关先读介绍，再实践并查看反馈。
@@ -48,7 +50,7 @@ npm --prefix apps/web ci
 
 使用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。浏览器只调用同源 `/api/v1`，Next.js 服务端代理转发内部令牌；Key 只在后端内存中保存。前端类型来自 `contracts/types.d.ts`，已知生成器 discriminator 差异的边界适配见前端验证文档。
 
-多个 Key 可切换、重命名、清除或删除；重启后保留非敏感配置，重新输入 Key。模型出现在列表中不等于支持实训所需工具，正式运行仍要求连接检查通过。学习记录右侧显示开始日期与红/绿通关状态，演示不计正式通过。2026-10-22 本地已通过 197 项契约检查、91 项后端、8 项前端和 26 项浏览器测试；外部 DeepSeek 后端实测及第四关的教学限制见[独立实测记录](docs/live-model-validation.md)。
+多个 Key 可切换、重命名、清除或删除；重启需重新输入 Key。列表成功不等于工具兼容，正式运行仍要求连接检查通过。旧成绩保留，演示与第一关新复盘都不伪造正式通过。2026-10-24 前端单元 8 项、浏览器 30 项及类型/格式/隔离构建通过；后端 91 项与契约 197 项是原有基线，本次未修改或重跑。外部模型与第四关教学限制见[实测记录](docs/live-model-validation.md)。
 
 ## 双人协作
 
@@ -57,7 +59,7 @@ npm --prefix apps/web ci
 | A | 前端页面、课程内容、模拟接口、浏览器测试和使用说明 |
 | B | 后端接口、Agent 执行、数据存储、工具授权、规则评分和启动脚本 |
 
-前后端与四关闭环已合并；后续使用短期功能分支和 Pull Request 合并到 main。前端使用契约类型和测试样例，后端落实接口和业务约束；接口变更在同一 PR 同步契约、实现、测试和说明。Key 管理与审查修复已通过 [PR #6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 合并，实训侧栏、紧凑顶部、辅助示例与即时流式对话已通过 [PR #7](https://github.com/2791243700-hue/agent-practice-lab/pull/7) 合并。直接获取 main 即包含上述功能；启动、截图及验证边界见[实训工作区交付](docs/practice-workspace-delivery.md)。
+原版四关闭环、Key 管理、工作区及文档已通过 PR #1—#8 合并，本次以前一版 main `55ce473` 为开发基线，选择性替换第一关验收 UI。新正式评分仍待前后端协调，第二至四关与旧成绩保留。后续使用短期分支与 PR；接口、评分或课件变更同步契约、新版本和测试。原工作区历史记录见[交付说明](docs/practice-workspace-delivery.md)。
 
 ```powershell
 git clone https://github.com/2791243700-hue/agent-practice-lab.git

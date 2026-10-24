@@ -1,10 +1,12 @@
 # Agent Practice Lab：前后端开发交接
 
-更新：2026-10-22。适用于接手前端、后端、契约与课程的开发者。已合并主分支状态与验证边界详见[版本状态](project-status.md)。
+更新：2026-10-24。适用于接手前端、后端、契约与课程的开发者。当前交付见[版本状态](project-status.md)，第一关新验收的逐项工作见[后端任务清单](reflection-assessment-backend-handoff.md)。
 
 ## 当前代码与接收方式
 
-PR #1 契约、#2 后端、#3 前端、#4 DeepSeek/权限适配、#5 预览修复均已合并到 main，历史基线为 `3214d75`；当前 main 已纳入下述 #6、#7，代码基线为 `a8f7438`。原前端依赖 feat/backend 的合并顺序已执行完成，无需再次 retarget 或 cherry-pick 旧修复。
+本次以前一版 main `55ce473` 为基线，第一关旧单选及提交入口改为复盘预览，第二至四关保留正式验收。复盘只做前端核对与本地下载，不能生成新正式成绩；旧 choice API 仍可用于兼容历史，不是新验收已实现。后端应先协调新契约、能力规则及课件版本，再实现提交、评分、历史和导出。
+
+PR #1 契约、#2 后端、#3 前端、#4 DeepSeek/权限适配、#5 预览修复均已合并到 main，历史基线为 `3214d75`；历史工作区基线为 `a8f7438`，PR #8 后的本次开发基线为 `55ce473`。原前端依赖 feat/backend 的合并顺序已执行完成，无需再次 retarget 或 cherry-pick 旧修复。
 
 PR #6 已将 Key 管理、界面、审查修复与文档更新合并到 main（`e5a3458`）。接手时直接获取 main。通过 PR 查看差异和对应 CI；数据目录、凭据、日志及 Next.js 的开发生成路径不进入提交。
 
@@ -24,7 +26,7 @@ npm --prefix apps/web ci
 
 可用 `-Demo` 开演示，或 `-WebPort`、`-ApiPort`、`-DataDir` 创建独立实例；停止须使用相同数据目录。启动器传递私有的 AGENT_SCHOOL_API_ORIGIN、AGENT_SCHOOL_FRONTEND_ORIGIN、AGENT_SCHOOL_LOCAL_TOKEN；令牌不进入 NEXT_PUBLIC、浏览器、URL 或持久化配置。浏览器只访问同源 `/api/v1`，不要将启动地址的 127.0.0.1 随意换成 localhost。
 
-完整命令与最新证据见[后端说明](backend.md)、[后端验证](runtime-validation.md)、[前端验证](frontend-validation.md)。最近本地结果为 197 项契约、91 项后端、8 项前端、26 项浏览器测试通过，Ruff/格式/类型/生产构建通过；功能分支 CI 以对应 PR 实际结果为准。2026-10-19 DeepSeek 实测仅覆盖后端，第四关额外提供 ID 映射，见[独立记录](live-model-validation.md)。
+完整命令与证据见[后端说明](backend.md)、[后端验证](runtime-validation.md)、[前端验证](frontend-validation.md)。2026-10-24 前端 8 项、浏览器 30 项、格式/类型/隔离构建通过；后端 91 项、契约 197 项为原基线，本次未改动或重跑。云端以对应提交为准；旧 DeepSeek 后端实测不能代替新复盘评分验收。
 
 ## 新模型设置的契约
 
@@ -54,9 +56,11 @@ npm --prefix apps/web ci
 
 IdentityProvider/LocalIdentityProvider 目前只保留声明，服务、存储和幂等链路仍固定 local-owner；未来接入账号时需贯穿调用，不能把替换 `/me` 当作完成登录支持。
 
-四关答案依次为 question_id/option_id、facts[]、course_id/session_date/room、空对象；详见[契约](../contracts/README.md)。内部版本继续保存，页面精简小字不影响版本锁定和评分。
+现有 v0.1.0 后端仍接受 question_id/option_id、facts[]、course_id/session_date/room、空对象。第一关当前前端不再发送旧 choice，新的 reflection 类型尚未发布，见[契约](../contracts/README.md)和[任务清单](reflection-assessment-backend-handoff.md)。原课程版本与旧成绩继续保留。
 
 ## 待办与维护边界
+
+新增最高优先级：[第一关复盘正式接入](reflection-assessment-backend-handoff.md)。先明确评分依据、引用定位、变式版本及新旧实验策略；不能只接受解释非空、前端完成标记或自动代选旧正确答案。
 
 1. 第四关发布新版本说明必要 task_id；再做零经验用户独立验收。不要把已有后端实测说成新手体验已完成。
 2. 修复生成类型 discriminator，验证后去除前端 lib/types.ts 适配。

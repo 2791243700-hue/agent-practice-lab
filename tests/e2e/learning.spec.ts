@@ -52,6 +52,31 @@ async function testProfile(page: Page) {
   return await credential.json();
 }
 
+// Seed historical v1 submissions through the unchanged API. The new first-lesson
+// UI no longer offers the retired choice question or generates formal scores.
+async function historicalFirstSubmission(page: Page, option: string) {
+  const id = new URL(page.url()).pathname.split("/").at(-1)!;
+  const attempt = await (
+    await page.request.get(`/api/v1/attempts/${id}`)
+  ).json();
+  const response = await page.request.post("/api/v1/submissions", {
+    headers: {
+      Origin: "http://127.0.0.1:3100",
+      "Idempotency-Key": crypto.randomUUID(),
+    },
+    data: {
+      attempt_id: id,
+      expected_attempt_revision: attempt.revision,
+      answers: { question_id: "goal-constraints", option_id: option },
+    },
+  });
+  expect(response.ok()).toBe(true);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "历史验收结果（原版本）", exact: true }),
+  ).toBeVisible();
+}
+
 test("无 Key 阅读四关、首页与移动布局", async ({ page }) => {
   await page.goto("/");
   await expect(
@@ -78,7 +103,7 @@ test("无 Key 阅读四关、首页与移动布局", async ({ page }) => {
   await screenshot(page, "07-mobile-courses");
 });
 
-test("第一关：模型设置、认证失败、两次运行、刷新续接、逐项反馈和正式通过", async ({
+test("第一关：模型设置、认证失败、两次运行、复盘入口与原版本历史成绩", async ({
   page,
 }) => {
   const pageErrors: string[] = [];
@@ -143,10 +168,17 @@ test("第一关：模型设置、认证失败、两次运行、刷新续接、�
   ).toContainText("已根据课程通知整理两项待办，请核对日期和来源。");
   expect(starts.length).toBe(1);
   expect(cursors.some((c) => c > 0)).toBe(true);
-  await page
-    .getByRole("radio", { name: "只说帮我处理，并直接相信结果。" })
-    .check();
-  await page.getByRole("button", { name: "提交验收", exact: true }).click();
+  await expect(page.getByTestId("conversation-review")).toBeVisible();
+  await expect(
+    page.getByRole("radio", {
+      name: "只说帮我处理，并直接相信结果。",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "提交验收", exact: true }),
+  ).toHaveCount(0);
+  await historicalFirstSubmission(page, "no-check");
   await expect(page.getByTestId("submission-feedback")).toContainText(
     "需要补充",
   );
@@ -156,10 +188,7 @@ test("第一关：模型设置、认证失败、两次运行、刷新续接、�
   );
   await expect(page.getByText("本轮已完成", { exact: true })).toHaveCount(2);
   expect(starts.length).toBe(2);
-  await page
-    .getByRole("radio", { name: "说明目标、约束和输出要求，再检查结果。" })
-    .check();
-  await page.getByRole("button", { name: "提交验收", exact: true }).click();
+  await historicalFirstSubmission(page, "clear-goal");
   await expect(page.getByTestId("submission-feedback")).toContainText(
     "正式通过，做得有依据。",
   );

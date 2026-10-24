@@ -1,14 +1,16 @@
 # 当前版本与文档索引
 
-同步日期：2026-10-22。本文记录已合并的 main 状态与验证边界，其他文档的“当前”均以此范围为准。
+同步日期：2026-10-24。本文记录本次交付的实现与验证边界。历史设计、课件及旧测试结果不自动代表新增复盘已可正式评分。
 
 ## 代码交付状态
+
+本次交付以 main `55ce473`（PR #8）为基线：主页按凭据状态隐藏/恢复准备提示；第一关以四步复盘替换旧单选与提交入口；第二至四关保留基于实际事件与内容的正式验收。第一关只在页面内存中核对，支持 Markdown 下载，尚无后端保存、回看、导出及正式评分接入，当前新界面不能新生成第一关成绩。旧成绩保留并标为原版本结果。见[本次交付](reflection-assessment-delivery.md)与[后端任务](reflection-assessment-backend-handoff.md)。
 
 PR [#6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 与 [#7](https://github.com/2791243700-hue/agent-practice-lab/pull/7) 已依次合并到 main。#6 合并提交为 `e5a3458`，#7 合并提交为 `a8f7438`；后续文档同步提交在此基线上追加。安装和接手直接使用 main，无需再切换功能分支。
 
 前端体验增量原分支为 `feat/practice-workspace-interactions`，基于 `b56182f` 开发；PR #6 合并后，#7 已改为以 main 为目标并完成合并。包含生活情境示例、输入区准备提醒、左侧可收起工作区、紧凑顶部及实训信息、立即显示问题与流式跟随。完整说明及截图见[实训工作区交付](practice-workspace-delivery.md)。本轮未改动后端、接口、课件包或评分。
 
-公开仓库：[2791243700-hue/agent-practice-lab](https://github.com/2791243700-hue/agent-practice-lab)。契约、后端、前端、DeepSeek 适配和预览修复已通过 PR [#1](https://github.com/2791243700-hue/agent-practice-lab/pull/1)、[#2](https://github.com/2791243700-hue/agent-practice-lab/pull/2)、[#3](https://github.com/2791243700-hue/agent-practice-lab/pull/3)、[#4](https://github.com/2791243700-hue/agent-practice-lab/pull/4)、[#5](https://github.com/2791243700-hue/agent-practice-lab/pull/5) 合并。上述为历史基线 `3214d75`；当前已合并代码基线为 `a8f7438`（见上文）。
+公开仓库：[2791243700-hue/agent-practice-lab](https://github.com/2791243700-hue/agent-practice-lab)。原契约、后端、前端及适配已由 PR #1—#8 合并，原工作区基线为 `a8f7438`，#8 后为 `55ce473`。本次前端交付未改动后端、正式契约、评分或 1.0.0 课件包。
 
 在历史基线 `3214d75` 上新增并已合并的功能包括：
 
@@ -23,8 +25,9 @@ PR [#6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 与 [#7](ht
 | 范围 | 最近完成的结果 | 边界 |
 | --- | --- | --- |
 | PR #6 基线本地自动化 | 197 项契约结构检查、91 项后端测试、8 项前端测试、15 项浏览器测试通过；Ruff、格式、类型和生产构建通过 | 模型使用 MockTransport 或本地脚本服务，无私人 Key；浏览器回归使用本机 Chrome，构建在隔离目录执行 |
-| 本轮前端体验增量 | 8 项前端、26 项浏览器测试、Web 格式、类型和生产构建通过 | Playwright Chromium、临时数据和本地分段模型；没有私人 Key 实测，未重跑后端测试 |
-| 云端 CI | PR #6 的 6 项检查全部通过；#7 的前端检查在合并时仍排队。2026-10-22 上传本次文档前再次核对 main `8bbf7dd`：后端四环境、契约及前端共 6 项检查全部通过 | [main 前端检查](https://github.com/2791243700-hue/agent-practice-lab/actions/runs/39802913745/job/119908336575)已成功；结论仅对应 `8bbf7dd`，后续提交须核验各自 CI，不沿用此结果 |
+| PR #7 体验增量（历史） | 8 项前端、26 项浏览器、格式、类型及构建通过 | 2026-10-22 的记录，不代表新增复盘已正式评分 |
+| 2026-10-24 复盘与首页 | 8 项前端、30 项浏览器、格式、类型及隔离构建通过；首页提示另有 7 种夹具状态检查 | 第一关包含旧版本历史兼容，不能把旧提交通过算作新复盘评分完成；无私人 Key，未重跑后端/契约 |
+| 云端 CI | 本交付须核对对应 PR/合并提交的检查；历史 `8bbf7dd` 曾有 6 项成功 | 不沿用历史提交或本地结果冒充新提交云端通过，以对应提交的 Checks 为准 |
 | 2026-10-19 外部模型 | DeepSeek 文本/工具检查及四关后端正式提交通过 | 第四关额外提供了任务 ID 映射；未完成真实服务商的浏览器或零经验学生独立验收 |
 | 新增 Key 管理的外部验证 | 尚未执行 | 未使用真实 DeepSeek/OpenAI Key 验证新增导入与列表流程 |
 
@@ -33,6 +36,8 @@ PR [#6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 与 [#7](ht
 2026-10-22 合并后核查补充：契约 197 项、后端 91 项、前端单元 8 项，以及 TypeScript 和 Ruff 检查通过。37 个契约操作与实际路由、分发实现一一对应，未发现重复或遗漏；重新生成的 TypeScript 类型与提交文件一致。后端本地 HTTP 测试首次受进程代理环境影响，配置回环地址绕过代理后，单项及完整测试通过。该次核查未重跑生产构建、浏览器流程或真实模型。
 
 ## 已知待办
+
+优先任务是[第一关正式复盘接入](reflection-assessment-backend-handoff.md)：先对齐能力规则、引用字段和课程新版本，再实现存储、评分、历史与导出；同时处理旧版未完成实验的继续方式。当前不能代选旧答案或凭前端完成标记生成通关。
 
 1. 第四关对 `save_todos` 所需 `task_id` 的说明不充分，现有文字未给出必要映射；实测通过依赖额外提示。需要发布新的课程版本并复测零经验流程，不能直接改写已归档的 1.0.0 课程。
 2. 生成的 TypeScript discriminator 仍有 schema 名称与线上常量差异，前端保留边界适配；需修正生成方式后联动移除。
@@ -49,6 +54,7 @@ PR [#6](https://github.com/2791243700-hue/agent-practice-lab/pull/6) 与 [#7](ht
 | 后端启动与代理联调 | [后端开发说明](backend.md) |
 | 请求、错误、幂等和事件 | [契约说明](../contracts/README.md)、[OpenAPI](../contracts/openapi.json) |
 | 前后端接手与已知问题 | [交接说明](backend-handoff.md)、[协调记录](backend-coordination.md) |
+| 复盘验收与后端下一步 | [前端交付与截图](reflection-assessment-delivery.md)、[后端任务清单](reflection-assessment-backend-handoff.md) |
 | 设计背景和原始任务拆分 | [设计](../outputs/local-agent-learning-design.md)、[实施计划](../outputs/local-agent-learning-implementation-plan.md)、[双人协作](../outputs/two-person-github-collaboration-plan.md) |
 | 本次 Key 管理实现记录 | [2026-10-22 计划与验证](superpowers/plans/2026-10-22-key-manager.md) |
 
