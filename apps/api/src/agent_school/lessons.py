@@ -73,6 +73,10 @@ class LessonCatalog:
             "lookup_and_check_course": "course",
             "denied_without_write": "artifact",
             "approved_todos_artifact": "artifact",
+            "reflection_pair": "reflection",
+            "reflection_change": "reflection",
+            "reflection_quotes": "reflection",
+            "reflection_challenge": "reflection",
         }
         for rule in manifest["rules"]:
             evaluator, params = rule["evaluator"], rule["params"]
@@ -99,6 +103,17 @@ class LessonCatalog:
                 item["source_id"] not in material_ids for item in params["expected_items"]
             ):
                 raise ValueError("Grading artifact references missing course material")
+            if evaluator == "reflection_challenge":
+                challenge = form["challenge"]
+                items = {item["id"] for item in challenge["items"]}
+                expected = params["expected_judgments"]
+                if (
+                    params["challenge_id"] != challenge["id"]
+                    or len({item["item_id"] for item in expected}) != len(expected)
+                    or {item["item_id"] for item in expected} != items
+                    or len(items) != len(challenge["items"])
+                ):
+                    raise ValueError("Grading challenge must match every available form item exactly once")
 
     def get(self, lesson_id, version=None):
         if version is not None:

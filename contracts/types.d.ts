@@ -537,13 +537,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runs/{run_id}/tips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 读取本轮已保存的模型学习建议，不触发模型调用 */
+        get: operations["getRunTips"];
+        put?: never;
+        /** 明确点击后单次调用模型生成建议；缓存后不重复调用，不参与正式评分 */
+        post: operations["generateRunTips"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attempts/{attempt_id}/reflection-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 读取当前实验的复盘草稿，不调用模型 */
+        get: operations["getReflectionDraft"];
+        /** 按独立草稿版本保存复盘，不修改实验版本 */
+        put: operations["putReflectionDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         Empty: Record<string, never>;
         /** @enum {string} */
-        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ORIGIN_REJECTED" | "LOCAL_TOKEN_INVALID" | "PROFILE_BUSY" | "CREDENTIAL_MISSING" | "MODEL_NOT_READY" | "MODEL_AUTH_FAILED" | "MODEL_TIMEOUT" | "MODEL_INCOMPATIBLE" | "MODEL_UNAVAILABLE" | "RUN_BUSY" | "ATTEMPT_BUSY" | "ATTEMPT_SUPERSEDED" | "REVISION_CONFLICT" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_IN_PROGRESS" | "APPROVAL_ALREADY_DECIDED" | "APPROVAL_EXPIRED" | "APPROVAL_INVALIDATED" | "CURSOR_INVALID" | "DEMO_DISABLED" | "MODE_MISMATCH" | "LIMIT_EXCEEDED" | "RUN_TIMEOUT" | "TOOL_ERROR" | "EXECUTION_FAILED" | "INTERNAL_ERROR" | "MODEL_CATALOG_UNSUPPORTED" | "MODEL_CATALOG_INVALID";
+        ErrorCode: "VALIDATION_ERROR" | "NOT_FOUND" | "ORIGIN_REJECTED" | "LOCAL_TOKEN_INVALID" | "PROFILE_BUSY" | "CREDENTIAL_MISSING" | "MODEL_NOT_READY" | "MODEL_AUTH_FAILED" | "MODEL_TIMEOUT" | "MODEL_INCOMPATIBLE" | "MODEL_UNAVAILABLE" | "RUN_BUSY" | "ATTEMPT_BUSY" | "ATTEMPT_SUPERSEDED" | "REVISION_CONFLICT" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_IN_PROGRESS" | "APPROVAL_ALREADY_DECIDED" | "APPROVAL_EXPIRED" | "APPROVAL_INVALIDATED" | "CURSOR_INVALID" | "DEMO_DISABLED" | "MODE_MISMATCH" | "LIMIT_EXCEEDED" | "RUN_TIMEOUT" | "TOOL_ERROR" | "EXECUTION_FAILED" | "INTERNAL_ERROR" | "MODEL_CATALOG_UNSUPPORTED" | "MODEL_CATALOG_INVALID" | "TIPS_INVALID" | "TIPS_UNCERTAIN";
         FieldError: {
             path: string;
             message: string;
@@ -699,7 +735,7 @@ export interface components {
             kind: "ArtifactForm";
             prompt: string;
         };
-        AnswerForm: components["schemas"]["ChoiceForm"] | components["schemas"]["FactsForm"] | components["schemas"]["CourseForm"] | components["schemas"]["ArtifactForm"];
+        AnswerForm: components["schemas"]["ChoiceForm"] | components["schemas"]["FactsForm"] | components["schemas"]["CourseForm"] | components["schemas"]["ArtifactForm"] | components["schemas"]["ReflectionForm"];
         LessonSummary: {
             id: string;
             version: string;
@@ -927,7 +963,7 @@ export interface components {
             room: string;
         };
         /** @description Server selects exactly the lesson-specific shape. No expected answer values are returned by lesson APIs. */
-        Answers: components["schemas"]["ChoiceAnswers"] | components["schemas"]["FactsAnswers"] | components["schemas"]["CourseAnswers"] | components["schemas"]["Empty"];
+        Answers: components["schemas"]["ChoiceAnswers"] | components["schemas"]["FactsAnswers"] | components["schemas"]["CourseAnswers"] | components["schemas"]["Empty"] | components["schemas"]["ReflectionAnswers"];
         SubmissionCreate: {
             attempt_id: string;
             expected_attempt_revision: number;
@@ -1347,6 +1383,116 @@ export interface components {
         KeyConnectionResult: {
             profile: components["schemas"]["ModelProfile"];
             catalog: components["schemas"]["ModelCatalog"];
+        };
+        RunTipsCreate: {
+            profile_id: string;
+            expected_profile_revision: number;
+        };
+        RunTips: {
+            run_id: string;
+            attempt_id: string;
+            profile_id: string;
+            model: string;
+            /** Format: date-time */
+            created_at: string;
+            assessment: string;
+            gaps: string[];
+            next_steps: string[];
+            evidence: string[];
+            usage: components["schemas"]["Usage"];
+            context_truncated: boolean;
+        };
+        RunTipsResult: {
+            tips: components["schemas"]["RunTips"] | null;
+        };
+        ReflectionCitation: {
+            message_id: string;
+            event_seq: number;
+            quote: string;
+            /** @description Unicode code-point offset into the original message text, not UTF-16 units or rendered Markdown. */
+            start_offset: number;
+        };
+        ReflectionChange: {
+            /** @enum {string} */
+            category: "goal" | "constraint" | "output";
+            quote: string;
+        };
+        ReflectionJudgment: {
+            item_id: string;
+            /** @enum {string} */
+            decision: "known" | "confirm";
+        };
+        ReflectionChallengeAnswer: {
+            challenge_id: string;
+            judgments: components["schemas"]["ReflectionJudgment"][];
+            instruction: string;
+        };
+        ReflectionAnswers: {
+            /** @constant */
+            kind: "reflection";
+            baseline_run_id: string;
+            revised_run_id: string;
+            change: components["schemas"]["ReflectionChange"];
+            evidence: {
+                before: components["schemas"]["ReflectionCitation"];
+                after: components["schemas"]["ReflectionCitation"];
+            };
+            /** @enum {string} */
+            judgment: "satisfied" | "partial" | "unsatisfied";
+            explanation: string;
+            next_instruction: string;
+            challenge: components["schemas"]["ReflectionChallengeAnswer"];
+        };
+        ReflectionChallenge: {
+            id: string;
+            title: string;
+            notice: string;
+            items: {
+                id: string;
+                label: string;
+            }[];
+        };
+        ReflectionForm: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "ReflectionForm";
+            prompt: string;
+            challenge: components["schemas"]["ReflectionChallenge"];
+        };
+        ReflectionDraftData: {
+            step: number;
+            beforeId: string;
+            afterId: string;
+            beforeMessageId: string;
+            afterMessageId: string;
+            changeKind: string;
+            requirement: string;
+            beforeQuote: string;
+            afterQuote: string;
+            judgment: string;
+            explanation: string;
+            nextInstruction: string;
+            instruction: string;
+            facts: {
+                [key: string]: string;
+            };
+            beforeStartOffset: number;
+            afterStartOffset: number;
+            beforeEventSeq: number;
+            afterEventSeq: number;
+        };
+        ReflectionDraft: {
+            attempt_id: string;
+            revision: number;
+            draft: components["schemas"]["ReflectionDraftData"] | null;
+            updated_at: string | null;
+        };
+        PutReflectionDraftRequest: {
+            expected_revision: number;
+            expected_attempt_revision: number;
+            draft: components["schemas"]["ReflectionDraftData"];
         };
     };
     responses: never;
@@ -2727,6 +2873,167 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelCatalog"];
+                };
+            };
+            /** @description 统一错误格式；HTTP 状态映射见 README */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getRunTips: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunTipsResult"];
+                };
+            };
+            /** @description 统一错误格式；HTTP 状态映射见 README */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    generateRunTips: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunTipsCreate"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunTips"];
+                };
+            };
+            /** @description 成功 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 统一错误格式；HTTP 状态映射见 README */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getReflectionDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReflectionDraft"];
+                };
+            };
+            /** @description 统一错误格式；HTTP 状态映射见 README */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    putReflectionDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutReflectionDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReflectionDraft"];
+                };
+            };
+            /** @description 成功 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 成功 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description 统一错误格式；HTTP 状态映射见 README */

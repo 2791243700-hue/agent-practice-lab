@@ -34,7 +34,13 @@ class ExportService:
             archive.writestr(
                 "learning.json",
                 json.dumps(
-                    {"attempt": attempt, "runs": clean_runs, "events": events, "submissions": submissions},
+                    {
+                        "attempt": attempt,
+                        "runs": clean_runs,
+                        "events": events,
+                        "submissions": submissions,
+                        "reflection_draft": school.reflection.get_draft(attempt_id),
+                    },
                     ensure_ascii=False,
                     indent=2,
                 ),

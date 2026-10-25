@@ -141,5 +141,18 @@ const badManifest=read('examples/lesson-manifest.json');badManifest.intro_file='
 assert(!lessonValidator(badManifest),'Traversal path accepted');checks++;
 badManifest.intro_file='/absolute.md';assert(!lessonValidator(badManifest),'Absolute path accepted');checks++;
 badManifest.intro_file='intro.md';badManifest.rules=[];assert(!lessonValidator(badManifest),'Empty grading rules accepted');checks++;
+const reflection = sample('reflection-answer');
+invalid('ReflectionAnswers',{...reflection,passed:true},'client supplied reflection result');
+invalid('ReflectionAnswers',{...reflection,judgment:'always-better'},'unknown reflection judgment');
+invalid('ReflectionAnswers',{...reflection,explanation:'  \n'},'blank explanation input');
+invalid('ReflectionAnswers',{...reflection,challenge:{...reflection.challenge,instruction:'  '}},'blank challenge instruction input');
+const invalidCitation=structuredClone(reflection);invalidCitation.evidence.before.start_offset=-1;
+invalid('ReflectionAnswers',invalidCitation,'negative quote offset');
+invalid('ReflectionAnswers',{...reflection,challenge:{...reflection.challenge,judgments:[]}},'empty challenge judgments');
+invalid('ReflectionForm',{kind:'reflection',prompt:'test',challenge:{id:'c',title:'t',notice:'n',items:[{id:'i',label:'l',correct:'known'}]}},'private answer in public challenge');
+invalid('PutReflectionDraftRequest',{expected_revision:-1,expected_attempt_revision:1,draft:{}},'invalid draft revision');
+for (const folder of fs.readdirSync(path.join(root,'../content/lessons'),{withFileTypes:true})) {
+  if(folder.isDirectory()) valid(lessonValidator,JSON.parse(fs.readFileSync(path.join(root,'../content/lessons',folder.name,'manifest.json'),'utf8')),`published lesson ${folder.name}`);
+}
 console.log(`Contract validation passed: ${operationIds.size} operations, ${validators.size} schemas, ${http.length} HTTP examples, ${Object.keys(scenarios).length} event scenarios / ${kinds.size} kinds; ${checks} structural checks.`);
 console.log('This validates contracts and fixtures only; no server, concurrency behavior, or live model was tested.');

@@ -130,7 +130,13 @@ class RunService:
                     approval_required=name == "save_todos",
                 )
             )
-        platform = "你是教学资料助手。遵守工具和授权边界，不猜测事实。当前课题：\n" + lesson["task"]
+        platform = (
+            "你是教学资料助手。遵守工具和授权边界，不猜测事实。"
+            "主回答只给简洁、完整的任务结果；需要澄清缺失信息时简短询问。"
+            "不要主动附加学习评语、目标差距分析、两次指令对比或下一步教学建议，"
+            "这些由独立的 Tips 功能按需提供。学生明确请求的任务内容仍应完整回答。"
+            "当前课题：\n" + lesson["task"]
+        )
         settings = {
             **attempt["settings"],
             "system_instruction": platform + "\n学生设置：\n" + attempt["settings"]["system_instruction"],

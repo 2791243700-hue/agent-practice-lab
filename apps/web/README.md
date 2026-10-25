@@ -1,5 +1,7 @@
 # Agent Practice Lab Web
 
+当前统一功能见[交付记录](../../docs/unified-practice-delivery.md)：第一关按课程版本使用正式复盘或旧版 choice，草稿后端恢复；Tips、重置、结果弹窗和其余三关完整保留。以下 2026-10-24 记录为预览交付历史。
+
 Next.js App Router + TypeScript。课程、评分和身份通过现有后端获取，页面不复制正式评分逻辑，不修改已发布课程。
 
 2026-10-24：包含 Key 管理、按凭据状态显示的首页准备提示、可收起工作区和流式对话。第一关使用复盘验收模板，移除旧单选与提交；当前仅本地核对/下载，尚无新正式评分。第二至四关及旧成绩保留，详见[版本状态](../../docs/project-status.md)、[使用说明](../../docs/user-guide.md)和[后端接入清单](../../docs/reflection-assessment-backend-handoff.md)。

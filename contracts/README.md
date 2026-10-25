@@ -1,14 +1,12 @@
 # 前后端接口契约 v0.1.0
 
-2026-10-24 UI 边界：本文件仍描述已发布 v0.1.0，未增加 reflection 答案。第一关前端已移除旧 choice 提交入口，新复盘仅本地预览；旧 choice API 是兼容能力，不能代替新评分。接入前先协商并联动契约、课件新版本和实现，见[后端任务](../docs/reflection-assessment-backend-handoff.md)。
-
-更新：2026-10-22。首版契约及前后端已实现；已加入 Key 导入和模型列表操作，仍使用 v0.1.0，共 37 个 HTTP 操作。新增模型操作已通过 PR #6 合并到 main，前端体验增量也已随 PR #7 合并，交付状态见[版本状态](../docs/project-status.md)。样例用于结构验证，不代表外部模型实际运行。
+更新：2026-10-25。首版契约及前后端已实现；已加入 Key 导入和模型列表操作，仍使用 v0.1.0，本地工作区共 41 个 HTTP 操作（Tips 增量随功能分支交付，尚未合并 main）。新增模型操作已通过 PR #6 合并到 main，前端体验增量也已随 PR #7 合并，交付状态见[版本状态](../docs/project-status.md)。样例用于结构验证，不代表外部模型实际运行。
 
 ## 文件与唯一来源
 
 | 文件 | 用途 |
 | --- | --- |
-| [openapi.json](openapi.json) | 37 个 HTTP 操作、89 个 schema 的请求、响应、字段约束和操作 ID |
+| [openapi.json](openapi.json) | 41 个 HTTP 操作、102 个 schema 的请求、响应、字段约束和操作 ID |
 | [events.schema.json](events.schema.json) | 11 类 SSE 事件及每类 payload 的 JSON Schema |
 | [lesson.schema.json](lesson.schema.json) | 服务端私有课程 manifest，包括评分规则和参考事实 |
 | [types.d.ts](types.d.ts) | 从 OpenAPI 生成的 TypeScript 类型，不手工修改 |
@@ -16,7 +14,7 @@
 | [examples/events.json](examples/events.json) | 拒绝后批准、过期、取消、重启中断、模型失败、读取和查询等模拟事件序列 |
 | [examples/lesson-manifest.json](examples/lesson-manifest.json) | 第四关的课程模板格式示例，非完整课程包 |
 
-OpenAPI 与本说明是现有实现的规范来源，FastAPI 路由按 JSON 契约校验请求和响应，内部 DTO 使用 Pydantic，尚未全量切换为模型导出。事件 schema 是 OpenAPI 的 StoredEvent 及其依赖的独立副本，验证脚本检查两者一致。调整生成方式时须保持既有线上字段和行为，不维护两套各自变化的定义。
+OpenAPI 与本说明是现有实现的规范来源，FastAPI 路由与 School 共用同一个 Contracts 对象，按 JSON 契约校验请求和响应，内部 DTO 使用 Pydantic，尚未全量切换为模型导出。事件 schema 是 OpenAPI 的 StoredEvent 及其依赖的独立副本，验证脚本检查两者一致。调整生成方式时须保持既有线上字段和行为，不维护两套各自变化的定义。
 
 HTTP 字段结构以 OpenAPI 为准；跨字段、并发和权限规则以本说明为准。冲突必须修正文档与 schema 后再合并，不由两端各自解释。本次对既有计划的具体化包括：固定 Attempt.mode、演示成绩单独表示、分页历史、版本冲突处理、提交快照下载和全局幂等约定。
 
@@ -33,7 +31,7 @@ HTTP 字段结构以 OpenAPI 为准；跨字段、并发和权限规则以本说
 
 ### 幂等与版本
 
-创建配置、导入 Key 连接、连接检查、创建/重置实验、启动运行、提交、导出要求 `Idempotency-Key`，8—128 个字母、数字、下划线或连字符。前端为一次用户操作生成一个键，结果不明确时供手动重试沿用，成功后用户重新操作才换键，不自动重发写操作。
+创建配置、导入 Key 连接、连接检查、创建/重置实验、启动运行、生成 Tips、提交、导出要求 `Idempotency-Key`，8—128 个字母、数字、下划线或连字符。前端为一次用户操作生成一个键，结果不明确时供手动重试沿用，成功后用户重新操作才换键，不自动重发写操作。
 
 后端按 owner + HTTP 方法 + 路径 + key 持久化成功结果及规范化请求体哈希，去重记录不在首版自动过期。相同 key 和请求返回第一次成功响应及原状态码；请求不同返回 409 IDEMPOTENCY_CONFLICT；相同操作尚未完成返回 409 IDEMPOTENCY_IN_PROGRESS。先查已成功的幂等记录，再检查版本或忙碌状态。失败且未发生业务变更的请求允许原键重试；重置等多步变更必须通过事务和操作锁保证最多创建一次资源。单独设置/清除 credential 不使用该缓存。connect 接收 Key，但幂等记录仅保存请求摘要和非敏感响应，不保存原始请求或 Key；重启后重放历史响应不会恢复内存凭据，需 GET 当前配置再重新输入。前端待确认操作也只缓存请求体 SHA-256 指纹。
 
@@ -66,12 +64,16 @@ ModelProfile.revision 初始为 1，非敏感配置或内存凭据变更时递�
 | GET /attempts/{attempt_id} | 实训 ID | Attempt、进度、活跃运行和最近提交 ID |
 | PATCH /attempts/{attempt_id} | expected_revision、settings、selected_file_ids | 更新下一轮配置 |
 | POST /attempts/{attempt_id}/reset | expected_revision；幂等键 | 201 新 Attempt，旧记录保留 |
+| GET /attempts/{attempt_id}/reflection-draft | 实训 ID | ReflectionDraft；未保存 revision=0、draft=null，不调用模型 |
+| PUT /attempts/{attempt_id}/reflection-draft | expected_revision、expected_attempt_revision、draft | ReflectionDraft；自动保存，独立 revision，不修改 Attempt |
 | GET /attempts/{attempt_id}/files | 实训 ID | 材料和当前产物列表 |
 | GET /attempts/{attempt_id}/files/{file_id} | 文件 ID | FilePreview，最多 20000 字符 |
 | GET /attempts/{attempt_id}/files/{file_id}/download | 文件 ID | 完整附件下载 |
 | POST /runs | attempt_id、expected_attempt_revision、profile_id、input_text；幂等键 | 202 Run |
 | GET /attempts/{attempt_id}/runs | cursor、limit 可选 | 运行历史 |
 | GET /runs/{run_id} | 运行 ID | 状态、脱敏快照、用量、pending_approval |
+| GET /runs/{run_id}/tips | 运行 ID | 已保存的 Tips 或 null，不调用模型 |
+| POST /runs/{run_id}/tips | profile_id、expected_profile_revision、幂等键 | 终态运行的模型学习建议；缓存后直接复用 |
 | POST /runs/{run_id}/cancel | `{}` | 202 当前 Run，等待终态确认取消完成 |
 | GET /runs/{run_id}/event-history | after_seq=0、limit=100，上限 500 | 持久化事件分页 |
 | GET /runs/{run_id}/events | after_seq 或 Last-Event-ID | SSE 重放与订阅 |
@@ -255,3 +257,29 @@ validate 检查 OpenAPI、所有 JSON Schema、样例、事件副本一致性、
 字段、状态、事件名和语义变更必须同步说明、样例、生成类型并评估版本，同一个 PR 由双方审阅；新增两个操作为增量补充，health.contract_version 仍为 0.1.0。实现中遇到新需要先改契约，再改消费方；不得静默更名或用旧客户端假定所有未来字段兼容。
 
 格式依据：[OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html) 用于 HTTP 定义；SSE 的帧、id 和 Last-Event-ID 遵循 [WHATWG Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)。
+
+## 按需模型 Tips（2026-10-23 本地增量）
+
+- GET `/runs/{run_id}/tips`：返回 `{tips: null}` 或已保存的 RunTips，不请求服务商。
+- POST 同路径：必需 Idempotency-Key，body 为 `{profile_id, expected_profile_revision}`；返回 200 RunTips。仅终态运行可生成；配置须已检查且有内存 Key。当前选择的配置可不同于原运行配置。
+- 一次无工具的 Chat Completions 请求，45 秒总超时，无自动重试或跳转；输入最多约 60000 字符，HTTP 响应最多 256000 字节。范围为同实训截至指定运行的公开课程目标和真实事件，截断会标记 context_truncated；不发送私有评分参数或 Key 字段。
+- 按 run_id 唯一保存、校验并脱敏；缓存优先于配置检查，删除配置/重启后仍可读。不同幂等键并发也受全局执行槽保护，不会重复请求。生成期间配置不可变更。
+- TIPS_INVALID / 422：服务商未返回约定 JSON，未保存，可手动重试。MODEL_AUTH_FAILED / 401、MODEL_TIMEOUT / 504、MODEL_UNAVAILABLE / 503 为净化错误。重试可能再次产生费用。
+- TIPS_UNCERTAIN / 409：持久待处理标记因进程中断未结束，为避免重复扣费不自动再次生成；已有成功结果始终可读。
+- Tips 是模型建议，不参与正式验收，不修改运行、授权、提交或历史。其用量在 RunTips.usage 单列，不计入执行运行的 Usage；不代表账户完整账单。
+
+2026-10-23 补充：Tips 界面不显示单独的依据段落。新生成仅要求 assessment、gaps、next_steps；为兼容既有 RunTips 响应，evidence 字段保留，新结果固定为空数组。服务商额外返回的依据会丢弃，旧缓存仍可读但不显示该部分。
+
+内部整理不删除对外兼容接口或旧数据字段。路由与分发操作的一致性由 `apps/api/tests/test_contract_wiring.py` 验证；TypeScript 类型仍由 `npm run types` 生成。当前核对结果见[清理记录](../docs/cleanup-2026-10-23.md)。
+
+## 第一关新版复盘（2026-10-25）
+
+第一关 1.1.0 的 answer_form.kind=reflection，包含公开 challenge 的 id/title/notice/items；正确判断只存在课程私有 rules 中。旧版 1.0.0 仍可通过原 choice 字段提交，成绩不重算。当前功能在 PR #9 分支，完整范围见[统一交付](../docs/unified-practice-delivery.md)。
+
+POST /submissions 的 answers 新增 ReflectionAnswers：kind=reflection；baseline_run_id/revised_run_id；change.category=goal|constraint|output 和 quote；evidence.before/after 分别含 message_id、event_seq、quote、start_offset；judgment=satisfied|partial|unsatisfied；explanation、next_instruction；challenge.challenge_id、judgments[item_id,decision=known|confirm] 和 instruction。完整必填与长度以 OpenAPI 为准。start_offset 为原始正文 Unicode 码点偏移，换行、空格和重复句均按原文核对，不按 HTML 或 UTF-16 单元计算。
+
+后端核对运行归属/终态/顺序、改动引用及指定消息的精确原文，再核对课程版本的变式题。引用真实不等于自由解释质量已判定，explanation 和 instruction 保存用于学习反馈，不以关键词/字数作为硬性通过条件。partial/unsatisfied 允许通过，须写后续指令。演示不计正式完成。
+
+GET /attempts/{attempt_id}/reflection-draft 未保存时返回 revision=0、draft=null、updated_at=null。PUT 携当前草稿 expected_revision 及 expected_attempt_revision，成功只使草稿 revision+1。所有草稿字段允许未完成值，但固定字段、长度和数量有上限；私有 Key 经现有 HTTP 边界脱敏。仅 active reflection 实验可写，历史草稿可读。冲突返回 409 REVISION_CONFLICT，前端保留当前编辑内容并让学生主动处理，不自动覆盖。该 PUT 不要求 Idempotency-Key；响应丢失后先 GET，不能盲目重试写入。
+
+正式提交冻结答案、规则和引用，草稿的后续修改不改变历史结果。ZIP 中包含草稿以及不可变提交，课程与引用均绑定原版本，排除凭据、连接参数和内部令牌。

@@ -21,9 +21,9 @@ def fingerprint(value):
 
 
 class School:
-    def __init__(self, config):
+    def __init__(self, config, contracts: Contracts | None = None):
         self.config = config
-        self.contracts = Contracts(config.root)
+        self.contracts = contracts if contracts is not None else Contracts(config.root)
         from agent_school.instance import InstanceLock
 
         self.instance_lock = InstanceLock(config.data_dir)
@@ -52,6 +52,12 @@ class School:
 
         self.submissions = SubmissionService(self)
         self.exports = ExportService(self)
+        from agent_school.tips import TipsService
+
+        self.tips = TipsService(self)
+        from agent_school.reflection import ReflectionService
+
+        self.reflection = ReflectionService(self)
 
     def completed(self, lesson_id, version):
         attempts = {
@@ -162,6 +168,8 @@ class School:
         return value
 
     async def prepare(self, operation, path, params, body):
+        if operation == "generateRunTips":
+            return await self.tips.generate(path["run_id"], body)
         if operation == "connectProfile":
             return await self.profiles.prepare_connect(body)
         if operation == "listProfileModels":
@@ -172,6 +180,14 @@ class School:
             await self.runs.prepare_reset(path["attempt_id"], body)
 
     async def dispatch(self, operation, path, params, body, prepared=None):
+        if operation == "getReflectionDraft":
+            return self.reflection.get_draft(path["attempt_id"])
+        if operation == "putReflectionDraft":
+            return self.reflection.put_draft(path["attempt_id"], body)
+        if operation == "generateRunTips":
+            return prepared
+        if operation == "getRunTips":
+            return self.tips.get(path["run_id"])
         if operation == "connectProfile":
             return self.profiles.connect(prepared)
         if operation == "listProfileModels":

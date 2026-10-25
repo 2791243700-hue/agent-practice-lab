@@ -558,6 +558,102 @@
         "has_more": true,
         "last_seq": 12
       }
+    },
+    {
+      "name": "run-tips-not-generated",
+      "schema": "RunTipsResult",
+      "value": {
+        "tips": null
+      }
+    },
+    {
+      "name": "run-tips-model-advice",
+      "schema": "RunTips",
+      "value": {
+        "run_id": "run-example",
+        "attempt_id": "attempt-example",
+        "profile_id": "profile-example",
+        "model": "example-tool-model",
+        "created_at": "2026-10-23T00:00:00Z",
+        "assessment": "已提供任务结果，尚需核对来源。",
+        "gaps": [
+          "尚未核对结果中的来源。"
+        ],
+        "next_steps": [
+          "打开材料核对来源后提交验收。"
+        ],
+        "evidence": [
+          "本轮回答已列出两项任务。"
+        ],
+        "usage": {
+          "model_calls": 1,
+          "input_tokens": null,
+          "output_tokens": null
+        },
+        "context_truncated": false
+      }
+    },
+    {
+      "name": "reflection-answer",
+      "schema": "ReflectionAnswers",
+      "value": {
+        "kind": "reflection",
+        "baseline_run_id": "run-before",
+        "revised_run_id": "run-after",
+        "change": {
+          "category": "constraint",
+          "quote": "未知事项先确认"
+        },
+        "evidence": {
+          "before": {
+            "message_id": "message-before",
+            "event_seq": 2,
+            "quote": "待办",
+            "start_offset": 0
+          },
+          "after": {
+            "message_id": "message-after",
+            "event_seq": 2,
+            "quote": "请确认",
+            "start_offset": 0
+          }
+        },
+        "judgment": "partial",
+        "explanation": "补充了确认要求，还需核对日期来源。",
+        "next_instruction": "为日期标注来源",
+        "challenge": {
+          "challenge_id": "missing-information",
+          "judgments": [
+            {
+              "item_id": "start",
+              "decision": "known"
+            },
+            {
+              "item_id": "place",
+              "decision": "known"
+            },
+            {
+              "item_id": "end",
+              "decision": "confirm"
+            },
+            {
+              "item_id": "signup",
+              "decision": "confirm"
+            }
+          ],
+          "instruction": "仅依据通知整理，未说明的事项先确认。"
+        }
+      }
+    },
+    {
+      "name": "empty-reflection-draft",
+      "schema": "ReflectionDraft",
+      "value": {
+        "attempt_id": "attempt-example",
+        "revision": 0,
+        "draft": null,
+        "updated_at": null
+      }
     }
   ]
 }

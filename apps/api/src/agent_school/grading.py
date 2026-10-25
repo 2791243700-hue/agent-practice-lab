@@ -81,6 +81,7 @@ class Grader:
             "facts": "FactsAnswers",
             "course": "CourseAnswers",
             "artifact": "Empty",
+            "reflection": "ReflectionAnswers",
         }[kind]
         try:
             self.school.contracts.validate(schema, self.answers)
@@ -105,6 +106,107 @@ class Grader:
                 raise AppError(message="请选择本关任务和来源。")
         elif kind == "course" and self.answers["course_id"] != form["course_id"]:
             raise AppError(message="请核对本关指定的课程。")
+        elif kind == "reflection":
+            self.validate_reflection(form)
+
+    def validate_reflection(self, form):
+        self.reflection_runs = []
+        self.reflection_quotes = []
+        for side, field in (("before", "baseline_run_id"), ("after", "revised_run_id")):
+            run = self.run_map.get(self.answers[field])
+            if run is None:
+                raise AppError(message="只能引用本实验同一模式的运行。")
+            citation = self.answers["evidence"][side]
+            event = next(
+                (
+                    event
+                    for event in self.events
+                    if (
+                        event["run_id"] == run["id"]
+                        and event["seq"] == citation["event_seq"]
+                        and event["kind"] == "message.completed"
+                        and event["payload"]["message_id"] == citation["message_id"]
+                    )
+                ),
+                None,
+            )
+            if event is None:
+                raise AppError(message="引用必须绑定本轮实际存在的完整消息和事件。")
+            self.reflection_runs.append(run)
+            self.reflection_quotes.append((event, citation))
+        challenge = self.answers["challenge"]
+        judgments = challenge["judgments"]
+        item_ids = {item["id"] for item in form["challenge"]["items"]}
+        if (
+            challenge["challenge_id"] != form["challenge"]["id"]
+            or len({item["item_id"] for item in judgments}) != len(judgments)
+            or any(item["item_id"] not in item_ids for item in judgments)
+        ):
+            raise AppError(message="请使用本关小变式的项目，每项只能核对一次。")
+        if self.answers["judgment"] != "satisfied" and not self.answers["next_instruction"].strip():
+            raise AppError(message="尚未完全满足要求时，请填写下一步指令。")
+
+    def evaluate_reflection(self, rule):
+        kind = rule["evaluator"]
+        refs = [self.answer_ref()]
+        before, after = self.reflection_runs
+        if kind == "reflection_pair":
+            order = {
+                run["id"]: index for index, run in enumerate(self.school.store.list_in_creation_order("run"))
+            }
+            valid = before["id"] != after["id"] and order[before["id"]] < order[after["id"]]
+            for run in self.reflection_runs:
+                messages = [
+                    event
+                    for event in self.events
+                    if (
+                        event["run_id"] == run["id"]
+                        and event["kind"] == "message.completed"
+                        and event["payload"]["content"].strip()
+                    )
+                ]
+                completed = next(
+                    (
+                        event
+                        for event in self.events
+                        if (event["run_id"] == run["id"] and event["kind"] == "run.completed")
+                    ),
+                    None,
+                )
+                valid = valid and run["status"] == "completed" and bool(messages) and completed is not None
+                if completed:
+                    refs.append(self.ev(completed))
+                refs.extend(self.ev(event) for event in messages)
+            if not valid:
+                self.details[rule["id"]] = "请选择本实验中先后完成、且各有完整非空回答的两轮运行。"
+            return valid, refs
+        if kind == "reflection_change":
+            quote = self.answers["change"]["quote"]
+            valid = bool(quote.strip()) and quote in after["input_text"] and quote not in before["input_text"]
+            if not valid:
+                self.details[rule["id"]] = "新增要求必须逐字存在于第二轮原始指令中，且第一轮指令没有该片段。"
+            return valid, refs
+        if kind == "reflection_quotes":
+            valid = True
+            for event, citation in self.reflection_quotes:
+                text, quote = event["payload"]["content"], citation["quote"]
+                offset = citation["start_offset"]
+                valid = valid and bool(quote.strip()) and text[offset : offset + len(quote)] == quote
+                refs.append(self.ev(event))
+            if not valid:
+                self.details[rule["id"]] = (
+                    "引用与所选完整消息的原文或 Unicode 码点位置不一致，请重新选取原文。"
+                )
+            return valid, refs
+        if kind == "reflection_challenge":
+            params = rule["params"]
+            actual = {item["item_id"]: item["decision"] for item in self.answers["challenge"]["judgments"]}
+            expected = {item["item_id"]: item["decision"] for item in params["expected_judgments"]}
+            valid = self.answers["challenge"]["challenge_id"] == params["challenge_id"] and actual == expected
+            if not valid:
+                self.details[rule["id"]] = "请逐项核对通知中已说明和仍需确认的信息。"
+            return valid, refs
+        raise ValueError("Unsupported reflection evaluator")
 
     def valid_denials(self):
         for event, req in self.tool_events("save_todos", "denied"):
@@ -135,6 +237,8 @@ class Grader:
 
     def evaluate_rule(self, rule):
         kind, params = rule["evaluator"], rule["params"]
+        if kind.startswith("reflection_"):
+            return self.evaluate_reflection(rule)
         refs = []
         if kind == "distinct_completed_runs":
             candidates = {}

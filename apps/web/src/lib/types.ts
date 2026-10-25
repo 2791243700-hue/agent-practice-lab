@@ -12,7 +12,8 @@ export type AnswerForm =
   | Tagged<Schema["ChoiceForm"], "choice">
   | Tagged<Schema["FactsForm"], "facts">
   | Tagged<Schema["CourseForm"], "course">
-  | Tagged<Schema["ArtifactForm"], "artifact">;
+  | Tagged<Schema["ArtifactForm"], "artifact">
+  | Tagged<Schema["ReflectionForm"], "reflection">;
 export type Lesson = Omit<Schema["LessonDetail"], "answer_form"> & {
   answer_form: AnswerForm;
 };

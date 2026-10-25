@@ -85,6 +85,19 @@ const provider = createServer(async (request, response) => {
         role: "assistant",
         content: "已根据课程通知整理两项待办，请核对日期和来源。",
       };
+  if (
+    !probe &&
+    body.messages?.some(
+      (entry) =>
+        entry.role === "system" && entry.content.includes("学习指导老师"),
+    )
+  ) {
+    message.content = JSON.stringify({
+      assessment: "任务结果已给出，仍需核对完成依据。",
+      gaps: ["尚未确认结果与本关目标完全一致。"],
+      next_steps: ["核对资料与工具结果，再提交验收。"],
+    });
+  }
   if (body.stream) {
     response.writeHead(200, { "Content-Type": "text/event-stream" });
     const chunk = (delta) => ({

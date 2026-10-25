@@ -403,6 +403,162 @@
               "evaluator",
               "params"
             ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "evaluator": {
+                "type": "string",
+                "const": "reflection_pair"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {},
+                "required": []
+              }
+            },
+            "required": [
+              "id",
+              "required",
+              "message",
+              "evaluator",
+              "params"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "evaluator": {
+                "type": "string",
+                "const": "reflection_change"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {},
+                "required": []
+              }
+            },
+            "required": [
+              "id",
+              "required",
+              "message",
+              "evaluator",
+              "params"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "evaluator": {
+                "type": "string",
+                "const": "reflection_quotes"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {},
+                "required": []
+              }
+            },
+            "required": [
+              "id",
+              "required",
+              "message",
+              "evaluator",
+              "params"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "evaluator": {
+                "type": "string",
+                "const": "reflection_challenge"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "challenge_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+                  },
+                  "expected_judgments": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/ReflectionJudgment"
+                    },
+                    "minItems": 1,
+                    "maxItems": 20
+                  }
+                },
+                "required": [
+                  "challenge_id",
+                  "expected_judgments"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "required",
+              "message",
+              "evaluator",
+              "params"
+            ]
           }
         ]
       }
@@ -440,6 +596,9 @@
         },
         {
           "$ref": "#/$defs/ArtifactForm"
+        },
+        {
+          "$ref": "#/$defs/ReflectionForm"
         }
       ],
       "discriminator": {
@@ -692,6 +851,100 @@
       "required": [
         "editable_fields",
         "defaults"
+      ]
+    },
+    "ReflectionForm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "reflection"
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "challenge": {
+          "$ref": "#/$defs/ReflectionChallenge"
+        }
+      },
+      "required": [
+        "kind",
+        "prompt",
+        "challenge"
+      ]
+    },
+    "ReflectionChallenge": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "notice": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8000
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "id",
+              "label"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "notice",
+        "items"
+      ]
+    },
+    "ReflectionJudgment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "item_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "known",
+            "confirm"
+          ]
+        }
+      },
+      "required": [
+        "item_id",
+        "decision"
       ]
     }
   }

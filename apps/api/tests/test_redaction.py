@@ -4,7 +4,7 @@ import pytest
 
 from agent_school.contracts import ChatMessage, RuntimeRequest
 from agent_school.runtime.agentscope_runtime import AgentScopeRuntime, RuntimeFailure
-from agent_school.runtime.probe import ScriptedModel
+from runtime_probe import ScriptedModel
 
 
 async def test_sdk_provider_exception_cannot_log_credential(capfd):

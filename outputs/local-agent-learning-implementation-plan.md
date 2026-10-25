@@ -216,3 +216,5 @@ answers 按课时分别校验：关 1 为 question_id、option_id；关 2 为 fa
 - 类型一致：AgentRuntime、ModelAccess、RuntimeEvent、StoredEvent、RuleResult 在共用契约定义，跨任务沿用；Approval 与 Workspace 的具体返回 DTO 在所属任务定义。
 - 五项 Review Focus 均已映射到具体测试。使用可注入时钟验证超时，不为测试阻塞等待。
 - 本计划保留最初的任务设计；应用现已实施。当前已完成与待办见上方执行结果，不将历史未勾选框解释为所有测试尚未执行。
+
+2026-10-23 实现位置更新：原计划的 `runtime/probe.py` 已迁至 `apps/api/tests/runtime_probe.py`，仅用于离线测试；其余原始任务说明保留为历史设计。

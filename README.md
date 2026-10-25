@@ -2,7 +2,7 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**当前状态（2026-10-24）：v0.1.0 本地前后端已接入，第一关采用复盘验收预览。** 可阅读四关、管理自备 Key、运行实训、审批和查看产物、回看历史与导出记录。第一关已移除旧单选提交入口，新复盘尚未接入正式评分，完成后不会新生成通关成绩；第二至四关继续按真实事件及内容正式验收。无需登录，不提供线上部署。完整范围见[版本状态](docs/project-status.md)。
+**当前功能分支（2026-10-25）：统一实训与第一关正式复盘。** 整合 PR #10 的四步复盘与 PR #9 的 Tips、重置及弹窗。新版 1.1.0 支持草稿恢复、正式结构化验收、历史和导出；旧版实验继续原规则。功能在 PR #9 分支，尚未合并 main；完整边界与验证见[当前交付](docs/unified-practice-delivery.md)。
 
 ## 本地启动（Windows）
 
@@ -22,7 +22,7 @@ npm --prefix apps/web ci
 
 ## 首版范围
 
-首页在至少一把 Key 已配置后隐藏准备提示，全部凭据缺失后恢复。第一关四步复盘可引用、标亮并下载对话依据；草稿刷新或离开后清空，不在原有 ZIP 中。功能、截图与验证见[本次交付](docs/reflection-assessment-delivery.md)，正式接入见[后端工作清单](docs/reflection-assessment-backend-handoff.md)。
+首页按已配置凭据隐藏或恢复准备提示。第一关新版复盘引用真实运行与消息，草稿保存到后端，正式提交可回看并纳入 ZIP；客观结构化核对决定通过，自由解释单独保存和反馈。
 
 - 本地运行、浏览器操作；学生自行申请并配置模型服务 API Key。
 - 使用统一教学 Agent，每关先读介绍，再实践并查看反馈。
@@ -42,7 +42,7 @@ npm --prefix apps/web ci
 - [四关导读](outputs/lesson-introductions.md)
 - [分阶段实施计划](outputs/local-agent-learning-implementation-plan.md)
 - [双人分工与 GitHub 协作](outputs/two-person-github-collaboration-plan.md)
-- [v0.1.0 接口契约与调用规则](contracts/README.md)（37 个 HTTP 操作、11 类事件）
+- [v0.1.0 接口契约与调用规则](contracts/README.md)（41 个 HTTP 操作、102 个 schema、11 类事件）
 - [机器可读 OpenAPI](contracts/openapi.json)与[生成的 TypeScript 类型](contracts/types.d.ts)
 - [后端安装、启动与前端联调](docs/backend.md)
 - [后端验证报告](docs/runtime-validation.md)
@@ -50,7 +50,7 @@ npm --prefix apps/web ci
 
 使用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。浏览器只调用同源 `/api/v1`，Next.js 服务端代理转发内部令牌；Key 只在后端内存中保存。前端类型来自 `contracts/types.d.ts`，已知生成器 discriminator 差异的边界适配见前端验证文档。
 
-多个 Key 可切换、重命名、清除或删除；重启需重新输入 Key。列表成功不等于工具兼容，正式运行仍要求连接检查通过。旧成绩保留，演示与第一关新复盘都不伪造正式通过。2026-10-24 前端单元 8 项、浏览器 30 项及类型/格式/隔离构建通过；后端 91 项与契约 197 项是原有基线，本次未修改或重跑。外部模型与第四关教学限制见[实测记录](docs/live-model-validation.md)。
+多个 Key 可切换、重命名、清除或删除；重启需重新输入 Key，环境重置保留 Key 与模型选择。列表成功不等于工具兼容，正式运行要求连接检查通过。模型调用、正式评分和演示分别记录；最新验证见[交付记录](docs/unified-practice-delivery.md)。
 
 ## 双人协作
 
@@ -59,12 +59,12 @@ npm --prefix apps/web ci
 | A | 前端页面、课程内容、模拟接口、浏览器测试和使用说明 |
 | B | 后端接口、Agent 执行、数据存储、工具授权、规则评分和启动脚本 |
 
-原版四关闭环、Key 管理、工作区及文档已通过 PR #1—#8 合并，本次以前一版 main `55ce473` 为开发基线，选择性替换第一关验收 UI。新正式评分仍待前后端协调，第二至四关与旧成绩保留。后续使用短期分支与 PR；接口、评分或课件变更同步契约、新版本和测试。原工作区历史记录见[交付说明](docs/practice-workspace-delivery.md)。
+原版及 Key/工作区功能已合并，复盘预览已通过 PR #10 合并到 main `47108b2`。当前统一交付继续在 PR #9 分支协调；接口、评分或课件变更同步契约、新版本及测试。
 
 ```powershell
 git clone https://github.com/2791243700-hue/agent-practice-lab.git
 cd agent-practice-lab
-git switch -c feat/lesson-intro
+git switch feat/practice-tips-and-feedback
 ```
 
 上述命令用于获取项目并开始开发。后端在 apps/api 执行 uv sync --locked 安装依赖，Windows 从根目录运行 scripts/start.ps1 启动；详细环境、令牌和接入说明见后端文档。第二名开发者需要仓库写权限才能直接推送分支，也可通过 fork 提交 PR。

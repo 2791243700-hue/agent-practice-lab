@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "../../apps/web/tests/browser";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { fillReflection } from "./reflection-helpers";
 const screenshots = path.resolve(process.cwd(), "../../docs/screenshots");
 async function screenshot(page: Page, name: string) {
   await mkdir(screenshots, { recursive: true });
@@ -52,31 +53,6 @@ async function testProfile(page: Page) {
   return await credential.json();
 }
 
-// Seed historical v1 submissions through the unchanged API. The new first-lesson
-// UI no longer offers the retired choice question or generates formal scores.
-async function historicalFirstSubmission(page: Page, option: string) {
-  const id = new URL(page.url()).pathname.split("/").at(-1)!;
-  const attempt = await (
-    await page.request.get(`/api/v1/attempts/${id}`)
-  ).json();
-  const response = await page.request.post("/api/v1/submissions", {
-    headers: {
-      Origin: "http://127.0.0.1:3100",
-      "Idempotency-Key": crypto.randomUUID(),
-    },
-    data: {
-      attempt_id: id,
-      expected_attempt_revision: attempt.revision,
-      answers: { question_id: "goal-constraints", option_id: option },
-    },
-  });
-  expect(response.ok()).toBe(true);
-  await page.reload();
-  await expect(
-    page.getByRole("heading", { name: "历史验收结果（原版本）", exact: true }),
-  ).toBeVisible();
-}
-
 test("无 Key 阅读四关、首页与移动布局", async ({ page }) => {
   await page.goto("/");
   await expect(
@@ -103,7 +79,7 @@ test("无 Key 阅读四关、首页与移动布局", async ({ page }) => {
   await screenshot(page, "07-mobile-courses");
 });
 
-test("第一关：模型设置、认证失败、两次运行、复盘入口与原版本历史成绩", async ({
+test("第一关：模型设置、认证失败、两次运行、刷新续接、逐项反馈和正式通过", async ({
   page,
 }) => {
   const pageErrors: string[] = [];
@@ -168,39 +144,45 @@ test("第一关：模型设置、认证失败、两次运行、复盘入口与�
   ).toContainText("已根据课程通知整理两项待办，请核对日期和来源。");
   expect(starts.length).toBe(1);
   expect(cursors.some((c) => c > 0)).toBe(true);
-  await expect(page.getByTestId("conversation-review")).toBeVisible();
-  await expect(
-    page.getByRole("radio", {
-      name: "只说帮我处理，并直接相信结果。",
-      exact: true,
-    }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "提交验收", exact: true }),
-  ).toHaveCount(0);
-  await historicalFirstSubmission(page, "no-check");
-  await expect(page.getByTestId("submission-feedback")).toContainText(
-    "需要补充",
-  );
   await send(
     page,
     "请整理两项待办，列出截止日期，只使用通知中的事实，不猜测缺失信息。",
   );
   await expect(page.getByText("本轮已完成", { exact: true })).toHaveCount(2);
   expect(starts.length).toBe(2);
-  await historicalFirstSubmission(page, "clear-goal");
-  await expect(page.getByTestId("submission-feedback")).toContainText(
-    "正式通过，做得有依据。",
+  await fillReflection(page, "只使用通知中的事实，不猜测缺失信息。", {
+    wrongChallenge: true,
+  });
+  await expect(
+    page.getByTestId("conversation-review").getByRole("status"),
+  ).toContainText("复盘草稿已保存");
+  await page.reload();
+  await expect(
+    page.getByRole("combobox", { name: "结束时间", exact: true }),
+  ).toHaveValue("known");
+  await page.getByRole("button", { name: "提交验收", exact: true }).click();
+  await expect(page.getByTestId("submission-dialog")).toContainText(
+    "本次尚未通过",
   );
+  await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "结束时间", exact: true })
+    .selectOption("confirm");
+  await page.getByRole("button", { name: "提交验收", exact: true }).click();
+  await expect(page.getByTestId("submission-dialog")).toContainText(
+    "本关已通关",
+  );
+  await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
   await page.getByRole("button", { name: "查看本关介绍" }).click();
   await expect(page.getByText("本关学什么", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "收起导读" }).click();
   await screenshot(page, "04-first-lesson-feedback");
   await page.getByText("历史提交（2）", { exact: true }).click();
   await page.locator(".history-item").last().click();
-  await expect(page.getByTestId("submission-feedback")).toContainText(
-    "还差几步",
+  await expect(page.getByTestId("submission-dialog")).toContainText(
+    "本次尚未通过",
   );
+  await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
   await page.goto("/");
   await expect(page.getByText("已正式通过", { exact: true })).toHaveCount(1);
   await page.getByRole("link", { name: "继续实训" }).click();
@@ -230,9 +212,10 @@ test("第二、三关：材料、工具结果、事实核对、错误反馈与�
     await facts.nth(i).getByLabel("依据来源").selectOption("notice-week");
   }
   await page.getByRole("button", { name: "提交验收", exact: true }).click();
-  await expect(page.getByTestId("submission-feedback")).toContainText(
+  await expect(page.getByTestId("submission-dialog")).toContainText(
     "演示检查通过 · 不计正式完成",
   );
+  await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
   await startDemo(page, "03-tools");
   await send(page, "查询 agent101 的课程安排，并告诉我日期和教室。");
   await expect(page.getByText("本轮已完成", { exact: true })).toBeVisible();
@@ -241,15 +224,17 @@ test("第二、三关：材料、工具结果、事实核对、错误反馈与�
   await page.getByLabel("课程日期", { exact: true }).fill("2026-11-07");
   await page.getByLabel("教室", { exact: true }).fill("错误教室");
   await page.getByRole("button", { name: "提交验收", exact: true }).click();
-  await expect(page.getByTestId("submission-feedback")).toContainText(
-    "需要补充",
+  await expect(page.getByTestId("submission-dialog")).toContainText(
+    "演示检查未通过 · 不计正式完成",
   );
+  await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
   await page.getByLabel("课程日期", { exact: true }).fill("2026-11-05");
   await page.getByLabel("教室", { exact: true }).fill("A301");
   await page.getByRole("button", { name: "提交验收", exact: true }).click();
-  await expect(page.getByTestId("submission-feedback")).toContainText(
+  await expect(page.getByTestId("submission-dialog")).toContainText(
     "演示检查通过 · 不计正式完成",
   );
+  await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
   await page.goto("/");
   await expect(page.getByText("已正式通过", { exact: true })).toHaveCount(
     before.items.filter((item: { completed: boolean }) => item.completed)
@@ -290,10 +275,24 @@ test("第四关：刷新恢复审批、拒绝未写入、批准实际完成、�
   await page.getByRole("link", { name: "下载完整文件" }).click();
   expect((await fileDownload).suggestedFilename()).toBeTruthy();
   await page.getByRole("button", { name: "提交验收", exact: true }).click();
-  await expect(page.getByTestId("submission-feedback")).toContainText(
+  await expect(page.getByTestId("submission-dialog")).toContainText(
     "演示检查通过 · 不计正式完成",
   );
   await screenshot(page, "06-artifacts-feedback");
+  await page.getByText("查看详细验收记录", { exact: true }).click();
+  await expect(page.locator(".feedback details summary").first()).toBeVisible();
+  for (const detail of await page.locator(".feedback details").all())
+    await detail.locator("summary").click();
+  const eventLink = page.getByRole("link", { name: /查看运行事件/ }).first();
+  const targetId = (await eventLink.getAttribute("href"))!.slice(1);
+  await eventLink.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(`[id="${targetId}"]`)).toBeVisible();
+  await expect(page.locator(`[id="${targetId}"]`)).toBeFocused();
+  await page.getByText("历史提交（1）", { exact: true }).click();
+  await page.locator(".history-item").first().click();
+  await page.getByText("查看详细验收记录", { exact: true }).click();
+  await expect(page.locator(".feedback details summary").first()).toBeVisible();
   for (const detail of await page.locator(".feedback details").all())
     await detail.locator("summary").click();
   const frozen = page.waitForEvent("download");
@@ -302,12 +301,13 @@ test("第四关：刷新恢复审批、拒绝未写入、批准实际完成、�
     .first()
     .click();
   expect((await frozen).suggestedFilename()).toBeTruthy();
+  await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
   await page.getByRole("button", { name: "导出学习记录", exact: true }).click();
   const zip = page.waitForEvent("download");
   await page.getByRole("link", { name: "学习记录已就绪，下载 ZIP" }).click();
   expect((await zip).suggestedFilename()).toMatch(/\.zip$/);
-  await page.getByRole("button", { name: "重新开始", exact: true }).click();
-  await page.getByRole("button", { name: "确认重新开始", exact: true }).click();
+  await page.getByRole("button", { name: "重置环境", exact: true }).click();
+  await page.getByRole("button", { name: "确认重置环境", exact: true }).click();
   await expect(page).not.toHaveURL(url);
   await expect(page.getByText("0 轮尝试", { exact: true })).toBeVisible();
   await page.goto(url);

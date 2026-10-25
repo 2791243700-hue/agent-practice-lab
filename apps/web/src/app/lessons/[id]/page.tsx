@@ -20,14 +20,24 @@ export default function LessonPage({
   const { id } = use(params);
   const query = useSearchParams();
   const version = query.get("version");
-  return <LessonContent key={`${id}/${version}`} id={id} version={version} />;
+  const profile = query.get("profile");
+  return (
+    <LessonContent
+      key={`${id}/${version}/${profile}`}
+      id={id}
+      version={version}
+      profile={profile}
+    />
+  );
 }
 function LessonContent({
   id,
   version,
+  profile,
 }: {
   id: string;
   version: string | null;
+  profile: string | null;
 }) {
   const router = useRouter();
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -60,7 +70,9 @@ function LessonContent({
           mode,
         } satisfies Schema["AttemptCreate"],
       });
-      router.push(`/practice/${pathId(a.id)}`);
+      router.push(
+        `/practice/${pathId(a.id)}${mode === "live" && profile ? `?profile=${pathId(profile)}` : ""}`,
+      );
     });
   }
   const recent = attempts.find(
@@ -77,6 +89,12 @@ function LessonContent({
         !action.error && <Loading />
       ) : (
         <>
+          {lesson.id === "01-task" && lesson.version === "1.0.0" && (
+            <div className="notice warning">
+              正在阅读旧版 1.0.0。
+              <Link href="/lessons/01-task">阅读新版 1.1.0 导读 →</Link>
+            </div>
+          )}
           <Heading
             eyebrow={`EXPERIMENT ${String(lesson.order).padStart(2, "0")} / 阅读导读`}
             title={lesson.title}
@@ -107,7 +125,7 @@ function LessonContent({
                 {recent ? (
                   <Link
                     className="button full"
-                    href={`/practice/${pathId(recent.id)}`}
+                    href={`/practice/${pathId(recent.id)}${recent.mode === "live" && profile ? `?profile=${pathId(profile)}` : ""}`}
                   >
                     继续{recent.mode === "demo" ? "演示" : ""}实训{" "}
                     <ArrowRight size={16} />

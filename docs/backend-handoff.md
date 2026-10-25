@@ -1,5 +1,7 @@
 # Agent Practice Lab：前后端开发交接
 
+2026-10-25 当前更新：统一实训、新版 1.1.0 正式复盘及草稿 API 已在 PR #9 功能分支接入，尚未合并 main。当前协议为 41 操作、102 schema；以下既有记录按日期保留，其“预览/未接入/37 或 39 操作”描述属于历史基线。最新功能与验证以[统一交付](unified-practice-delivery.md)和[当前索引](project-status.md)为准。
+
 更新：2026-10-24。适用于接手前端、后端、契约与课程的开发者。当前交付见[版本状态](project-status.md)，第一关新验收的逐项工作见[后端任务清单](reflection-assessment-backend-handoff.md)。
 
 ## 当前代码与接收方式

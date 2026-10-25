@@ -1,5 +1,7 @@
 # 前端交付与验证记录
 
+2026-10-25 当前更新：统一实训、新版 1.1.0 正式复盘及草稿 API 已在 PR #9 功能分支接入，尚未合并 main。当前协议为 41 操作、102 schema；以下既有记录按日期保留，其“预览/未接入/37 或 39 操作”描述属于历史基线。最新功能与验证以[统一交付](unified-practice-delivery.md)和[当前索引](project-status.md)为准。
+
 更新：2026-10-24。当前功能与边界见[版本状态](project-status.md)。本次选择性替换第一关验收及首页提示，完整说明与截图见[本次交付](reflection-assessment-delivery.md)；云端检查按对应提交核验。
 
 侧栏、顶部和流式交互为 PR #7 历史交付，其 26 项结果见[原交付记录](practice-workspace-delivery.md)。当前第一关采用复盘预览，已移除旧单选提交，新正式评分未接入；第二至四关与旧成绩保留，后端要求见[接入任务](reflection-assessment-backend-handoff.md)。
