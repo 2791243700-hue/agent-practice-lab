@@ -592,6 +592,68 @@
         },
         "context_truncated": false
       }
+    },
+    {
+      "name": "reflection-answer",
+      "schema": "ReflectionAnswers",
+      "value": {
+        "kind": "reflection",
+        "baseline_run_id": "run-before",
+        "revised_run_id": "run-after",
+        "change": {
+          "category": "constraint",
+          "quote": "未知事项先确认"
+        },
+        "evidence": {
+          "before": {
+            "message_id": "message-before",
+            "event_seq": 2,
+            "quote": "待办",
+            "start_offset": 0
+          },
+          "after": {
+            "message_id": "message-after",
+            "event_seq": 2,
+            "quote": "请确认",
+            "start_offset": 0
+          }
+        },
+        "judgment": "partial",
+        "explanation": "补充了确认要求，还需核对日期来源。",
+        "next_instruction": "为日期标注来源",
+        "challenge": {
+          "challenge_id": "missing-information",
+          "judgments": [
+            {
+              "item_id": "start",
+              "decision": "known"
+            },
+            {
+              "item_id": "place",
+              "decision": "known"
+            },
+            {
+              "item_id": "end",
+              "decision": "confirm"
+            },
+            {
+              "item_id": "signup",
+              "decision": "confirm"
+            }
+          ],
+          "instruction": "仅依据通知整理，未说明的事项先确认。"
+        }
+      }
+    },
+    {
+      "name": "empty-reflection-draft",
+      "schema": "ReflectionDraft",
+      "value": {
+        "attempt_id": "attempt-example",
+        "revision": 0,
+        "draft": null,
+        "updated_at": null
+      }
     }
   ]
 }

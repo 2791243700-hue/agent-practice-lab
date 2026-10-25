@@ -1,10 +1,14 @@
 # 后端开发与联调
 
+2026-10-25 当前更新：统一实训、新版 1.1.0 正式复盘及草稿 API 已在 PR #9 功能分支接入，尚未合并 main。当前协议为 41 操作、102 schema；以下既有记录按日期保留，其“预览/未接入/37 或 39 操作”描述属于历史基线。最新功能与验证以[统一交付](unified-practice-delivery.md)和[当前索引](project-status.md)为准。
+
 2026-10-23 通过 feat/practice-tips-and-feedback 分支交付，尚未合并 main：新增按需模型 Tips（GET/POST `/runs/{run_id}/tips`），当前本地 39 个 HTTP 操作、92 个 schema；缓存按运行持久保存，独立于正式评分。用量与异常/中断处理见[契约说明](../contracts/README.md)，使用边界见[版本状态](project-status.md)。下文 2026-10-22 的数字与验证记录属于已合并历史基线。
 
 历史基线（2026-10-22）：后端本地实现 v0.1.0 的 37 个 HTTP 操作，已与前端接通课程、Key 管理、Agent 运行、授权、评分、下载和导出。已合并的 main 版本与验证边界见[版本状态](project-status.md)。
 
 ## 准备
+
+2026-10-24 前端变化：第一关旧单选提交已被复盘模板替换，新复盘不调用正式提交，也不能生成新通关成绩。后端旧契约作为兼容能力保留；第二至四关继续正式验收。新答案、评分、存储、回看和导出需按[后端清单](reflection-assessment-backend-handoff.md)先协调再实现。本文其余接口说明仍对应已发布 v0.1.0。
 
 需要 Python 3.11 或 3.12 与 uv。模型使用 AgentScope 2.0.10 SDK，不需要 Redis、数据库服务器或 Docker。锁文件固定依赖，项目级虚拟环境放 apps/api/.venv。
 

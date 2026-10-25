@@ -55,6 +55,9 @@ class School:
         from agent_school.tips import TipsService
 
         self.tips = TipsService(self)
+        from agent_school.reflection import ReflectionService
+
+        self.reflection = ReflectionService(self)
 
     def completed(self, lesson_id, version):
         attempts = {
@@ -177,6 +180,10 @@ class School:
             await self.runs.prepare_reset(path["attempt_id"], body)
 
     async def dispatch(self, operation, path, params, body, prepared=None):
+        if operation == "getReflectionDraft":
+            return self.reflection.get_draft(path["attempt_id"])
+        if operation == "putReflectionDraft":
+            return self.reflection.put_draft(path["attempt_id"], body)
         if operation == "generateRunTips":
             return prepared
         if operation == "getRunTips":

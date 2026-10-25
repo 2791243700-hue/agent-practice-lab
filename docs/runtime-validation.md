@@ -1,5 +1,7 @@
 # 后端验证报告
 
+2026-10-25 当前更新：统一实训、新版 1.1.0 正式复盘及草稿 API 已在 PR #9 功能分支接入，尚未合并 main。当前协议为 41 操作、102 schema；以下既有记录按日期保留，其“预览/未接入/37 或 39 操作”描述属于历史基线。最新功能与验证以[统一交付](unified-practice-delivery.md)和[当前索引](project-status.md)为准。
+
 本轮上传前最终验证（2026-10-23）：137 项后端、15 项前端、42 项完整浏览器回归、204 项契约检查通过，Ruff、格式、TypeScript 和隔离生产构建通过。交付分支为 feat/practice-tips-and-feedback，尚未合并 main；后续分阶段记录保留原测试数字，当前结果与截图见[本轮交付记录](practice-updates-2026-10-23.md)。
 
 2026-10-23 通过 feat/practice-tips-and-feedback 分支交付，尚未合并 main：新增按需模型 Tips（GET/POST `/runs/{run_id}/tips`），当前本地 39 个 HTTP 操作、92 个 schema；缓存按运行持久保存，独立于正式评分。用量与异常/中断处理见[契约说明](../contracts/README.md)，使用边界见[版本状态](project-status.md)。下文 2026-10-22 的数字与验证记录属于已合并历史基线。
@@ -8,12 +10,14 @@
 
 ## 实现与最近验证
 
+2026-10-24 同步：下列后端 91 项及契约 197 项为此前验证，本次未修改或重跑它们。第一关新复盘尚无正式评分，旧 choice 成功不代表新验收已接通；当前 30 项浏览器验证见[前端交付](reflection-assessment-delivery.md)。
+
 | 范围 | 内容与结果 |
 | --- | --- |
 | 后端完整测试 | 91 项通过；包含 11 项模型目录/Key 管理及本轮新增的 33 项审查修复回归 |
 | 契约结构 | 197 项检查通过：37 个操作、89 个 schema、21 个 HTTP 样例、6 个事件场景/11 类事件；类型已重新生成 |
 | Python 质量检查 | Ruff check、format check 通过 |
-| 联动前端 | 8 项前端、26 项浏览器测试及类型、格式、生产构建通过，见[前端报告](frontend-validation.md) |
+| PR #7 联动前端（历史） | 8 项前端、26 项浏览器及类型/格式/构建通过；当前 30 项结果见[前端报告](frontend-validation.md) |
 
 后端使用 Python 3.11/3.12，AgentScope 固定为 2.0.10，依赖固定在 `apps/api/uv.lock`。本地自动化使用独立临时库/文件、MockTransport 或本地 HTTP 模型，不消耗外部模型额度。上述结果为本地验证，功能分支的云端 CI 结论以对应 PR 为准。
 

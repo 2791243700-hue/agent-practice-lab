@@ -12,7 +12,7 @@ for (const width of [1440, 390]) {
       id: `header-fixture-${width}`,
       owner_id: "local-owner",
       lesson_id: "01-task",
-      lesson_version: "1.0.0",
+      lesson_version: "1.1.0",
       mode: "live",
       progress: "in_progress",
       status: "active",
@@ -27,6 +27,18 @@ for (const width of [1440, 390]) {
     };
     await page.route(`**/api/v1/attempts/${attempt.id}/**`, (route) =>
       route.fulfill({ json: { items: [], next_cursor: null } }),
+    );
+    await page.route(
+      `**/api/v1/attempts/${attempt.id}/reflection-draft`,
+      (route) =>
+        route.fulfill({
+          json: {
+            attempt_id: attempt.id,
+            revision: 0,
+            draft: null,
+            updated_at: null,
+          },
+        }),
     );
     await page.route(`**/api/v1/attempts/${attempt.id}`, (route) =>
       route.fulfill({ json: attempt }),
@@ -62,7 +74,7 @@ for (const width of [1440, 390]) {
     }).format(new Date(attempt.created_at));
     await expect(date).toHaveText(expectedDate);
     await expect(header.locator(".practice-info-popover")).toContainText(
-      "1.0.0",
+      "1.1.0",
     );
     const during = await page.locator(".practice-layout").boundingBox();
     expect(during!.y).toBe(before!.y);

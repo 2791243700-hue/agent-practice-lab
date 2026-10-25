@@ -1,5 +1,7 @@
 # 本地 Agent 教学平台：双人开发与单仓库协作
 
+2026-10-24 当前实现补充：第一关前端采用复盘验收预览并移除旧单选提交，新正式评分待后端接入；第二至四关保留客观事件/内容验收。以下设计、导读或原始分工保留历史语义，不覆盖已发布课件。最新范围见[交付记录](../docs/reflection-assessment-delivery.md)，下一步见[后端任务](../docs/reflection-assessment-backend-handoff.md)。
+
 初稿：2026-10-17；同步：2026-10-22。适用于两名开发者；A、B 为角色代号，前端协作者 188517 已获仓库写权限。
 
 状态：四关前后端已实现，PR #1—#7 已合并。公开仓库：[2791243700-hue/agent-practice-lab](https://github.com/2791243700-hue/agent-practice-lab)，默认分支 main。Key 管理和审查修复已通过 PR #6 合并，实训侧栏、顶部和流式交互已通过 PR #7 合并；接手直接获取 main；准确基线、验证与待办见[版本状态](../docs/project-status.md)。下文阶段表保留原始分工，不表示仍需从零执行。

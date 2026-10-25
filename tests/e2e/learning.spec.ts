@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "../../apps/web/tests/browser";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { fillReflection } from "./reflection-helpers";
 const screenshots = path.resolve(process.cwd(), "../../docs/screenshots");
 async function screenshot(page: Page, name: string) {
   await mkdir(screenshots, { recursive: true });
@@ -143,23 +144,30 @@ test("第一关：模型设置、认证失败、两次运行、刷新续接、�
   ).toContainText("已根据课程通知整理两项待办，请核对日期和来源。");
   expect(starts.length).toBe(1);
   expect(cursors.some((c) => c > 0)).toBe(true);
-  await page
-    .getByRole("radio", { name: "只说帮我处理，并直接相信结果。" })
-    .check();
-  await page.getByRole("button", { name: "提交验收", exact: true }).click();
-  await expect(page.getByTestId("submission-dialog")).toContainText(
-    "本次尚未通过",
-  );
-  await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
   await send(
     page,
     "请整理两项待办，列出截止日期，只使用通知中的事实，不猜测缺失信息。",
   );
   await expect(page.getByText("本轮已完成", { exact: true })).toHaveCount(2);
   expect(starts.length).toBe(2);
+  await fillReflection(page, "只使用通知中的事实，不猜测缺失信息。", {
+    wrongChallenge: true,
+  });
+  await expect(
+    page.getByTestId("conversation-review").getByRole("status"),
+  ).toContainText("复盘草稿已保存");
+  await page.reload();
+  await expect(
+    page.getByRole("combobox", { name: "结束时间", exact: true }),
+  ).toHaveValue("known");
+  await page.getByRole("button", { name: "提交验收", exact: true }).click();
+  await expect(page.getByTestId("submission-dialog")).toContainText(
+    "本次尚未通过",
+  );
+  await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
   await page
-    .getByRole("radio", { name: "说明目标、约束和输出要求，再检查结果。" })
-    .check();
+    .getByRole("combobox", { name: "结束时间", exact: true })
+    .selectOption("confirm");
   await page.getByRole("button", { name: "提交验收", exact: true }).click();
   await expect(page.getByTestId("submission-dialog")).toContainText(
     "本关已通关",
@@ -272,6 +280,7 @@ test("第四关：刷新恢复审批、拒绝未写入、批准实际完成、�
   );
   await screenshot(page, "06-artifacts-feedback");
   await page.getByText("查看详细验收记录", { exact: true }).click();
+  await expect(page.locator(".feedback details summary").first()).toBeVisible();
   for (const detail of await page.locator(".feedback details").all())
     await detail.locator("summary").click();
   const eventLink = page.getByRole("link", { name: /查看运行事件/ }).first();
@@ -283,6 +292,7 @@ test("第四关：刷新恢复审批、拒绝未写入、批准实际完成、�
   await page.getByText("历史提交（1）", { exact: true }).click();
   await page.locator(".history-item").first().click();
   await page.getByText("查看详细验收记录", { exact: true }).click();
+  await expect(page.locator(".feedback details summary").first()).toBeVisible();
   for (const detail of await page.locator(".feedback details").all())
     await detail.locator("summary").click();
   const frozen = page.waitForEvent("download");

@@ -2168,6 +2168,118 @@
           }
         }
       }
+    },
+    "/attempts/{attempt_id}/reflection-draft": {
+      "get": {
+        "operationId": "getReflectionDraft",
+        "summary": "读取当前实验的复盘草稿，不调用模型",
+        "tags": [
+          "attempts"
+        ],
+        "parameters": [
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReflectionDraft"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "统一错误格式；HTTP 状态映射见 README",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putReflectionDraft",
+        "summary": "按独立草稿版本保存复盘，不修改实验版本",
+        "tags": [
+          "attempts"
+        ],
+        "parameters": [
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReflectionDraft"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "统一错误格式；HTTP 状态映射见 README",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutReflectionDraftRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2827,6 +2939,9 @@
           },
           {
             "$ref": "#/components/schemas/ArtifactForm"
+          },
+          {
+            "$ref": "#/components/schemas/ReflectionForm"
           }
         ],
         "discriminator": {
@@ -4103,6 +4218,9 @@
           },
           {
             "$ref": "#/components/schemas/Empty"
+          },
+          {
+            "$ref": "#/components/schemas/ReflectionAnswers"
           }
         ],
         "description": "Server selects exactly the lesson-specific shape. No expected answer values are returned by lesson APIs."
@@ -5778,6 +5896,444 @@
         },
         "required": [
           "tips"
+        ]
+      },
+      "ReflectionCitation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "event_seq": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "quote": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 6000
+          },
+          "start_offset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Unicode code-point offset into the original message text, not UTF-16 units or rendered Markdown."
+          }
+        },
+        "required": [
+          "message_id",
+          "event_seq",
+          "quote",
+          "start_offset"
+        ]
+      },
+      "ReflectionChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "goal",
+              "constraint",
+              "output"
+            ]
+          },
+          "quote": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 6000
+          }
+        },
+        "required": [
+          "category",
+          "quote"
+        ]
+      },
+      "ReflectionJudgment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "known",
+              "confirm"
+            ]
+          }
+        },
+        "required": [
+          "item_id",
+          "decision"
+        ]
+      },
+      "ReflectionChallengeAnswer": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "challenge_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "judgments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReflectionJudgment"
+            },
+            "minItems": 1,
+            "maxItems": 20
+          },
+          "instruction": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 6000,
+            "pattern": "\\S"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "judgments",
+          "instruction"
+        ]
+      },
+      "ReflectionAnswers": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "reflection"
+          },
+          "baseline_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "revised_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "change": {
+            "$ref": "#/components/schemas/ReflectionChange"
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "before": {
+                "$ref": "#/components/schemas/ReflectionCitation"
+              },
+              "after": {
+                "$ref": "#/components/schemas/ReflectionCitation"
+              }
+            },
+            "required": [
+              "before",
+              "after"
+            ]
+          },
+          "judgment": {
+            "type": "string",
+            "enum": [
+              "satisfied",
+              "partial",
+              "unsatisfied"
+            ]
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 6000,
+            "pattern": "\\S"
+          },
+          "next_instruction": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "challenge": {
+            "$ref": "#/components/schemas/ReflectionChallengeAnswer"
+          }
+        },
+        "required": [
+          "kind",
+          "baseline_run_id",
+          "revised_run_id",
+          "change",
+          "evidence",
+          "judgment",
+          "explanation",
+          "next_instruction",
+          "challenge"
+        ]
+      },
+      "ReflectionChallenge": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "notice": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                }
+              },
+              "required": [
+                "id",
+                "label"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "notice",
+          "items"
+        ]
+      },
+      "ReflectionForm": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "reflection"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "challenge": {
+            "$ref": "#/components/schemas/ReflectionChallenge"
+          }
+        },
+        "required": [
+          "kind",
+          "prompt",
+          "challenge"
+        ]
+      },
+      "ReflectionDraftData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "step": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "beforeId": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "afterId": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "beforeMessageId": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "afterMessageId": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "changeKind": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "requirement": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "beforeQuote": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "afterQuote": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "judgment": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "nextInstruction": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "instruction": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 6000
+          },
+          "facts": {
+            "type": "object",
+            "maxProperties": 20,
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 40
+            }
+          },
+          "beforeStartOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "afterStartOffset": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "beforeEventSeq": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "afterEventSeq": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        },
+        "required": [
+          "step",
+          "beforeId",
+          "afterId",
+          "beforeMessageId",
+          "afterMessageId",
+          "changeKind",
+          "requirement",
+          "beforeQuote",
+          "afterQuote",
+          "judgment",
+          "explanation",
+          "nextInstruction",
+          "instruction",
+          "facts",
+          "beforeStartOffset",
+          "afterStartOffset",
+          "beforeEventSeq",
+          "afterEventSeq"
+        ]
+      },
+      "ReflectionDraft": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReflectionDraftData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "attempt_id",
+          "revision",
+          "draft",
+          "updated_at"
+        ]
+      },
+      "PutReflectionDraftRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "expected_attempt_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "draft": {
+            "$ref": "#/components/schemas/ReflectionDraftData"
+          }
+        },
+        "required": [
+          "expected_revision",
+          "expected_attempt_revision",
+          "draft"
         ]
       }
     }

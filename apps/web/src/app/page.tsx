@@ -28,6 +28,9 @@ export default function Home() {
     null,
   );
   const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [hasConfiguredKey, setHasConfiguredKey] = useState<boolean | null>(
+    null,
+  );
   const [error, setError] = useState<unknown>(null);
   async function load() {
     setError(null);
@@ -44,6 +47,34 @@ export default function Home() {
   }
   useEffect(() => {
     void load();
+  }, []);
+  useEffect(() => {
+    let active = true;
+    let latestRequest = 0;
+    async function refreshKeyStatus() {
+      const request = ++latestRequest;
+      try {
+        const profiles = await api<Schema["ProfileList"]>("/model-profiles");
+        if (active && request === latestRequest) {
+          setHasConfiguredKey(
+            profiles.items.some((p) => p.credential_status === "configured"),
+          );
+        }
+      } catch {
+        // Keep course browsing available if the credential status is unavailable.
+      }
+    }
+    function refreshOnReturn() {
+      if (document.visibilityState === "visible") void refreshKeyStatus();
+    }
+    void refreshKeyStatus();
+    window.addEventListener("focus", refreshOnReturn);
+    document.addEventListener("visibilitychange", refreshOnReturn);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", refreshOnReturn);
+      document.removeEventListener("visibilitychange", refreshOnReturn);
+    };
   }, []);
   const completed = lessons?.filter((l) => l.completed).length ?? 0;
   return (
@@ -192,20 +223,23 @@ export default function Home() {
           </div>
         </>
       )}
-      <section className="prepare-card">
-        <span className="prepare-icon">
-          <KeyRound size={23} />
-        </span>
-        <div>
-          <h3>准备好你的第一把“钥匙”</h3>
-          <p>
-            实训需要你自己的模型 API Key。先阅读导读，再跟着设置页完成连接检查。
-          </p>
-        </div>
-        <Link className="button secondary" href="/settings">
-          配置模型 <ArrowRight size={16} />
-        </Link>
-      </section>
+      {hasConfiguredKey === false && (
+        <section className="prepare-card">
+          <span className="prepare-icon">
+            <KeyRound size={23} />
+          </span>
+          <div>
+            <h3>准备好你的第一把“钥匙”</h3>
+            <p>
+              实训需要你自己的模型 API
+              Key。先阅读导读，再跟着设置页完成连接检查。
+            </p>
+          </div>
+          <Link className="button secondary" href="/settings">
+            配置模型 <ArrowRight size={16} />
+          </Link>
+        </section>
+      )}
       <div className="quiet-note">
         <ShieldCheck size={15} /> Key
         仅保存在本地后端内存；演示练习与正式学习分别记录。

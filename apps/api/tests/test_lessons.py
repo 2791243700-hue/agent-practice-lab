@@ -49,16 +49,16 @@ def test_course_missing_intro_or_republishing_changed_version_rejected(client, t
 def test_latest_version_accepts_mixed_legal_strings_and_prefers_numeric_release(client):
     catalog = client.app.state.school.catalog
     original = catalog.get("01-task", "1.0.0")
-    for version in ["1.0.beta", "1.0.alpha", "1.00.0", "1.0.00", "1.0.²", "1..text"]:
+    for version in ["2.0.beta", "2.0.alpha", "2.00.0", "2.0.00", "2.0.²", "2..text"]:
         updated = copy.deepcopy(original)
         updated["manifest"]["version"] = version
         catalog.publish(updated)
-    assert catalog.get("01-task")["manifest"]["version"] == "1.00.0"
+    assert catalog.get("01-task")["manifest"]["version"] == "2.00.0"
     assert client.get("/api/v1/lessons").status_code == 200
     latest = copy.deepcopy(original)
-    latest["manifest"]["version"] = "1.0.10"
+    latest["manifest"]["version"] = "2.0.10"
     catalog.publish(latest)
-    assert catalog.get("01-task")["manifest"]["version"] == "1.0.10"
+    assert catalog.get("01-task")["manifest"]["version"] == "2.0.10"
 
 
 @pytest.mark.parametrize("via_import", [False, True])

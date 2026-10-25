@@ -555,6 +555,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/attempts/{attempt_id}/reflection-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 读取当前实验的复盘草稿，不调用模型 */
+        get: operations["getReflectionDraft"];
+        /** 按独立草稿版本保存复盘，不修改实验版本 */
+        put: operations["putReflectionDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -717,7 +735,7 @@ export interface components {
             kind: "ArtifactForm";
             prompt: string;
         };
-        AnswerForm: components["schemas"]["ChoiceForm"] | components["schemas"]["FactsForm"] | components["schemas"]["CourseForm"] | components["schemas"]["ArtifactForm"];
+        AnswerForm: components["schemas"]["ChoiceForm"] | components["schemas"]["FactsForm"] | components["schemas"]["CourseForm"] | components["schemas"]["ArtifactForm"] | components["schemas"]["ReflectionForm"];
         LessonSummary: {
             id: string;
             version: string;
@@ -945,7 +963,7 @@ export interface components {
             room: string;
         };
         /** @description Server selects exactly the lesson-specific shape. No expected answer values are returned by lesson APIs. */
-        Answers: components["schemas"]["ChoiceAnswers"] | components["schemas"]["FactsAnswers"] | components["schemas"]["CourseAnswers"] | components["schemas"]["Empty"];
+        Answers: components["schemas"]["ChoiceAnswers"] | components["schemas"]["FactsAnswers"] | components["schemas"]["CourseAnswers"] | components["schemas"]["Empty"] | components["schemas"]["ReflectionAnswers"];
         SubmissionCreate: {
             attempt_id: string;
             expected_attempt_revision: number;
@@ -1386,6 +1404,95 @@ export interface components {
         };
         RunTipsResult: {
             tips: components["schemas"]["RunTips"] | null;
+        };
+        ReflectionCitation: {
+            message_id: string;
+            event_seq: number;
+            quote: string;
+            /** @description Unicode code-point offset into the original message text, not UTF-16 units or rendered Markdown. */
+            start_offset: number;
+        };
+        ReflectionChange: {
+            /** @enum {string} */
+            category: "goal" | "constraint" | "output";
+            quote: string;
+        };
+        ReflectionJudgment: {
+            item_id: string;
+            /** @enum {string} */
+            decision: "known" | "confirm";
+        };
+        ReflectionChallengeAnswer: {
+            challenge_id: string;
+            judgments: components["schemas"]["ReflectionJudgment"][];
+            instruction: string;
+        };
+        ReflectionAnswers: {
+            /** @constant */
+            kind: "reflection";
+            baseline_run_id: string;
+            revised_run_id: string;
+            change: components["schemas"]["ReflectionChange"];
+            evidence: {
+                before: components["schemas"]["ReflectionCitation"];
+                after: components["schemas"]["ReflectionCitation"];
+            };
+            /** @enum {string} */
+            judgment: "satisfied" | "partial" | "unsatisfied";
+            explanation: string;
+            next_instruction: string;
+            challenge: components["schemas"]["ReflectionChallengeAnswer"];
+        };
+        ReflectionChallenge: {
+            id: string;
+            title: string;
+            notice: string;
+            items: {
+                id: string;
+                label: string;
+            }[];
+        };
+        ReflectionForm: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "ReflectionForm";
+            prompt: string;
+            challenge: components["schemas"]["ReflectionChallenge"];
+        };
+        ReflectionDraftData: {
+            step: number;
+            beforeId: string;
+            afterId: string;
+            beforeMessageId: string;
+            afterMessageId: string;
+            changeKind: string;
+            requirement: string;
+            beforeQuote: string;
+            afterQuote: string;
+            judgment: string;
+            explanation: string;
+            nextInstruction: string;
+            instruction: string;
+            facts: {
+                [key: string]: string;
+            };
+            beforeStartOffset: number;
+            afterStartOffset: number;
+            beforeEventSeq: number;
+            afterEventSeq: number;
+        };
+        ReflectionDraft: {
+            attempt_id: string;
+            revision: number;
+            draft: components["schemas"]["ReflectionDraftData"] | null;
+            updated_at: string | null;
+        };
+        PutReflectionDraftRequest: {
+            expected_revision: number;
+            expected_attempt_revision: number;
+            draft: components["schemas"]["ReflectionDraftData"];
         };
     };
     responses: never;
@@ -2838,6 +2945,90 @@ export interface operations {
             };
             /** @description 成功 */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 统一错误格式；HTTP 状态映射见 README */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getReflectionDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReflectionDraft"];
+                };
+            };
+            /** @description 统一错误格式；HTTP 状态映射见 README */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    putReflectionDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutReflectionDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReflectionDraft"];
+                };
+            };
+            /** @description 成功 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 成功 */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -20,6 +20,9 @@ run.started/run.completed 或只有一条完整回答，就否认已经完成的
 这里只评价截至 target_run_id 的学习状态。若 context_truncated 为 true，只评价看得到的内容，
 不要因此推翻 platform_facts 已确认的事实；不要求学生导出、补齐事件日志或提供运行 ID。
 本关 available_tools 为空时，不要求使用工具、保存文件或提供授权记录。
+若给出 reflection_draft 或已提交的 reflection_answers，可点评学生解释与引用是否相符，
+给出改写建议；仅按实际保存的内容反馈，不把自由解释质量追加为正式通过条件。
+这些内容是生成时的快照，不宣称后续修改已经重新评价。challenge 只有题目，不给正确答案。
 submissions 为空表示尚未提交验收，可建议完成页面上的核对题并提交，
 不代表缺少学生必须另交的自评、报告或材料。只推荐课程中实际存在的操作。
 面向零经验学生，用“你”直接说明已完成什么、还差什么、接下来点击哪里或怎么改任务说明。
@@ -104,6 +107,15 @@ class TipsService:
             if submission["attempt_id"] == attempt["id"] and refs and refs <= included:
                 submissions.append(
                     {
+                        **(
+                            {
+                                "reflection_answers": bounded(
+                                    json.dumps(submission["answers"], ensure_ascii=False), 16000
+                                )
+                            }
+                            if submission.get("answers", {}).get("kind") == "reflection"
+                            else {}
+                        ),
                         "created_at": submission["created_at"],
                         "passed": submission["passed"],
                         "rules": [
@@ -130,12 +142,24 @@ class TipsService:
             "submissions": submissions[-3:],
             "context_truncated": truncated,
         }
+        if lesson["manifest"]["answer_form"]["kind"] == "reflection":
+            context["lesson"]["answer_form"]["challenge"] = lesson["manifest"]["answer_form"]["challenge"]
+            saved = self.store.get("reflection-draft", attempt["id"], missing_ok=True)
+            draft = saved and saved["draft"]
+            if draft and draft.get("afterId") == run["id"] and draft.get("beforeId") in included:
+                context["reflection_draft"] = {
+                    "revision": saved["revision"],
+                    "updated_at": saved["updated_at"],
+                    "draft": bounded(json.dumps(draft, ensure_ascii=False), 16000),
+                }
+            context["context_truncated"] = truncated
         # Keep the request bounded even when many large tool outputs were recorded.
         while len(json.dumps(context, ensure_ascii=False)) > 60_000:
             context["context_truncated"] = True
             if len(context["runs"]) > 1:
                 context["runs"].pop(0)
                 context["submissions"] = []
+                context.pop("reflection_draft", None)
             elif context["runs"][0]["events"]:
                 context["runs"][0]["events"].pop(0)
             else:

@@ -614,3 +614,67 @@ def test_context_uses_durable_creation_order_after_updates_and_restart(client, c
         create_app(config), base_url="http://127.0.0.1:8000", headers={"X-Local-Token": config.local_token}
     ) as reopened:
         check_context(reopened.app.state.school)
+
+
+def test_tips_include_only_matching_saved_reflection_for_optional_prose_feedback(client):
+    from test_reflection import draft_data, pair, reflection_attempt
+
+    school = client.app.state.school
+    attempt = reflection_attempt(client)
+    answers = pair(client, attempt)
+    before = school.store.get("run", answers["baseline_run_id"])
+    after = school.store.get("run", answers["revised_run_id"])
+    draft = draft_data()
+    draft.update(beforeId=before["id"], afterId=after["id"], explanation="我认为第二轮只部分满足要求。")
+    school.store.put(
+        "reflection-draft",
+        attempt["id"],
+        {
+            "attempt_id": attempt["id"],
+            "revision": 2,
+            "draft": draft,
+            "updated_at": "2026-10-25T00:00:00Z",
+        },
+    )
+    context = school.tips.context(after)
+    assert context["reflection_draft"]["revision"] == 2
+    assert json.loads(context["reflection_draft"]["draft"])["explanation"] == draft["explanation"]
+    assert "expected_judgments" not in json.dumps(context, ensure_ascii=False)
+    assert context["lesson"]["answer_form"]["challenge"]["id"] == "activity-notice"
+    assert "reflection_draft" not in school.tips.context(before)
+
+
+def test_tips_drop_reflection_draft_when_evidence_budget_drops_baseline(client):
+    from test_reflection import draft_data, pair, reflection_attempt
+
+    school = client.app.state.school
+    attempt = reflection_attempt(client)
+    answers = pair(client, attempt)
+    before = school.store.get("run", answers["baseline_run_id"])
+    after = school.store.get("run", answers["revised_run_id"])
+    for index in range(20):
+        school.events.append(
+            before["id"],
+            "message.completed",
+            {
+                "message_id": f"long-{index}",
+                "role": "assistant",
+                "content": "x" * 5000,
+            },
+        )
+    draft = draft_data()
+    draft.update(beforeId=before["id"], afterId=after["id"], explanation="saved explanation")
+    school.store.put(
+        "reflection-draft",
+        attempt["id"],
+        {
+            "attempt_id": attempt["id"],
+            "revision": 1,
+            "draft": draft,
+            "updated_at": "2026-10-25T00:00:00Z",
+        },
+    )
+    context = school.tips.context(after)
+    assert context["context_truncated"] is True
+    assert "reflection_draft" not in context
+    assert [run["id"] for run in context["runs"]] == [after["id"]]

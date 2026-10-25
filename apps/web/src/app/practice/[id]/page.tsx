@@ -298,6 +298,14 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
   }
   return (
     <>
+      {lesson.id === "01-task" && lesson.version === "1.0.0" && (
+        <div className="notice warning">
+          这是旧版 1.0.0 实训，可继续原版单选验收。
+          <Link href="/lessons/01-task">
+            阅读新版 1.1.0 导读并开始新版实训 →
+          </Link>
+        </div>
+      )}
       <header className="practice-header">
         <div className="practice-header-nav">
           <nav className="practice-crumbs" aria-label="课程位置">
@@ -389,6 +397,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
           <button
             className="button"
             disabled={action.busy}
+            data-discard-unsaved-reflection
             onClick={() =>
               void action.act(async () => {
                 const a = await api<Attempt>(`${endpoint}/reset`, {
@@ -940,6 +949,8 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             attempt={attempt}
             lesson={lesson}
             history={submissions}
+            runs={runs}
+            events={events}
             disabled={
               !!active ||
               historical ||
@@ -949,6 +960,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
               pendingMessage !== null
             }
             onSubmit={submit}
+            onRefresh={() => refresh()}
             onView={async (id) => {
               feedbackTriggerRef.current =
                 document.activeElement instanceof HTMLElement

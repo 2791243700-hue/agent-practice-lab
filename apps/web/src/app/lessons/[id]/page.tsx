@@ -89,6 +89,12 @@ function LessonContent({
         !action.error && <Loading />
       ) : (
         <>
+          {lesson.id === "01-task" && lesson.version === "1.0.0" && (
+            <div className="notice warning">
+              正在阅读旧版 1.0.0。
+              <Link href="/lessons/01-task">阅读新版 1.1.0 导读 →</Link>
+            </div>
+          )}
           <Heading
             eyebrow={`EXPERIMENT ${String(lesson.order).padStart(2, "0")} / 阅读导读`}
             title={lesson.title}

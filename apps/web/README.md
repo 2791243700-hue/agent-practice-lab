@@ -1,8 +1,10 @@
 # Agent Practice Lab Web
 
-Next.js App Router + TypeScript。课程、评分和身份通过现有后端获取，页面不复制评分逻辑，不修改已发布课程。
+当前统一功能见[交付记录](../../docs/unified-practice-delivery.md)：第一关按课程版本使用正式复盘或旧版 choice，草稿后端恢复；Tips、重置、结果弹窗和其余三关完整保留。以下 2026-10-24 记录为预览交付历史。
 
-2026-10-23：当前分支新增按需模型 Tips、提交结果弹窗、保留所选模型的重置和 Markdown 表格显示；新改动未合并 main，见[本轮交付](../../docs/practice-updates-2026-10-23.md)。既有功能包含 Key 优先配置、服务商模型列表和多个内存 Key 管理；学习记录显示日期与红/绿正式通关状态，顶栏提供“帮助”。main 基线和本次功能分支改动见[版本状态](../../docs/project-status.md)。操作步骤见[新手说明](../../docs/user-guide.md)。
+Next.js App Router + TypeScript。课程、评分和身份通过现有后端获取，页面不复制正式评分逻辑，不修改已发布课程。
+
+2026-10-24：包含 Key 管理、按凭据状态显示的首页准备提示、可收起工作区和流式对话。第一关使用复盘验收模板，移除旧单选与提交；当前仅本地核对/下载，尚无新正式评分。第二至四关及旧成绩保留，详见[版本状态](../../docs/project-status.md)、[使用说明](../../docs/user-guide.md)和[后端接入清单](../../docs/reflection-assessment-backend-handoff.md)。
 
 从仓库根目录安装：`npm --prefix apps/web ci`。使用 `scripts/start.ps1` 一起启动前后端；原启动器已支持本目录的 `npm run dev -- --hostname … --port …`。
 
@@ -23,4 +25,4 @@ npm run test:e2e
 
 `components/key-manager.tsx` 管理 Key 与模型；`components/learning-status.tsx` 统一日期和通关展示；`lib/api.ts` 保留结果不明确时的幂等键，操作体缓存只保留 SHA-256 指纹，不保留 Key 明文。Key 不写入 localStorage/sessionStorage。服务商建议不等于认证成功；模型列表不等于文本和工具兼容检查通过。
 
-最近本地验证：8 项前端测试、15 项浏览器测试、类型、格式和生产构建通过。浏览器测试使用本地脚本模型和虚构凭据；本机此次使用 Chrome，CI 使用安装的 Chromium。明细与截图见[前端验证](../../docs/frontend-validation.md)。生产构建与日常开发应使用独立目录，避免占用同一 `.next`。
+最近本地验证：前端单元 8 项、浏览器 30 项、类型、格式和隔离生产构建通过。浏览器使用脚本模型和虚构凭据，第一关旧提交只构造历史兼容记录，不算新复盘正式评分。明细与截图见[前端交付](../../docs/reflection-assessment-delivery.md)。不要在日常 dev 使用的同一 .next 中执行 build。

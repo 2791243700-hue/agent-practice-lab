@@ -2,13 +2,17 @@ import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import pytest
+
 from conftest import create_attempt, post
 from test_credentials import configure
 from test_grading import submit
+from test_reflection import reflection_attempt
 from test_runs import start, wait_run
 
 
-def test_live_sdk_http_chain_can_pass_first_lesson_without_exporting_key(client):
+@pytest.mark.parametrize("version", ["1.0.0", "1.1.0"])
+def test_live_sdk_http_chain_can_pass_first_lesson_without_exporting_key(client, version):
     class Provider(BaseHTTPRequestHandler):
         calls = 0
 
@@ -110,7 +114,11 @@ def test_live_sdk_http_chain_can_pass_first_lesson_without_exporting_key(client)
             == checked.json()
         )
         assert Provider.calls == 3
-        attempt = create_attempt(client, mode="live")
+        attempt = (
+            create_attempt(client, mode="live") if version == "1.0.0" else reflection_attempt(client, "live")
+        )
+        runs = []
+        messages = []
         for index, text in enumerate(["看看通知", "整理两项任务，列出截止日期，不猜测"]):
             run = start(client, attempt, text, f"http-run-key-{index}", profile["id"])
             finished = wait_run(client, run["id"])
@@ -119,9 +127,45 @@ def test_live_sdk_http_chain_can_pass_first_lesson_without_exporting_key(client)
             events = client.app.state.school.store.event_list(run["id"])
             complete = [e for e in events if e["kind"] == "message.completed"]
             assert complete and complete[-1]["payload"]["content"] == "已完成任务，请核对课程通知。"
-        result = submit(client, attempt, {"question_id": "goal-constraints", "option_id": "clear-goal"})
+            runs.append(finished)
+            messages.append(complete[-1])
+        answers = {"question_id": "goal-constraints", "option_id": "clear-goal"}
+        if version == "1.1.0":
+            challenge = client.get("/api/v1/lessons/01-task").json()["answer_form"]["challenge"]
+            answers = {
+                "kind": "reflection",
+                "baseline_run_id": runs[0]["id"],
+                "revised_run_id": runs[1]["id"],
+                "change": {"category": "constraint", "quote": "不猜测"},
+                "evidence": {
+                    side: {
+                        "message_id": message["payload"]["message_id"],
+                        "event_seq": message["seq"],
+                        "quote": "已完成任务",
+                        "start_offset": 0,
+                    }
+                    for side, message in zip(("before", "after"), messages)
+                },
+                "judgment": "partial",
+                "explanation": "还没有列出两项任务。",
+                "next_instruction": "逐项列出任务。",
+                "challenge": {
+                    "challenge_id": challenge["id"],
+                    "judgments": [
+                        {
+                            "item_id": item["id"],
+                            "decision": "known" if item["id"] in ("start", "place") else "confirm",
+                        }
+                        for item in challenge["items"]
+                    ],
+                    "instruction": "整理活动通知，缺少的信息标记待确认。",
+                },
+            }
+        result = submit(client, attempt, answers)
         assert result["passed"] and result["evaluation_passed"]
-        assert client.get("/api/v1/lessons/01-task").json()["completed"]
+        assert client.get("/api/v1/lessons/01-task?version=" + version).json()["completed"]
+        if version == "1.0.0":
+            assert not client.get("/api/v1/lessons/01-task").json()["completed"]
         assert "http-test-private-key" not in str(client.app.state.school.store.list("run"))
     finally:
         provider.shutdown()

@@ -100,6 +100,9 @@ export function RunTips({
       {open && (
         <div id={`tips-${runId}`} className="run-tips-content">
           <p className="small muted">模型建议，不代表正式通关</p>
+          <p className="small muted">
+            建议基于生成时已保存的内容；修改复盘后，已有建议不会自动更新。
+          </p>
           {busy && (
             <p className="reply-pending" role="status">
               <span className="spinner" aria-hidden="true" />
@@ -157,7 +160,8 @@ export function RunTips({
               <p>
                 生成 Tips
                 会额外调用一次模型，可能消耗额度，并将本关目标、你的任务说明、
-                Agent 回答及工具执行结果发送到所选模型服务商。
+                Agent
+                回答、工具执行结果，以及关联的已保存复盘填写（包括你的解释和改写）发送到所选模型服务商。
               </p>
               {profile && (
                 <p className="small">

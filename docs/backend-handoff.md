@@ -1,14 +1,16 @@
 # Agent Practice Lab：前后端开发交接
 
-2026-10-23 通过 feat/practice-tips-and-feedback 分支交付，尚未合并 main：新增按需模型 Tips（GET/POST `/runs/{run_id}/tips`），当前本地 39 个 HTTP 操作、92 个 schema；缓存按运行持久保存，独立于正式评分。用量与异常/中断处理见[契约说明](../contracts/README.md)，使用边界见[版本状态](project-status.md)。下文 2026-10-22 的数字与验证记录属于已合并历史基线。
+2026-10-25 当前更新：统一实训、新版 1.1.0 正式复盘及草稿 API 已在 PR #9 功能分支接入，尚未合并 main。当前协议为 41 操作、102 schema；以下既有记录按日期保留，其“预览/未接入/37 或 39 操作”描述属于历史基线。最新功能与验证以[统一交付](unified-practice-delivery.md)和[当前索引](project-status.md)为准。
 
-历史基线（2026-10-22）：适用于接手前端、后端、契约与课程的开发者。已合并主分支状态与验证边界详见[版本状态](project-status.md)。
+更新：2026-10-24。适用于接手前端、后端、契约与课程的开发者。当前交付见[版本状态](project-status.md)，第一关新验收的逐项工作见[后端任务清单](reflection-assessment-backend-handoff.md)。
 
 ## 当前代码与接收方式
 
-PR #1 契约、#2 后端、#3 前端、#4 DeepSeek/权限适配、#5 预览修复均已合并到 main，历史基线为 `3214d75`；当前 main 已纳入下述 #6、#7，代码基线为 `a8f7438`。原前端依赖 feat/backend 的合并顺序已执行完成，无需再次 retarget 或 cherry-pick 旧修复。
+本次以前一版 main `55ce473` 为基线，第一关旧单选及提交入口改为复盘预览，第二至四关保留正式验收。复盘只做前端核对与本地下载，不能生成新正式成绩；旧 choice API 仍可用于兼容历史，不是新验收已实现。后端应先协调新契约、能力规则及课件版本，再实现提交、评分、历史和导出。
 
-PR #6 已将 Key 管理、界面、审查修复与文档更新合并到 main（`e5a3458`）。接手历史基线可获取 main；当前 Tips、重置和弹窗功能请使用 feat/practice-tips-and-feedback 分支（PR #9）。通过 PR 查看差异和对应 CI；数据目录、凭据、日志及 Next.js 的开发生成路径不进入提交。
+PR #1 契约、#2 后端、#3 前端、#4 DeepSeek/权限适配、#5 预览修复均已合并到 main，历史基线为 `3214d75`；历史工作区基线为 `a8f7438`，PR #8 后的本次开发基线为 `55ce473`。原前端依赖 feat/backend 的合并顺序已执行完成，无需再次 retarget 或 cherry-pick 旧修复。
+
+PR #6 已将 Key 管理、界面、审查修复与文档更新合并到 main（`e5a3458`）。接手时直接获取 main。通过 PR 查看差异和对应 CI；数据目录、凭据、日志及 Next.js 的开发生成路径不进入提交。
 
 前端体验增量已通过 PR #7 合并到 main（`a8f7438`），原开发基线为 `b56182f`。包含侧栏与板块折叠、紧凑顶部、生活情境示例、准备提醒，以及问题即时显示和流式滚动。后端接口及课件包未更改；启动、6 张截图与 8 项前端/26 项浏览器验证见[增量交付说明](practice-workspace-delivery.md)。两个 PR 的依赖合并已经完成，无需再 retarget 或 cherry-pick。
 
@@ -26,7 +28,7 @@ npm --prefix apps/web ci
 
 可用 `-Demo` 开演示，或 `-WebPort`、`-ApiPort`、`-DataDir` 创建独立实例；停止须使用相同数据目录。启动器传递私有的 AGENT_SCHOOL_API_ORIGIN、AGENT_SCHOOL_FRONTEND_ORIGIN、AGENT_SCHOOL_LOCAL_TOKEN；令牌不进入 NEXT_PUBLIC、浏览器、URL 或持久化配置。浏览器只访问同源 `/api/v1`，不要将启动地址的 127.0.0.1 随意换成 localhost。
 
-完整命令与最新证据见[后端说明](backend.md)、[后端验证](runtime-validation.md)、[前端验证](frontend-validation.md)。2026-10-22 基线验证为 197 项契约、91 项后端、8 项前端、26 项浏览器测试通过，Ruff/格式/类型/生产构建通过；功能分支 CI 以对应 PR 实际结果为准。2026-10-19 DeepSeek 实测仅覆盖后端，第四关额外提供 ID 映射，见[独立记录](live-model-validation.md)。
+完整命令与证据见[后端说明](backend.md)、[后端验证](runtime-validation.md)、[前端验证](frontend-validation.md)。2026-10-24 前端 8 项、浏览器 30 项、格式/类型/隔离构建通过；后端 91 项、契约 197 项为原基线，本次未改动或重跑。云端以对应提交为准；旧 DeepSeek 后端实测不能代替新复盘评分验收。
 
 ## 新模型设置的契约
 
@@ -56,9 +58,11 @@ npm --prefix apps/web ci
 
 IdentityProvider/LocalIdentityProvider 目前只保留声明，服务、存储和幂等链路仍固定 local-owner；未来接入账号时需贯穿调用，不能把替换 `/me` 当作完成登录支持。
 
-四关答案依次为 question_id/option_id、facts[]、course_id/session_date/room、空对象；详见[契约](../contracts/README.md)。内部版本继续保存，页面精简小字不影响版本锁定和评分。
+现有 v0.1.0 后端仍接受 question_id/option_id、facts[]、course_id/session_date/room、空对象。第一关当前前端不再发送旧 choice，新的 reflection 类型尚未发布，见[契约](../contracts/README.md)和[任务清单](reflection-assessment-backend-handoff.md)。原课程版本与旧成绩继续保留。
 
 ## 待办与维护边界
+
+新增最高优先级：[第一关复盘正式接入](reflection-assessment-backend-handoff.md)。先明确评分依据、引用定位、变式版本及新旧实验策略；不能只接受解释非空、前端完成标记或自动代选旧正确答案。
 
 1. 第四关发布新版本说明必要 task_id；再做零经验用户独立验收。不要把已有后端实测说成新手体验已完成。
 2. 修复生成类型 discriminator，验证后去除前端 lib/types.ts 适配。
@@ -80,7 +84,3 @@ IdentityProvider/LocalIdentityProvider 目前只保留声明，服务、存储�
 | content/lessons/、scripts/ | 版本化课程和本地启停 |
 
 跨端更改先同步契约，课件变更发布新版本。问题交接附提交/课程版本、mode、资源 ID、事件序号、错误码和最短复现，先检查日志与截图无凭据。
-
-## 内部结构清理（2026-10-23）
-
-HTTP 边界和业务服务共享 Contracts 实例，避免重复读取和构建契约校验器；直接创建 School 的测试仍支持自动加载。离线 SDK 模拟器移至 `apps/api/tests/runtime_probe.py`，不再随生产包安装。对外 HTTP 操作、字段和状态码保持兼容，核对结果见[清理记录](cleanup-2026-10-23.md)。

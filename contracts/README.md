@@ -1,12 +1,12 @@
 # 前后端接口契约 v0.1.0
 
-更新：2026-10-23。首版契约及前后端已实现；已加入 Key 导入和模型列表操作，仍使用 v0.1.0，本地工作区共 39 个 HTTP 操作（Tips 增量随功能分支交付，尚未合并 main）。新增模型操作已通过 PR #6 合并到 main，前端体验增量也已随 PR #7 合并，交付状态见[版本状态](../docs/project-status.md)。样例用于结构验证，不代表外部模型实际运行。
+更新：2026-10-25。首版契约及前后端已实现；已加入 Key 导入和模型列表操作，仍使用 v0.1.0，本地工作区共 41 个 HTTP 操作（Tips 增量随功能分支交付，尚未合并 main）。新增模型操作已通过 PR #6 合并到 main，前端体验增量也已随 PR #7 合并，交付状态见[版本状态](../docs/project-status.md)。样例用于结构验证，不代表外部模型实际运行。
 
 ## 文件与唯一来源
 
 | 文件 | 用途 |
 | --- | --- |
-| [openapi.json](openapi.json) | 39 个 HTTP 操作、92 个 schema 的请求、响应、字段约束和操作 ID |
+| [openapi.json](openapi.json) | 41 个 HTTP 操作、102 个 schema 的请求、响应、字段约束和操作 ID |
 | [events.schema.json](events.schema.json) | 11 类 SSE 事件及每类 payload 的 JSON Schema |
 | [lesson.schema.json](lesson.schema.json) | 服务端私有课程 manifest，包括评分规则和参考事实 |
 | [types.d.ts](types.d.ts) | 从 OpenAPI 生成的 TypeScript 类型，不手工修改 |
@@ -64,6 +64,8 @@ ModelProfile.revision 初始为 1，非敏感配置或内存凭据变更时递�
 | GET /attempts/{attempt_id} | 实训 ID | Attempt、进度、活跃运行和最近提交 ID |
 | PATCH /attempts/{attempt_id} | expected_revision、settings、selected_file_ids | 更新下一轮配置 |
 | POST /attempts/{attempt_id}/reset | expected_revision；幂等键 | 201 新 Attempt，旧记录保留 |
+| GET /attempts/{attempt_id}/reflection-draft | 实训 ID | ReflectionDraft；未保存 revision=0、draft=null，不调用模型 |
+| PUT /attempts/{attempt_id}/reflection-draft | expected_revision、expected_attempt_revision、draft | ReflectionDraft；自动保存，独立 revision，不修改 Attempt |
 | GET /attempts/{attempt_id}/files | 实训 ID | 材料和当前产物列表 |
 | GET /attempts/{attempt_id}/files/{file_id} | 文件 ID | FilePreview，最多 20000 字符 |
 | GET /attempts/{attempt_id}/files/{file_id}/download | 文件 ID | 完整附件下载 |
@@ -269,3 +271,15 @@ validate 检查 OpenAPI、所有 JSON Schema、样例、事件副本一致性、
 2026-10-23 补充：Tips 界面不显示单独的依据段落。新生成仅要求 assessment、gaps、next_steps；为兼容既有 RunTips 响应，evidence 字段保留，新结果固定为空数组。服务商额外返回的依据会丢弃，旧缓存仍可读但不显示该部分。
 
 内部整理不删除对外兼容接口或旧数据字段。路由与分发操作的一致性由 `apps/api/tests/test_contract_wiring.py` 验证；TypeScript 类型仍由 `npm run types` 生成。当前核对结果见[清理记录](../docs/cleanup-2026-10-23.md)。
+
+## 第一关新版复盘（2026-10-25）
+
+第一关 1.1.0 的 answer_form.kind=reflection，包含公开 challenge 的 id/title/notice/items；正确判断只存在课程私有 rules 中。旧版 1.0.0 仍可通过原 choice 字段提交，成绩不重算。当前功能在 PR #9 分支，完整范围见[统一交付](../docs/unified-practice-delivery.md)。
+
+POST /submissions 的 answers 新增 ReflectionAnswers：kind=reflection；baseline_run_id/revised_run_id；change.category=goal|constraint|output 和 quote；evidence.before/after 分别含 message_id、event_seq、quote、start_offset；judgment=satisfied|partial|unsatisfied；explanation、next_instruction；challenge.challenge_id、judgments[item_id,decision=known|confirm] 和 instruction。完整必填与长度以 OpenAPI 为准。start_offset 为原始正文 Unicode 码点偏移，换行、空格和重复句均按原文核对，不按 HTML 或 UTF-16 单元计算。
+
+后端核对运行归属/终态/顺序、改动引用及指定消息的精确原文，再核对课程版本的变式题。引用真实不等于自由解释质量已判定，explanation 和 instruction 保存用于学习反馈，不以关键词/字数作为硬性通过条件。partial/unsatisfied 允许通过，须写后续指令。演示不计正式完成。
+
+GET /attempts/{attempt_id}/reflection-draft 未保存时返回 revision=0、draft=null、updated_at=null。PUT 携当前草稿 expected_revision 及 expected_attempt_revision，成功只使草稿 revision+1。所有草稿字段允许未完成值，但固定字段、长度和数量有上限；私有 Key 经现有 HTTP 边界脱敏。仅 active reflection 实验可写，历史草稿可读。冲突返回 409 REVISION_CONFLICT，前端保留当前编辑内容并让学生主动处理，不自动覆盖。该 PUT 不要求 Idempotency-Key；响应丢失后先 GET，不能盲目重试写入。
+
+正式提交冻结答案、规则和引用，草稿的后续修改不改变历史结果。ZIP 中包含草稿以及不可变提交，课程与引用均绑定原版本，排除凭据、连接参数和内部令牌。
