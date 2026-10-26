@@ -2,7 +2,7 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**当前 main（2026-10-26）：统一实训与第一关正式复盘。** PR #9 已合并为 af36497，整合 PR #10 的四步复盘与 Tips、重置及弹窗。新版 1.1.0 支持草稿恢复、正式结构化验收、历史和导出；旧版实验继续原规则。完整边界与验证见[当前交付](docs/unified-practice-delivery.md)。
+**当前 main（2026-10-26）：统一实训、正式复盘与通知上下文修复。** PR #12 已合并为 `1b2b788`，包含第一关直接提供固定通知、材料区内联原文和四步复盘顺序解锁。新版 1.1.0 支持草稿恢复、结构化验收、历史与导出；旧版实验继续原规则。最新状态和验证入口见[版本索引](docs/project-status.md)。
 
 ## 本地启动（Windows）
 
@@ -50,7 +50,7 @@ npm --prefix apps/web ci
 
 使用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。浏览器只调用同源 `/api/v1`，Next.js 服务端代理转发内部令牌；Key 只在后端内存中保存。前端类型来自 `contracts/types.d.ts`，本次接口更新已补齐 discriminator 映射并删除前端补丁，见[接口更新记录](docs/interface-update-2026-10-26.md)。
 
-多个 Key 可切换、重命名、清除或删除；重启需重新输入 Key，环境重置保留 Key 与模型选择。列表成功不等于工具兼容，正式运行要求连接检查通过。模型调用、正式评分和演示分别记录；最新验证见[交付记录](docs/unified-practice-delivery.md)。
+多个 Key 可切换、重命名、清除或删除；重启需重新输入 Key，环境重置保留 Key 与模型选择。列表成功不等于工具兼容，正式运行要求连接检查通过。模型调用、正式评分和演示分别记录；最新验证见[版本索引](docs/project-status.md)。
 
 ## 双人协作
 
@@ -59,7 +59,7 @@ npm --prefix apps/web ci
 | A | 前端页面、课程内容、模拟接口、浏览器测试和使用说明 |
 | B | 后端接口、Agent 执行、数据存储、工具授权、规则评分和启动脚本 |
 
-原版及 Key/工作区功能已合并，复盘预览已通过 PR #10 合并到 main `47108b2`。统一实训已通过 PR #9 合并 main `af36497`；接口、评分或课件变更同步契约、新版本及测试。
+原版及 Key/工作区功能、统一复盘、接口映射与通知修复均已合并。开发以 main 为基线；接口、评分或课件变更同步契约、版本与测试，具体交付及验证见[版本索引](docs/project-status.md)。
 
 ```powershell
 git clone https://github.com/2791243700-hue/agent-practice-lab.git

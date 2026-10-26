@@ -1,6 +1,6 @@
 # Agent Practice Lab：前后端开发交接
 
-更新：2026-10-26。统一实训已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并到 main `af36497`，包含第一关 1.1.0 正式复盘、草稿恢复、Tips 和提交弹窗。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。 接口以[契约说明](../contracts/README.md)为准，功能与验证见[统一交付](unified-practice-delivery.md)。
+更新：2026-10-26。现行功能包括统一实训、第一关正式复盘、接口映射与通知上下文修复；当前契约为 41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
 
 ## 当前代码与接收方式
 
@@ -22,7 +22,7 @@ npm --prefix apps/web ci
 
 可用 `-Demo` 开演示，或 `-WebPort`、`-ApiPort`、`-DataDir` 创建独立实例；停止须使用相同数据目录。启动器传递私有的 AGENT_SCHOOL_API_ORIGIN、AGENT_SCHOOL_FRONTEND_ORIGIN、AGENT_SCHOOL_LOCAL_TOKEN；令牌不进入 NEXT_PUBLIC、浏览器、URL 或持久化配置。浏览器只访问同源 `/api/v1`，不要将启动地址的 127.0.0.1 随意换成 localhost。
 
-完整命令与证据见[后端说明](backend.md)、[统一交付](unified-practice-delivery.md)。合并前 193 项后端、18 项前端、52 项浏览器与 231 项契约结构检查通过；main af36497 的三类 CI 全部通过。测试使用本地脚本模型，不代表新增功能已完成真实服务商或零经验学生验收。
+完整命令见[后端说明](backend.md)，当前测试及云端 CI 证据见[版本索引](project-status.md)。测试使用本地脚本模型，不代表新增功能已完成真实服务商或零经验学生验收。
 
 ## 新模型设置的契约
 
@@ -62,7 +62,7 @@ IdentityProvider/LocalIdentityProvider 目前只保留声明，服务、存储�
 2. discriminator 映射已在本地修复，前端适配已删除；后续新增联合类型同步显式映射和生成类型，见[接口更新](interface-update-2026-10-26.md)。
 3. 启动器增加前端 HTTP 就绪等待；当前首次访问可能需稍等刷新。
 4. 用真实服务商在新设置页验证导入、模型选择、兼容检查及浏览器四关闭环；目前新功能只有本地自动化。
-5. 后续变更按具体提交核验 CI；当前 main `af36497` 的三类 CI 已全部通过，详见[版本状态](project-status.md)。无登录、班级或线上部署实现，不能仅改监听地址就上线。
+5. 后续变更按具体提交核验 CI；最新合并版本及三类 CI 证据统一见[版本状态](project-status.md)。无登录、班级或线上部署实现，不能仅改监听地址就上线。
 
 ## 主要维护文件
 

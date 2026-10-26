@@ -1,10 +1,10 @@
 # 当前版本与文档索引
 
-更新：2026-10-26。统一实训已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并到 main `af36497`，包含第一关 1.1.0 正式复盘、草稿恢复、Tips 和提交弹窗。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。 main 的前端、后端及契约 CI 均通过；本地服务是否加载新版取决于实际启动版本。
+更新：2026-10-26。最近已合并版本为 [PR #12](https://github.com/2791243700-hue/agent-practice-lab/pull/12) 的 main `1b2b788`，包含统一实训、第一关正式复盘、接口判别值映射及通知上下文修复。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。本次样式清理与文档同步作为独立变更提交，合并状态以对应 PR 为准；见[清理记录](cleanup-2026-10-26.md)。
 
 ## 当前范围
 
-2026-10-26 后续修复：PR #11 已将接口判别值映射合并 main 94481d8。本次增量修复第一关通知上下文，材料区内联原文、复盘顺序解锁及产物标题；范围与验证见[实训修复记录](practice-fixes-2026-10-26.md)。
+PR #11 完成接口判别值映射；PR #12 修复第一关通知上下文，将材料原文放回材料区，限制四步复盘按顺序解锁，并将产物区标题简化为“产物”。具体行为见[实训修复记录](practice-fixes-2026-10-26.md)。
 
 - 四关导读、统一教学 Agent、Key 管理、工具授权和学习记录。
 - 按需模型 Tips、顶部重置保留当前 Key/模型、Markdown 表格及提交结果弹窗。
@@ -12,7 +12,9 @@
 - 第二至四关继续使用真实事件和产物验收；演示不计正式通过。
 - 41 个 HTTP 操作、102 个 schema、11 类事件；前后端使用共享契约。
 
-本次本地验证：193 项后端、18 项前端、52 项浏览器全量及 231 项契约结构检查通过；格式、类型、生产构建通过。当前实现、保存/评分边界和本次验证以[统一交付记录](unified-practice-delivery.md)为准。2026-10-24 的[预览交付](reflection-assessment-delivery.md)保留为历史设计；[后端接入说明](reflection-assessment-backend-handoff.md)已更新为正式协议；2026-10-23 的[Tips 交付](practice-updates-2026-10-23.md)与[清理记录](cleanup-2026-10-23.md)保留历史验证数字。
+最近合并版本的验证：198 项后端、19 项前端单元、55 项浏览器回归及 231 项契约结构检查通过；main `1b2b788` 的[后端](https://github.com/2791243700-hue/agent-practice-lab/actions/runs/40330515797)、[前端](https://github.com/2791243700-hue/agent-practice-lab/actions/runs/40330515854)与[契约 CI](https://github.com/2791243700-hue/agent-practice-lab/actions/runs/40330515875)均通过。本次清理的验证单独记录在[清理记录](cleanup-2026-10-26.md)，不把此前结果算作本次重跑。
+
+[统一交付](unified-practice-delivery.md)、[接口更新](interface-update-2026-10-26.md)、[实训修复](practice-fixes-2026-10-26.md)分别保留各次交付的范围与测试数字；2026-10-24 的预览、2026-10-23 的 Tips 和清理报告属于历史记录。
 
 ## 已知边界
 
@@ -33,4 +35,4 @@
 | 新版设计与计划 | [设计](superpowers/specs/2026-10-25-unified-practice-design.md)、[计划](superpowers/plans/2026-10-25-unified-practice.md) |
 | 外部模型历史验证 | [真实模型记录](live-model-validation.md) |
 
-历史 PR #1—#8 已完成原版及 Key/工作区功能；PR #10 为复盘预览已合并。PR #9 已将两个方向合并；核验的是 main af36497 的检查结果。
+历史 PR #1—#8 完成原版及 Key/工作区功能；PR #10 为复盘预览，PR #9 完成正式整合，PR #11 修复生成类型映射，PR #12 完成通知与界面修复。历史报告中的提交号和测试数字仅对应各自日期。

@@ -1,6 +1,6 @@
 # 后端开发与联调
 
-更新：2026-10-26。统一实训已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并到 main `af36497`，包含第一关 1.1.0 正式复盘、草稿恢复、Tips 和提交弹窗。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。 接口以[契约说明](../contracts/README.md)为准，功能与验证见[统一交付](unified-practice-delivery.md)。
+更新：2026-10-26。现行功能包括统一实训、第一关正式复盘、接口映射与通知上下文修复；当前契约为 41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
 
 ## 准备
 
@@ -73,7 +73,7 @@ uv run --project apps/api uvicorn agent_school.main:app_factory --factory --host
 
 ## 验证与限制
 
-合并前重新验证：193 项后端、18 项前端单元、52 项浏览器、231 项契约结构检查全部通过。main `af36497` 的三类云端 CI 也全部通过。后端测试包含真实 SDK + 本地 HTTP 脚本服务，不消耗外部模型额度。2026-10-19 的 DeepSeek 后端实测为历史记录，不能代替新复盘、Tips 或 Key 导入的真实服务商验收，见[实测记录](live-model-validation.md)。
+当前自动化验证及 CI 证据见[版本索引](project-status.md)。后端测试包含真实 SDK + 本地 HTTP 脚本服务，不消耗外部模型额度。2026-10-19 的 DeepSeek 后端实测为历史记录，不能代替新复盘、Tips 或 Key 导入的真实服务商验收，见[实测记录](live-model-validation.md)。
 
 本次接口更新已修复 discriminator 映射并删除前端适配，见[更新记录](interface-update-2026-10-26.md)。第四关 task_id 指导和启动器前端 HTTP 就绪等待仍待完善。首版不提供线上身份系统、任意 shell、文件上传或自定义 MCP 执行。
 
