@@ -7,6 +7,7 @@ export default defineConfig({
   timeout: 60000,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
+    channel: process.env.PLAYWRIGHT_CHROMIUM_CHANNEL,
     baseURL: "http://127.0.0.1:3100",
     viewport: { width: 1440, height: 1000 },
     trace: "retain-on-failure",

@@ -13,3 +13,5 @@
 后端 198 项、前端单元 19 项通过；隔离生产构建与 55 项浏览器回归通过，覆盖第一关上下文、新旧版本、材料预览、步骤限制、保存/冲突、手机流式刷新、授权/产物、重置与 Tips。SDK 请求检查使用本地脚本模型，验证勾选/未勾选均包含两项任务和截止日期；其他三关不会自动获得文件正文。没有调用私人模型 Key。
 
 另经 Ruff、Python/Web 格式、严格 TypeScript、231 项契约结构检查及文档链接核对。最终云端结果以本次修复提交及其合并提交的 CI 为准。运行数据、Key、本机生成文件和隔离测试目录不纳入提交。
+
+前端 CI 的 Ubuntu 镜像依赖下载曾以约 40 KB/s 持续十分钟以上，换环境重跑后仍耗时较长。现使用运行器已安装的 Chrome 执行同一套 Playwright 测试，先检查 Chrome 版本，再运行全部 55 项；不省略测试或改成模拟浏览器。本地默认仍使用 Playwright Chromium，也可设 PLAYWRIGHT_CHROMIUM_CHANNEL=chrome 使用已安装的 Chrome。运行器软件依据见[该次 Ubuntu 24.04 镜像清单](https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md)。
