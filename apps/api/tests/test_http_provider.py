@@ -12,9 +12,11 @@ from test_runs import start, wait_run
 
 
 @pytest.mark.parametrize("version", ["1.0.0", "1.1.0"])
-def test_live_sdk_http_chain_can_pass_first_lesson_without_exporting_key(client, version):
+@pytest.mark.parametrize("selected", [False, True])
+def test_live_sdk_http_chain_can_pass_first_lesson_without_exporting_key(client, version, selected):
     class Provider(BaseHTTPRequestHandler):
         calls = 0
+        task_requests = []
 
         def log_message(self, *args):
             pass
@@ -37,6 +39,7 @@ def test_live_sdk_http_chain_can_pass_first_lesson_without_exporting_key(client,
                     ],
                 }
             if body.get("stream"):
+                Provider.task_requests.append(body)
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")
                 self.end_headers()
@@ -117,6 +120,17 @@ def test_live_sdk_http_chain_can_pass_first_lesson_without_exporting_key(client,
         attempt = (
             create_attempt(client, mode="live") if version == "1.0.0" else reflection_attempt(client, "live")
         )
+        if selected:
+            changed = client.patch(
+                "/api/v1/attempts/" + attempt["id"],
+                json={
+                    "expected_revision": attempt["revision"],
+                    "settings": attempt["settings"],
+                    "selected_file_ids": ["notice-week"],
+                },
+            )
+            assert changed.status_code == 200
+            attempt = changed.json()
         runs = []
         messages = []
         for index, text in enumerate(["看看通知", "整理两项任务，列出截止日期，不猜测"]):
@@ -129,6 +143,13 @@ def test_live_sdk_http_chain_can_pass_first_lesson_without_exporting_key(client,
             assert complete and complete[-1]["payload"]["content"] == "已完成任务，请核对课程通知。"
             runs.append(finished)
             messages.append(complete[-1])
+        assert len(Provider.task_requests) == 2
+        for request in Provider.task_requests:
+            supplied = json.dumps(request["messages"], ensure_ascii=False)
+            assert "提交课程总结" in supplied
+            assert "预约实验室" in supplied
+            assert "2026-11-04" in supplied and "2026-11-06" in supplied
+            assert not request.get("tools")
         answers = {"question_id": "goal-constraints", "option_id": "clear-goal"}
         if version == "1.1.0":
             challenge = client.get("/api/v1/lessons/01-task").json()["answer_form"]["challenge"]

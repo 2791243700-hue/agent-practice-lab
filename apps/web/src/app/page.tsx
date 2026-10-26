@@ -102,7 +102,6 @@ export default function Home() {
           <Link className="button light" href="/lessons/01-task">
             从第一关开始 <ArrowRight size={17} />
           </Link>
-          <span className="hero-foot">无需 Key 即可阅读全部导读</span>
         </div>
         <div className="hero-art" aria-hidden="true">
           <div className="orbit orbit-one" />

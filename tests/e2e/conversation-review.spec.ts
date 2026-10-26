@@ -66,6 +66,8 @@ async function fixture(
     conflict?: boolean;
     delay?: number;
     saveFailure?: boolean;
+    prepared?: boolean;
+    restoredStep?: number;
   } = {},
 ) {
   const attempt: Attempt = {
@@ -128,6 +130,33 @@ async function fixture(
     draft: null,
     updated_at: null,
   };
+  if (options.prepared || options.restoredStep !== undefined) {
+    draft = {
+      ...draft,
+      revision: 1,
+      updated_at: "2026-10-26T01:00:00Z",
+      draft: {
+        step: options.restoredStep ?? 0,
+        beforeId: options.prepared ? "review-before" : "",
+        afterId: options.prepared ? "review-after" : "",
+        beforeMessageId: options.prepared ? "message-review-before" : "",
+        afterMessageId: options.prepared ? "message-review-after" : "",
+        beforeEventSeq: options.prepared ? 2 : 0,
+        afterEventSeq: options.prepared ? 2 : 0,
+        beforeStartOffset: 0,
+        afterStartOffset: 0,
+        beforeQuote: options.prepared ? texts[0] : "",
+        afterQuote: options.prepared ? texts[1] : "",
+        changeKind: options.prepared ? "constraint" : "",
+        requirement: options.prepared ? requirement : "",
+        judgment: options.prepared ? "satisfied" : "",
+        explanation: options.prepared ? "根据原文核对。" : "",
+        nextInstruction: "",
+        facts: {},
+        instruction: "",
+      },
+    };
+  }
   const writes: Schema["PutReflectionDraftRequest"][] = [];
   const submissions: Submission[] = [];
   let activeWrites = 0,
@@ -246,6 +275,62 @@ async function fixture(
   };
 }
 
+test("顶部步骤按完成情况解锁，返回修改后重新锁定后续步骤", async ({ page }) => {
+  await fixture(page);
+  const review = page.getByTestId("conversation-review");
+  const nav = review.getByRole("navigation", { name: "复盘步骤" });
+  await expect(nav.getByRole("button", { name: /选择两轮/ })).toBeEnabled();
+  for (const name of [/标出改动/, /核对回答/, /换个情境/])
+    await expect(nav.getByRole("button", { name })).toBeDisabled();
+  await review
+    .getByRole("combobox", { name: "第一次尝试", exact: true })
+    .selectOption("review-before");
+  await expect(nav.getByRole("button", { name: /标出改动/ })).toBeDisabled();
+  await review
+    .getByRole("combobox", { name: "改进后的尝试", exact: true })
+    .selectOption("review-after");
+  await expect(nav.getByRole("button", { name: /标出改动/ })).toBeEnabled();
+  await nav.getByRole("button", { name: /标出改动/ }).click();
+  await expect(nav.getByRole("button", { name: /核对回答/ })).toBeDisabled();
+  await review
+    .getByRole("combobox", { name: "主要改动是什么？", exact: true })
+    .selectOption("constraint");
+  await review.getByLabel("引用新增或改写的要求").fill("不是原始指令的内容");
+  await expect(nav.getByRole("button", { name: /核对回答/ })).toBeDisabled();
+  await review.getByLabel("引用新增或改写的要求").fill(requirement);
+  await expect(nav.getByRole("button", { name: /核对回答/ })).toBeEnabled();
+  await expect(nav.getByRole("button", { name: /换个情境/ })).toBeDisabled();
+  await nav.getByRole("button", { name: /选择两轮/ }).click();
+  await fillReflection(page, requirement, {
+    ids: ["review-before", "review-after"],
+    judgment: "partial",
+  });
+  await nav.getByRole("button", { name: /核对回答/ }).click();
+  await review.getByLabel("如果再试一次，你会怎样修改指令？").fill(" ");
+  await expect(nav.getByRole("button", { name: /换个情境/ })).toBeDisabled();
+  await review
+    .getByLabel("如果再试一次，你会怎样修改指令？")
+    .fill("继续核对来源。");
+  await expect(nav.getByRole("button", { name: /换个情境/ })).toBeEnabled();
+  await nav.getByRole("button", { name: /标出改动/ }).click();
+  await review.getByLabel("引用新增或改写的要求").fill("");
+  await expect(nav.getByRole("button", { name: /核对回答/ })).toBeDisabled();
+  await expect(nav.getByRole("button", { name: /换个情境/ })).toBeDisabled();
+  await expect(review.getByRole("status")).toContainText("已保存");
+  await page.reload();
+  await expect(nav.getByRole("button", { name: /换个情境/ })).toBeDisabled();
+});
+
+test("恢复停留在后续步骤的未完成草稿时回到最早待完成步骤", async ({ page }) => {
+  await fixture(page, { restoredStep: 3 });
+  const review = page.getByTestId("conversation-review");
+  await expect(
+    review.getByRole("combobox", { name: "第一次尝试", exact: true }),
+  ).toBeEnabled();
+  await expect(review.getByRole("button", { name: /换个情境/ })).toBeDisabled();
+  await expect(review.getByLabel("给 Agent 补充一条要求")).toHaveCount(0);
+});
+
 test("正式复盘保存精确重复引用，刷新恢复，提交冻结且历史可定位", async ({
   page,
 }) => {
@@ -325,7 +410,7 @@ test("正式复盘保存精确重复引用，刷新恢复，提交冻结且历�
 });
 
 test("自动保存串行处理慢请求，不丢失最后修改", async ({ page }) => {
-  const state = await fixture(page, { delay: 900 });
+  const state = await fixture(page, { delay: 900, prepared: true });
   const review = page.getByTestId("conversation-review");
   await review.getByRole("button", { name: /换个情境/ }).click();
   const input = review.getByLabel("给 Agent 补充一条要求");
@@ -336,7 +421,7 @@ test("自动保存串行处理慢请求，不丢失最后修改", async ({ page 
     .poll(() => state.draft().draft?.instruction)
     .toBe("最后一次填写");
   expect(state.maximumWrites()).toBe(1);
-  expect(state.writes.map((write) => write.expected_revision)).toEqual([0, 1]);
+  expect(state.writes.map((write) => write.expected_revision)).toEqual([1, 2]);
   await expect(review.getByRole("status")).toContainText("复盘草稿已保存");
   await page.reload();
   await expect(review.getByLabel("给 Agent 补充一条要求")).toHaveValue(
@@ -348,7 +433,11 @@ for (const conflict of [true, false])
   test(`保存${conflict ? "冲突" : "失败"}保留本地修改，停止覆盖并提供备份`, async ({
     page,
   }) => {
-    const state = await fixture(page, { conflict, saveFailure: !conflict });
+    const state = await fixture(page, {
+      conflict,
+      saveFailure: !conflict,
+      prepared: true,
+    });
     const review = page.getByTestId("conversation-review");
     await review.getByRole("button", { name: /换个情境/ }).click();
     await review.getByLabel("给 Agent 补充一条要求").fill("保留我的修改");
@@ -468,7 +557,7 @@ test("自由说明要求填写但不按长度或关键词评判", async ({ page 
 test("SPA 后退和前进后恢复未保存填写，恢复时不静默覆盖服务端", async ({
   page,
 }) => {
-  const state = await fixture(page, { saveFailure: true });
+  const state = await fixture(page, { saveFailure: true, prepared: true });
   await page.locator(".back-link").click();
   await expect(page).toHaveURL("/");
   await page.goBack();

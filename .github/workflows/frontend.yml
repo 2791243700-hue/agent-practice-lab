@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NEXT_TELEMETRY_DISABLED: '1'
+      PLAYWRIGHT_CHROMIUM_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,8 +44,8 @@ jobs:
         working-directory: apps/web
       - run: npm run build
         working-directory: apps/web
-      - run: npx playwright install --with-deps chromium
-        working-directory: apps/web
+      - name: Check preinstalled Chrome
+        run: google-chrome --version
       - run: npm run test:e2e
         working-directory: apps/web
       - uses: actions/upload-artifact@v4
