@@ -1,6 +1,6 @@
 # Agent Practice Lab Web
 
-当前统一功能见[交付记录](../../docs/unified-practice-delivery.md)：第一关按课程版本使用正式复盘或旧版 choice，草稿后端恢复；Tips、重置、结果弹窗和其余三关完整保留。已通过 PR #9 合并 main af36497，当前接口为 41 操作、102 schema。
+当前功能与最近合并版本见[版本索引](../../docs/project-status.md)。第一关按课程版本使用正式复盘或旧版 choice，草稿后端恢复；固定通知直接进入 Agent 上下文，并在材料区默认展示；四步复盘按完成条件顺序解锁。Tips、重置、结果弹窗和其余三关保留。当前接口为 41 操作、102 schema。
 
 Next.js App Router + TypeScript。课程、评分和身份通过现有后端获取，页面不复制正式评分逻辑，不修改已发布课程。
 
@@ -25,4 +25,4 @@ npm run test:e2e
 
 `components/key-manager.tsx` 管理 Key 与模型；`components/learning-status.tsx` 统一日期和通关展示；`lib/api.ts` 保留结果不明确时的幂等键，操作体缓存只保留 SHA-256 指纹，不保留 Key 明文。Key 不写入 localStorage/sessionStorage。服务商建议不等于认证成功；模型列表不等于文本和工具兼容检查通过。
 
-合并前验证：前端单元 18 项、浏览器 52 项、类型、格式和隔离生产构建通过；main af36497 前端 CI 通过。浏览器使用脚本模型和虚构凭据，覆盖第一关新版正式闭环及旧版兼容。明细见[统一交付](../../docs/unified-practice-delivery.md)。不要在日常 dev 使用的同一 .next 中执行 build。
+当前测试与 CI 证据统一记录在[版本索引](../../docs/project-status.md)，本次冗余样式清理见[清理记录](../../docs/cleanup-2026-10-26.md)。浏览器测试使用脚本模型和虚构凭据；Ubuntu CI 使用运行器预装 Chrome，本地默认使用 Playwright Chromium，也可设 `PLAYWRIGHT_CHROMIUM_CHANNEL=chrome`。不要在日常 dev 使用的同一 .next 中执行 build。

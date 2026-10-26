@@ -391,12 +391,6 @@ main {
   color: #c6d9cb;
   margin: 0 0 20px;
 }
-.hero-foot {
-  font-size: 9px;
-  display: inline-block;
-  color: #a8c7b5;
-  margin-left: 17px;
-}
 .button {
   border: 1px solid transparent;
   border-radius: 7px;
@@ -1981,20 +1975,8 @@ input[type="range"] {
   gap: 15px;
   margin-top: 24px;
 }
-.review-actions .button,
-.review-summary .button {
+.review-actions .button {
   font-size: 12px;
-}
-.review-summary {
-  margin-top: 18px;
-  padding: 18px;
-  background: #eff4ed;
-  border: 1px solid #dce7d8;
-  border-radius: 10px;
-}
-.review-summary p {
-  font-size: 12px;
-  margin: 7px 0 14px;
 }
 @media (max-width: 1150px) {
   .review-pair {
@@ -2142,9 +2124,6 @@ input[type="range"] {
   .hero-art {
     max-width: 480px;
   }
-  .hero-foot {
-    font-size: 10px;
-  }
   .practice-layout {
     grid-template-columns: 330px minmax(0, 1fr);
   }
@@ -2177,10 +2156,6 @@ input[type="range"] {
   }
   .hero-art {
     min-width: 250px;
-  }
-  .hero-foot {
-    display: block;
-    margin: 10px 0 0;
   }
   .art-chip {
     padding: 9px 10px;
@@ -2280,10 +2255,6 @@ input[type="range"] {
   }
   .hero {
     min-height: auto;
-  }
-  .hero-foot {
-    display: inline-block;
-    margin-left: 15px;
   }
   .lesson-grid {
     gap: 13px;
@@ -2431,10 +2402,6 @@ input[type="range"] {
   }
   .hero h2 {
     font-size: 27px;
-  }
-  .hero-foot {
-    display: block;
-    margin: 10px 0 0;
   }
   .hero p {
     font-size: 11px;

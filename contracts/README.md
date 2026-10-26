@@ -243,7 +243,7 @@ fields.path 使用 JSON Pointer，如 /answers/facts/0/due_date。retryable 表�
 
 后端 B：实现 Pydantic/路由与全局运行锁、事务及各业务规则；运行事件、四种工具和评分证据对齐 schema。内部 AgentRuntime、CredentialStore 等接口继续遵循实施计划，不把它们全部暴露为 HTTP。
 
-当前契约通过 231 项结构检查，合并前通过 193 项后端、18 项前端单元及 52 项浏览器测试；main `af36497` 的前端、后端与契约 CI 均通过。动态行为由后端及浏览器测试覆盖；外部实测和限制见[真实模型记录](../docs/live-model-validation.md)。结构验证命令：
+当前契约包含 231 项结构检查；动态行为由后端及浏览器测试覆盖，最新执行结果和对应 CI 见[版本索引](../docs/project-status.md)。本次清理未更改请求、响应、事件或生成类型。外部实测和限制见[真实模型记录](../docs/live-model-validation.md)。结构验证命令：
 
 ```powershell
 cd contracts

@@ -1,6 +1,6 @@
 # 前后端接入协调记录
 
-更新：2026-10-26。统一实训已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并到 main `af36497`，包含第一关 1.1.0 正式复盘、草稿恢复、Tips 和提交弹窗。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。 接口以[契约说明](../contracts/README.md)为准，功能与验证见[统一交付](unified-practice-delivery.md)。
+更新：2026-10-26。现行功能包括统一实训、第一关正式复盘、接口映射与通知上下文修复；当前契约为 41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
 
 本页保留历史问题原因并维护当前处理状态，当前交付见[版本状态](project-status.md)。
 
@@ -25,7 +25,7 @@ PR #9 已合并到 main af36497：GET/POST /runs/{run_id}/tips 提供独立模�
 
 复盘草稿采用独立 revision 和 expected_attempt_revision，冲突保留本地输入并停止覆盖。刷新恢复后端草稿；SPA 后退/前进可恢复当前页面进程的未保存备份，不写浏览器持久存储。引用按原文 Unicode 码点定位。正式成绩只覆盖结构化核对，自由解释与 Tips 独立；旧版本按原规则继续，不重算历史成绩。
 
-合并前 193 项后端、18 项前端单元、52 项浏览器与 231 项契约结构检查通过，main af36497 三类 CI 通过。详见[复盘联调](reflection-assessment-backend-handoff.md)和[统一交付](unified-practice-delivery.md)。
+当前验证与 CI 状态见[版本索引](project-status.md)，字段与联调要求见[复盘接入](reflection-assessment-backend-handoff.md)。历史分轮记录保留原测试数字。
 
 ## 尚待处理
 

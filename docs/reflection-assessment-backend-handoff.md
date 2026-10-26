@@ -1,6 +1,6 @@
 # 复盘验收接口与联调
 
-更新：2026-10-26。统一实训已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并到 main `af36497`，包含第一关 1.1.0 正式复盘、草稿恢复、Tips 和提交弹窗。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。 本页为已实现协议的接入说明，替代 2026-10-24 的拟议任务清单；预览阶段记录保留在[历史交付](reflection-assessment-delivery.md)。字段约束以 [OpenAPI](../contracts/openapi.json) 为准，通用错误、幂等及字段映射见[契约说明](../contracts/README.md)。
+更新：2026-10-26。现行功能包括统一实训、第一关正式复盘、接口映射与通知上下文修复；当前契约为 41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
 
 ## 版本与职责
 
@@ -58,6 +58,6 @@ ReflectionAnswers 包含 kind=reflection、baseline_run_id、revised_run_id、ch
 
 ## 验证与维护入口
 
-合并前全量验证为 193 后端、18 前端单元、52 浏览器和 231 契约结构检查，main af36497 的前端、后端及契约 CI 通过。覆盖双版本、精确重复引用/emoji、反向顺序、草稿冲突/失败恢复、正式与演示、历史/导出及第二至四关回归。使用本地脚本模型，未新增真实服务商验收。
+当前验证与 CI 证据见[版本索引](project-status.md)。现有回归覆盖双版本、精确重复引用/emoji、反向顺序、草稿冲突/失败恢复、正式与演示、历史/导出及第二至四关。通知上下文与步骤解锁的后续验证见[实训修复记录](practice-fixes-2026-10-26.md)。使用本地脚本模型，未新增真实服务商验收。
 
 后端维护 reflection.py、grading.py、submissions.py、lessons.py、exports.py、tips.py；前端维护 conversation-review.tsx、use-reflection-draft.ts、reflection.ts、feedback.tsx。课件为 content/lessons/01-task-v1.1/，旧 content/lessons/01-task/ 不原地改写。契约变更同步 OpenAPI、样例和生成类型，不能手改 types.d.ts。生成类型已补齐显式映射并移除适配；第四关指导和启动器就绪检查仍见[协调记录](backend-coordination.md)。
