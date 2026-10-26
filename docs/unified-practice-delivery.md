@@ -1,6 +1,6 @@
 # 统一实训与第一关正式复盘
 
-日期：2026-10-25。分支 feat/practice-tips-and-feedback，PR #9，整合已合并 PR #10。main 的复盘预览只是历史基线；本文描述本功能分支，未合并 main。
+实现日期：2026-10-25；状态更新：2026-10-26。PR #9 已合并到 main af36497，包含此前 PR #10 的复盘界面和正式后端。本文描述当前已合并功能。
 
 ## 使用流程
 
@@ -48,7 +48,7 @@ v0.1.0 增量兼容：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。
 
 ## 尚未验证
 
-未额外调用真实 DeepSeek/OpenAI；本地脚本的 live 模式仅验证正式评分分支。新复盘尚未完成零经验学生独立使用验收。云端 CI 以 PR #9 最新提交为准，不以本地通过或旧提交检查替代。
+未额外调用真实 DeepSeek/OpenAI；本地脚本的 live 模式仅验证正式评分分支。新复盘尚未完成零经验学生独立使用验收。合并后的 main af36497 已通过[契约](https://github.com/2791243700-hue/agent-practice-lab/actions/runs/40184193359)、[后端](https://github.com/2791243700-hue/agent-practice-lab/actions/runs/40184193290)和[前端 CI](https://github.com/2791243700-hue/agent-practice-lab/actions/runs/40184193298)。
 
 ## 当前界面
 

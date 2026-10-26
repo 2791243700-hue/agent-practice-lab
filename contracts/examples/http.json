@@ -622,7 +622,7 @@
         "explanation": "补充了确认要求，还需核对日期来源。",
         "next_instruction": "为日期标注来源",
         "challenge": {
-          "challenge_id": "missing-information",
+          "challenge_id": "activity-notice",
           "judgments": [
             {
               "item_id": "start",

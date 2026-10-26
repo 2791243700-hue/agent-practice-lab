@@ -2137,7 +2137,7 @@
             }
           },
           "409": {
-            "description": "成功",
+            "description": "运行/配置忙碌、版本冲突或 TIPS_UNCERTAIN；按错误 code 处理，不自动重复模型请求。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2166,7 +2166,8 @@
               }
             }
           }
-        }
+        },
+        "description": "明确同意后生成一次独立模型建议，按运行缓存；GET 读取缓存不计费。可参考匹配的已保存复盘，编辑草稿不会自动更新缓存。结果不改变正式评分；成功直接返回 RunTips。"
       }
     },
     "/attempts/{attempt_id}/reflection-draft": {
@@ -2208,7 +2209,8 @@
               }
             }
           }
-        }
+        },
+        "description": "读取实验的持久化复盘草稿；未保存返回 revision=0、draft=null、updated_at=null。旧实验可读，无模型调用。"
       },
       "put": {
         "operationId": "putReflectionDraft",
@@ -2239,7 +2241,7 @@
             }
           },
           "409": {
-            "description": "成功",
+            "description": "草稿/实验版本冲突，或实验已被重置替代；保留本地输入并重读状态。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2249,7 +2251,7 @@
             }
           },
           "422": {
-            "description": "成功",
+            "description": "字段或引用不合法，或实验不使用 reflection 表单。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2278,7 +2280,8 @@
               }
             }
           }
-        }
+        },
+        "description": "完整替换 active reflection 实验的草稿。expected_revision 对应草稿，expected_attempt_revision 对应实验；成功只递增草稿 revision。不使用 Idempotency-Key，响应丢失先 GET；不产生正式提交或模型调用。"
       }
     }
   },
@@ -2945,7 +2948,14 @@
           }
         ],
         "discriminator": {
-          "propertyName": "kind"
+          "propertyName": "kind",
+          "mapping": {
+            "choice": "#/components/schemas/ChoiceForm",
+            "facts": "#/components/schemas/FactsForm",
+            "course": "#/components/schemas/CourseForm",
+            "artifact": "#/components/schemas/ArtifactForm",
+            "reflection": "#/components/schemas/ReflectionForm"
+          }
         }
       },
       "LessonSummary": {
@@ -3612,7 +3622,13 @@
           }
         ],
         "discriminator": {
-          "propertyName": "name"
+          "propertyName": "name",
+          "mapping": {
+            "list_materials": "#/components/schemas/ListMaterialsCall",
+            "read_material": "#/components/schemas/ReadMaterialCall",
+            "lookup_course": "#/components/schemas/LookupCourseCall",
+            "save_todos": "#/components/schemas/SaveTodosCall"
+          }
         }
       },
       "Approval": {
@@ -4421,7 +4437,13 @@
           }
         ],
         "discriminator": {
-          "propertyName": "kind"
+          "propertyName": "kind",
+          "mapping": {
+            "event": "#/components/schemas/EventEvidence",
+            "file": "#/components/schemas/FileEvidence",
+            "answer": "#/components/schemas/AnswerEvidence",
+            "inspection": "#/components/schemas/InspectionEvidence"
+          }
         }
       },
       "SubmissionSummary": {
@@ -5649,7 +5671,20 @@
           }
         ],
         "discriminator": {
-          "propertyName": "kind"
+          "propertyName": "kind",
+          "mapping": {
+            "run.started": "#/components/schemas/RunStartedEvent",
+            "message.delta": "#/components/schemas/MessageDeltaEvent",
+            "message.completed": "#/components/schemas/MessageCompletedEvent",
+            "tool.requested": "#/components/schemas/ToolRequestedEvent",
+            "approval.requested": "#/components/schemas/ApprovalRequestedEvent",
+            "approval.decided": "#/components/schemas/ApprovalDecidedEvent",
+            "tool.completed": "#/components/schemas/ToolCompletedEvent",
+            "run.completed": "#/components/schemas/RunCompletedEvent",
+            "run.failed": "#/components/schemas/RunFailedEvent",
+            "run.cancelled": "#/components/schemas/RunCancelledEvent",
+            "run.interrupted": "#/components/schemas/RunInterruptedEvent"
+          }
         }
       },
       "EventPage": {
@@ -6071,7 +6106,8 @@
           "explanation",
           "next_instruction",
           "challenge"
-        ]
+        ],
+        "description": "第一关 1.1.0 正式复盘答案。evidence 为待服务端核验的消息引用；不等同于服务端生成的 Submission.evidence。解释须非空白但不按语义质量自动评分。"
       },
       "ReflectionChallenge": {
         "type": "object",
@@ -6268,7 +6304,8 @@
           "afterStartOffset",
           "beforeEventSeq",
           "afterEventSeq"
-        ]
+        ],
+        "description": "完整表单快照，所有字段必填但允许未完成值。保留 beforeId 等 camelCase 字段；不能直接作为 ReflectionAnswers 提交。"
       },
       "ReflectionDraft": {
         "type": "object",
@@ -6310,7 +6347,8 @@
           "revision",
           "draft",
           "updated_at"
-        ]
+        ],
+        "description": "持久化草稿及独立 revision；未保存时 revision=0、draft=null、updated_at=null。保存不代表正式提交或通过。"
       },
       "PutReflectionDraftRequest": {
         "type": "object",

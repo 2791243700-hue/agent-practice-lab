@@ -2,7 +2,7 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**当前功能分支（2026-10-25）：统一实训与第一关正式复盘。** 整合 PR #10 的四步复盘与 PR #9 的 Tips、重置及弹窗。新版 1.1.0 支持草稿恢复、正式结构化验收、历史和导出；旧版实验继续原规则。功能在 PR #9 分支，尚未合并 main；完整边界与验证见[当前交付](docs/unified-practice-delivery.md)。
+**当前 main（2026-10-26）：统一实训与第一关正式复盘。** PR #9 已合并为 af36497，整合 PR #10 的四步复盘与 Tips、重置及弹窗。新版 1.1.0 支持草稿恢复、正式结构化验收、历史和导出；旧版实验继续原规则。完整边界与验证见[当前交付](docs/unified-practice-delivery.md)。
 
 ## 本地启动（Windows）
 
@@ -48,7 +48,7 @@ npm --prefix apps/web ci
 - [后端验证报告](docs/runtime-validation.md)
 - [前端向后端开发者交接](docs/backend-handoff.md)
 
-使用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。浏览器只调用同源 `/api/v1`，Next.js 服务端代理转发内部令牌；Key 只在后端内存中保存。前端类型来自 `contracts/types.d.ts`，已知生成器 discriminator 差异的边界适配见前端验证文档。
+使用 Next.js + TypeScript、FastAPI、AgentScope SDK、SQLite 和 SSE。浏览器只调用同源 `/api/v1`，Next.js 服务端代理转发内部令牌；Key 只在后端内存中保存。前端类型来自 `contracts/types.d.ts`，本次接口更新已补齐 discriminator 映射并删除前端补丁，见[接口更新记录](docs/interface-update-2026-10-26.md)。
 
 多个 Key 可切换、重命名、清除或删除；重启需重新输入 Key，环境重置保留 Key 与模型选择。列表成功不等于工具兼容，正式运行要求连接检查通过。模型调用、正式评分和演示分别记录；最新验证见[交付记录](docs/unified-practice-delivery.md)。
 
@@ -59,12 +59,12 @@ npm --prefix apps/web ci
 | A | 前端页面、课程内容、模拟接口、浏览器测试和使用说明 |
 | B | 后端接口、Agent 执行、数据存储、工具授权、规则评分和启动脚本 |
 
-原版及 Key/工作区功能已合并，复盘预览已通过 PR #10 合并到 main `47108b2`。当前统一交付继续在 PR #9 分支协调；接口、评分或课件变更同步契约、新版本及测试。
+原版及 Key/工作区功能已合并，复盘预览已通过 PR #10 合并到 main `47108b2`。统一实训已通过 PR #9 合并 main `af36497`；接口、评分或课件变更同步契约、新版本及测试。
 
 ```powershell
 git clone https://github.com/2791243700-hue/agent-practice-lab.git
 cd agent-practice-lab
-git switch feat/practice-tips-and-feedback
+git switch main
 ```
 
 上述命令用于获取项目并开始开发。后端在 apps/api 执行 uv sync --locked 安装依赖，Windows 从根目录运行 scripts/start.ps1 启动；详细环境、令牌和接入说明见后端文档。第二名开发者需要仓库写权限才能直接推送分支，也可通过 fork 提交 PR。

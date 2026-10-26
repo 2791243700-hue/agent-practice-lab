@@ -22,6 +22,16 @@ await SwaggerParser.validate(structuredClone(api));
 let checks = 0;
 const validators = new Map();
 for (const [name,schema] of Object.entries(schemas)) {
+  if (schema.discriminator) {
+    const key = schema.discriminator.propertyName;
+    const expected = Object.fromEntries(schema.oneOf.map(member => {
+      const target = schemas[member.$ref.split('/').at(-1)];
+      assert.equal(typeof target.properties[key].const, 'string', `${name}: missing wire discriminator`);
+      return [target.properties[key].const, member.$ref];
+    }));
+    assert.equal(Object.keys(expected).length, schema.oneOf.length, `${name}: duplicate wire discriminator`);
+    assert.deepEqual(schema.discriminator.mapping, expected, `${name}: discriminator mapping drift`);
+  }
   const document = {$schema:'https://json-schema.org/draft/2020-12/schema',...standalone(schema),$defs:standalone(schemas)};
   assert(ajv.validateSchema(document), `${name}: invalid JSON Schema`);
   validators.set(name,ajv.compile(document));
@@ -39,6 +49,7 @@ function invalid(name,value,label) {
 }
 
 assert.deepEqual(events.oneOf,standalone(schemas.StoredEvent.oneOf));
+assert.deepEqual(events.discriminator,standalone(schemas.StoredEvent.discriminator));
 for (const [name,definition] of Object.entries(events.$defs)) {
   assert.deepEqual(definition,standalone(schemas[name]),`Event schema drift: ${name}`);
 }

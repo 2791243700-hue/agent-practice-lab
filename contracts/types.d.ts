@@ -547,7 +547,10 @@ export interface paths {
         /** 读取本轮已保存的模型学习建议，不触发模型调用 */
         get: operations["getRunTips"];
         put?: never;
-        /** 明确点击后单次调用模型生成建议；缓存后不重复调用，不参与正式评分 */
+        /**
+         * 明确点击后单次调用模型生成建议；缓存后不重复调用，不参与正式评分
+         * @description 明确同意后生成一次独立模型建议，按运行缓存；GET 读取缓存不计费。可参考匹配的已保存复盘，编辑草稿不会自动更新缓存。结果不改变正式评分；成功直接返回 RunTips。
+         */
         post: operations["generateRunTips"];
         delete?: never;
         options?: never;
@@ -562,9 +565,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 读取当前实验的复盘草稿，不调用模型 */
+        /**
+         * 读取当前实验的复盘草稿，不调用模型
+         * @description 读取实验的持久化复盘草稿；未保存返回 revision=0、draft=null、updated_at=null。旧实验可读，无模型调用。
+         */
         get: operations["getReflectionDraft"];
-        /** 按独立草稿版本保存复盘，不修改实验版本 */
+        /**
+         * 按独立草稿版本保存复盘，不修改实验版本
+         * @description 完整替换 active reflection 实验的草稿。expected_revision 对应草稿，expected_attempt_revision 对应实验；成功只递增草稿 revision。不使用 Idempotency-Key，响应丢失先 GET；不产生正式提交或模型调用。
+         */
         put: operations["putReflectionDraft"];
         post?: never;
         delete?: never;
@@ -698,7 +707,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "ChoiceForm";
+            kind: "choice";
             question_id: string;
             prompt: string;
             options: components["schemas"]["Choice"][];
@@ -708,7 +717,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "FactsForm";
+            kind: "facts";
             tasks: {
                 task_id: string;
                 label: string;
@@ -723,7 +732,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "CourseForm";
+            kind: "course";
             course_id: string;
             prompt: string;
         };
@@ -732,7 +741,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "ArtifactForm";
+            kind: "artifact";
             prompt: string;
         };
         AnswerForm: components["schemas"]["ChoiceForm"] | components["schemas"]["FactsForm"] | components["schemas"]["CourseForm"] | components["schemas"]["ArtifactForm"] | components["schemas"]["ReflectionForm"];
@@ -844,7 +853,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            name: "ListMaterialsCall";
+            name: "list_materials";
             arguments: Record<string, never>;
         };
         ReadMaterialCall: {
@@ -853,7 +862,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            name: "ReadMaterialCall";
+            name: "read_material";
             arguments: {
                 file_id: string;
             };
@@ -864,7 +873,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            name: "LookupCourseCall";
+            name: "lookup_course";
             arguments: {
                 course_id: string;
             };
@@ -875,7 +884,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            name: "SaveTodosCall";
+            name: "save_todos";
             arguments: {
                 items: components["schemas"]["TodoItem"][];
             };
@@ -982,7 +991,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "EventEvidence";
+            kind: "event";
             run_id: string;
             event_seq: number;
         };
@@ -992,7 +1001,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "FileEvidence";
+            kind: "file";
             file: components["schemas"]["FileInfo"];
         };
         AnswerEvidence: {
@@ -1001,7 +1010,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "AnswerEvidence";
+            kind: "answer";
             answers: components["schemas"]["Answers"];
         };
         InspectionEvidence: {
@@ -1010,7 +1019,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "InspectionEvidence";
+            kind: "inspection";
             /** @enum {string} */
             check: "no_write_on_denial" | "artifact_consistency";
             passed: boolean;
@@ -1086,7 +1095,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "RunStartedEvent";
+            kind: "run.started";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1106,7 +1115,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "MessageDeltaEvent";
+            kind: "message.delta";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1126,7 +1135,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "MessageCompletedEvent";
+            kind: "message.completed";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1148,7 +1157,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "ToolRequestedEvent";
+            kind: "tool.requested";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1167,7 +1176,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "ApprovalRequestedEvent";
+            kind: "approval.requested";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1186,7 +1195,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "ApprovalDecidedEvent";
+            kind: "approval.decided";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1259,7 +1268,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "ToolCompletedEvent";
+            kind: "tool.completed";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1278,7 +1287,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "RunCompletedEvent";
+            kind: "run.completed";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1299,7 +1308,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "RunFailedEvent";
+            kind: "run.failed";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1321,7 +1330,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "RunCancelledEvent";
+            kind: "run.cancelled";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1344,7 +1353,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "RunInterruptedEvent";
+            kind: "run.interrupted";
             /** Format: date-time */
             created_at: string;
             payload: {
@@ -1427,6 +1436,7 @@ export interface components {
             judgments: components["schemas"]["ReflectionJudgment"][];
             instruction: string;
         };
+        /** @description 第一关 1.1.0 正式复盘答案。evidence 为待服务端核验的消息引用；不等同于服务端生成的 Submission.evidence。解释须非空白但不按语义质量自动评分。 */
         ReflectionAnswers: {
             /** @constant */
             kind: "reflection";
@@ -1457,10 +1467,11 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "ReflectionForm";
+            kind: "reflection";
             prompt: string;
             challenge: components["schemas"]["ReflectionChallenge"];
         };
+        /** @description 完整表单快照，所有字段必填但允许未完成值。保留 beforeId 等 camelCase 字段；不能直接作为 ReflectionAnswers 提交。 */
         ReflectionDraftData: {
             step: number;
             beforeId: string;
@@ -1483,6 +1494,7 @@ export interface components {
             beforeEventSeq: number;
             afterEventSeq: number;
         };
+        /** @description 持久化草稿及独立 revision；未保存时 revision=0、draft=null、updated_at=null。保存不代表正式提交或通过。 */
         ReflectionDraft: {
             attempt_id: string;
             revision: number;
@@ -2943,7 +2955,7 @@ export interface operations {
                     "application/json": components["schemas"]["RunTips"];
                 };
             };
-            /** @description 成功 */
+            /** @description 运行/配置忙碌、版本冲突或 TIPS_UNCERTAIN；按错误 code 处理，不自动重复模型请求。 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3018,7 +3030,7 @@ export interface operations {
                     "application/json": components["schemas"]["ReflectionDraft"];
                 };
             };
-            /** @description 成功 */
+            /** @description 草稿/实验版本冲突，或实验已被重置替代；保留本地输入并重读状态。 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3027,7 +3039,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description 成功 */
+            /** @description 字段或引用不合法，或实验不使用 reflection 表单。 */
             422: {
                 headers: {
                     [name: string]: unknown;

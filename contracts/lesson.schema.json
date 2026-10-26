@@ -602,7 +602,14 @@
         }
       ],
       "discriminator": {
-        "propertyName": "kind"
+        "propertyName": "kind",
+        "mapping": {
+          "choice": "#/$defs/ChoiceForm",
+          "facts": "#/$defs/FactsForm",
+          "course": "#/$defs/CourseForm",
+          "artifact": "#/$defs/ArtifactForm",
+          "reflection": "#/$defs/ReflectionForm"
+        }
       }
     },
     "ArtifactForm": {

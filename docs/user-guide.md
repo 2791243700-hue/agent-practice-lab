@@ -1,6 +1,6 @@
 # 新手使用说明
 
-更新：2026-10-25。以下“当前统一流程”适用于 feat/practice-tips-and-feedback 分支（PR #9），尚未合并 main。安装与 Key 配置方式沿用下文；完整交付与验证见[统一记录](unified-practice-delivery.md)。
+更新：2026-10-26。以下“当前统一流程”已通过 PR #9 合并到 main af36497。安装与 Key 配置方式沿用下文；完整交付与验证见[统一记录](unified-practice-delivery.md)。
 
 ## 当前统一流程
 
