@@ -5,39 +5,11 @@ export type Run = Schema["Run"];
 export type Profile = Schema["ModelProfile"];
 export type Approval = Schema["Approval"];
 export type Submission = Schema["Submission"];
-// v0.1 generated discriminator names differ from the JSON wire constants.
-// Keep every payload from contracts; correct only discriminators at this boundary.
-type Tagged<T, K extends string> = Omit<T, "kind"> & { kind: K };
-export type AnswerForm =
-  | Tagged<Schema["ChoiceForm"], "choice">
-  | Tagged<Schema["FactsForm"], "facts">
-  | Tagged<Schema["CourseForm"], "course">
-  | Tagged<Schema["ArtifactForm"], "artifact">
-  | Tagged<Schema["ReflectionForm"], "reflection">;
-export type Lesson = Omit<Schema["LessonDetail"], "answer_form"> & {
-  answer_form: AnswerForm;
-};
-export type ToolCall =
-  | (Omit<Schema["ListMaterialsCall"], "name"> & { name: "list_materials" })
-  | (Omit<Schema["ReadMaterialCall"], "name"> & { name: "read_material" })
-  | (Omit<Schema["LookupCourseCall"], "name"> & { name: "lookup_course" })
-  | (Omit<Schema["SaveTodosCall"], "name"> & { name: "save_todos" });
-export type Event =
-  | Tagged<Schema["RunStartedEvent"], "run.started">
-  | Tagged<Schema["MessageDeltaEvent"], "message.delta">
-  | Tagged<Schema["MessageCompletedEvent"], "message.completed">
-  | (Omit<Schema["ToolRequestedEvent"], "kind" | "payload"> & {
-      kind: "tool.requested";
-      payload: { call: ToolCall };
-    })
-  | Tagged<Schema["ApprovalRequestedEvent"], "approval.requested">
-  | Tagged<Schema["ApprovalDecidedEvent"], "approval.decided">
-  | Tagged<Schema["ToolCompletedEvent"], "tool.completed">
-  | Tagged<Schema["RunCompletedEvent"], "run.completed">
-  | Tagged<Schema["RunFailedEvent"], "run.failed">
-  | Tagged<Schema["RunCancelledEvent"], "run.cancelled">
-  | Tagged<Schema["RunInterruptedEvent"], "run.interrupted">;
-export type EventPage = Omit<Schema["EventPage"], "items"> & { items: Event[] };
+export type AnswerForm = Schema["AnswerForm"];
+export type Lesson = Schema["LessonDetail"];
+export type ToolCall = Schema["ToolCall"];
+export type Event = Schema["StoredEvent"];
+export type EventPage = Schema["EventPage"];
 export const terminal = (status: Run["status"]) =>
   ["completed", "failed", "cancelled", "interrupted"].includes(status);
 export const runLabels: Record<Run["status"], string> = {

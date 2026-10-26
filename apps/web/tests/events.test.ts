@@ -76,7 +76,7 @@ test("SSE reconnect carries the last sequence and 204 stops retries without POST
     globalThis.fetch = original;
   }
 });
-test("wire discriminator adapter matches the unchanged contract constants", () => {
+test("published wire discriminators keep their existing values", () => {
   const api = JSON.parse(
     readFileSync(
       new URL("../../../contracts/openapi.json", import.meta.url),

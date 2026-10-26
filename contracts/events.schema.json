@@ -37,7 +37,20 @@
     }
   ],
   "discriminator": {
-    "propertyName": "kind"
+    "propertyName": "kind",
+    "mapping": {
+      "run.started": "#/$defs/RunStartedEvent",
+      "message.delta": "#/$defs/MessageDeltaEvent",
+      "message.completed": "#/$defs/MessageCompletedEvent",
+      "tool.requested": "#/$defs/ToolRequestedEvent",
+      "approval.requested": "#/$defs/ApprovalRequestedEvent",
+      "approval.decided": "#/$defs/ApprovalDecidedEvent",
+      "tool.completed": "#/$defs/ToolCompletedEvent",
+      "run.completed": "#/$defs/RunCompletedEvent",
+      "run.failed": "#/$defs/RunFailedEvent",
+      "run.cancelled": "#/$defs/RunCancelledEvent",
+      "run.interrupted": "#/$defs/RunInterruptedEvent"
+    }
   },
   "$defs": {
     "Approval": {
@@ -1505,7 +1518,13 @@
         }
       ],
       "discriminator": {
-        "propertyName": "name"
+        "propertyName": "name",
+        "mapping": {
+          "list_materials": "#/$defs/ListMaterialsCall",
+          "read_material": "#/$defs/ReadMaterialCall",
+          "lookup_course": "#/$defs/LookupCourseCall",
+          "save_todos": "#/$defs/SaveTodosCall"
+        }
       }
     },
     "ToolCompletedEvent": {

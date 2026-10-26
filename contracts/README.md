@@ -1,6 +1,6 @@
 # 前后端接口契约 v0.1.0
 
-更新：2026-10-25。首版契约及前后端已实现；已加入 Key 导入和模型列表操作，仍使用 v0.1.0，本地工作区共 41 个 HTTP 操作（Tips 增量随功能分支交付，尚未合并 main）。新增模型操作已通过 PR #6 合并到 main，前端体验增量也已随 PR #7 合并，交付状态见[版本状态](../docs/project-status.md)。样例用于结构验证，不代表外部模型实际运行。
+更新：2026-10-26。统一实训已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并到 main `af36497`，包含第一关 1.1.0 正式复盘、草稿恢复、Tips 和提交弹窗。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。 本页按合并实现维护；机器可读字段见 OpenAPI，样例用于结构验证，不代表真实模型调用。
 
 ## 文件与唯一来源
 
@@ -23,7 +23,7 @@ HTTP 字段结构以 OpenAPI 为准；跨字段、并发和权限规则以本说
 - 浏览器访问同源 `/api/v1`；Next.js 服务端转发到回环地址上的 FastAPI。默认前端 3000、后端 8000，具体端口由启动器配置。
 - 浏览器不传 owner_id 或本地令牌；当前服务固定使用 local-owner，并按存储中的归属过滤资源。IdentityProvider/LocalIdentityProvider 仅为预留声明，尚未注入服务、存储或幂等链路；未来接入登录需贯穿这些调用，不能只替换 `/me`。不存在或不属于当前本地身份的 ID 统一 404。
 - Next.js 写请求校验 Origin 和 Host，拒绝不匹配或缺失 Origin 的浏览器写请求。代理覆盖客户端提供的 X-Local-Token，使用启动器传入的私有令牌；FastAPI 对所有路由验证令牌。健康检查由启动器带令牌访问。此令牌不进入 NEXT_PUBLIC、页面、浏览器存储或 URL。
-- 请求及 JSON 响应采用 UTF-8、snake_case；成功响应直接返回对象，列表返回 items，分页列表另有 next_cursor。204 没有响应体。
+- 请求及 JSON 响应采用 UTF-8，业务字段通常使用 snake_case；ReflectionDraftData 为已发布的表单快照，保留 beforeId、nextInstruction 等 camelCase 字段，不能自行转换；成功响应直接返回对象，列表返回 items，分页列表另有 next_cursor。204 没有响应体。
 - ID 是不透明字符串，不从其内容推导路径或顺序。时间用带时区的 RFC 3339 字符串，服务端输出 UTC；日期用 YYYY-MM-DD，按课程材料中的日期解释。
 - 请求拒绝未知字段；可空字段显式传 null。所有写请求的 Content-Type 为 application/json，有空请求体的操作发送 `{}`；DELETE 通过查询参数携带版本号。
 - 所有业务响应使用 Cache-Control: no-store；接口错误不返回堆栈、提供商原始响应、请求头、密钥或本机绝对路径。
@@ -190,11 +190,12 @@ data: {"schema_version":"0.1.0","run_id":"run-example","attempt_id":"attempt-exa
 
 ## 7. 提交、评分和证据
 
-POST /submissions 只接收答案与实训 ID/版本号，客户端不能传分数、通过状态、工具记录或证据。运行/授权/重置未结束时返回 409 ATTEMPT_BUSY，冻结证据与新运行启动共用实验锁。先校验本关答案结构及选项，再创建本次快照；复制中途、评分或记录写入失败时清理本次未发布快照，不清理已有提交目录。
+POST /submissions 只接收 attempt_id、expected_attempt_revision 和 answers（课程版本由 Attempt 推导），客户端不能传分数、通过状态、工具执行记录或 Submission.evidence；ReflectionAnswers.evidence 是待服务端核验的消息引用，不是客户端生成的评分证据。运行/授权/重置未结束时返回 409 ATTEMPT_BUSY，冻结证据与新运行启动共用实验锁。先校验本关答案结构及选项，再创建本次快照；复制中途、评分或记录写入失败时清理本次未发布快照，不清理已有提交目录。
 
 | 关卡 | answers | 后端必要检查 |
 | --- | --- | --- |
-| 01-task | question_id、option_id | 同一 Attempt 两次不同指令的完成运行，理解题正确 |
+| 01-task / 1.1.0 | ReflectionAnswers，kind=reflection | 两轮完成及顺序、新增要求、消息原文及码点偏移、版本化变式判断 |
+| 01-task / 1.0.0 | question_id、option_id | 保留旧 choice：同一 Attempt 两次不同指令的完成运行，理解题正确 |
 | 02-context | facts 列表，每项 task_id、due_date、source_id | 指定资料实际成功读取，必要事实与来源准确 |
 | 03-tools | course_id、session_date、room | 目标课程参数查询成功，信息核对准确 |
 | 04-permission | `{}` | 拒绝未写入，后续批准写入，清单日期/来源与两项任务正确 |
@@ -211,7 +212,7 @@ evidence_refs 是本次 Submission.evidence 中的 ID：event 引用已持久化
 
 导入和程序内发布都校验课程 manifest、非空导读、至少一条必需规则，以及 evaluator 与答案表单/题目选项/事实来源/课程的匹配；无效配置拒绝发布。Markdown 与 JSON 都校验快照哈希和事实；产物顺序/自然表达不作硬失败条件。文件内容被修改后必须重新提交生成新 Submission；旧成绩、规则版本和证据不变。
 
-导出在实训无活跃 Run 时生成冻结 ZIP（否则 409 ATTEMPT_BUSY），包含课件版本、导读、学习记录、提交和产物；排除所有模型连接配置、凭据和私有运行令牌。返回 ready 的 Export 后再 GET 下载，不构造可访问任意路径的 URL。
+导出在实训无活跃 Run 时生成冻结 ZIP（否则 409 ATTEMPT_BUSY），包含课件版本、导读、学习记录、提交和产物；learning.json 的 reflection_draft 保存导出时的 ReflectionDraft 对象（未保存时 draft=null），submissions 包含冻结的 answers/evidence；排除所有模型连接配置、凭据和私有运行令牌。返回 ready 的 Export 后再 GET 下载，不构造可访问任意路径的 URL。
 
 ## 8. 统一错误
 
@@ -222,15 +223,15 @@ evidence_refs 是本次 Submission.evidence 中的 ID：event 引用已持久化
 | HTTP 状态 | code |
 | --- | --- |
 | 400 | CURSOR_INVALID |
-| 401 | LOCAL_TOKEN_INVALID（代理/启动配置故障，不提示学生登录）、MODEL_AUTH_FAILED（获取模型目录的认证失败） |
+| 401 | LOCAL_TOKEN_INVALID（代理/启动配置故障，不提示学生登录）、MODEL_AUTH_FAILED（模型目录或 Tips 的认证失败） |
 | 403 | ORIGIN_REJECTED、DEMO_DISABLED |
 | 404 | NOT_FOUND |
-| 409 | PROFILE_BUSY、RUN_BUSY、ATTEMPT_BUSY、ATTEMPT_SUPERSEDED、REVISION_CONFLICT、IDEMPOTENCY_CONFLICT、IDEMPOTENCY_IN_PROGRESS、APPROVAL_ALREADY_DECIDED、APPROVAL_EXPIRED、APPROVAL_INVALIDATED |
-| 422 | VALIDATION_ERROR、CREDENTIAL_MISSING、MODEL_NOT_READY、MODE_MISMATCH、MODEL_CATALOG_UNSUPPORTED、MODEL_CATALOG_INVALID |
+| 409 | PROFILE_BUSY、RUN_BUSY、ATTEMPT_BUSY、ATTEMPT_SUPERSEDED、REVISION_CONFLICT、IDEMPOTENCY_CONFLICT、IDEMPOTENCY_IN_PROGRESS、APPROVAL_ALREADY_DECIDED、APPROVAL_EXPIRED、APPROVAL_INVALIDATED、TIPS_UNCERTAIN |
+| 422 | VALIDATION_ERROR、CREDENTIAL_MISSING、MODEL_NOT_READY、MODE_MISMATCH、MODEL_CATALOG_UNSUPPORTED、MODEL_CATALOG_INVALID、TIPS_INVALID |
 | 413 | LIMIT_EXCEEDED（请求体超过服务端限制） |
 | 500 | INTERNAL_ERROR |
 | 503 | ATTEMPT_BUSY（重置等待未结束）、MODEL_UNAVAILABLE（操作尚未接受） |
-| 504 | MODEL_TIMEOUT（获取模型目录超时） |
+| 504 | MODEL_TIMEOUT（模型目录或 Tips 请求超时） |
 
 MODEL_AUTH_FAILED、MODEL_TIMEOUT、MODEL_INCOMPATIBLE、MODEL_UNAVAILABLE 可用于 connection_check 或 Run.error；模型目录操作的认证/超时/网络错误直接返回相应 HTTP 错误。目录的上游 404/405/501 映射 MODEL_CATALOG_UNSUPPORTED，429/5xx 映射 MODEL_UNAVAILABLE，重定向或无效/空目录映射 MODEL_CATALOG_INVALID。RUN_TIMEOUT、TOOL_ERROR、EXECUTION_FAILED、LIMIT_EXCEEDED、APPROVAL_EXPIRED 可用于运行失败。SSE 建立前失败返回标准 HTTP 错误；建立后运行故障发 run.failed，不能往事件流中插入普通 JSON 响应。传输断开由客户端按游标重连。
 
@@ -242,7 +243,7 @@ fields.path 使用 JSON Pointer，如 /answers/facts/0/due_date。retryable 表�
 
 后端 B：实现 Pydantic/路由与全局运行锁、事务及各业务规则；运行事件、四种工具和评分证据对齐 schema。内部 AgentRuntime、CredentialStore 等接口继续遵循实施计划，不把它们全部暴露为 HTTP。
 
-2026-10-22 本地完成 197 项结构检查，动态行为由后端及浏览器测试覆盖；外部实测和限制见[真实模型记录](../docs/live-model-validation.md)。结构验证命令：
+当前契约通过 231 项结构检查，合并前通过 193 项后端、18 项前端单元及 52 项浏览器测试；main `af36497` 的前端、后端与契约 CI 均通过。动态行为由后端及浏览器测试覆盖；外部实测和限制见[真实模型记录](../docs/live-model-validation.md)。结构验证命令：
 
 ```powershell
 cd contracts
@@ -254,11 +255,13 @@ git diff --exit-code -- types.d.ts
 
 validate 检查 OpenAPI、所有 JSON Schema、样例、事件副本一致性、端点参数、引用和代表性非法输入。动态竞态/权限/恢复由后端与浏览器测试验证，不能用 schema 校验代替。生成类型提交前需与 OpenAPI 同步；未提交的预期生成差异应审阅，不直接丢弃。
 
-字段、状态、事件名和语义变更必须同步说明、样例、生成类型并评估版本，同一个 PR 由双方审阅；新增两个操作为增量补充，health.contract_version 仍为 0.1.0。实现中遇到新需要先改契约，再改消费方；不得静默更名或用旧客户端假定所有未来字段兼容。
+AnswerForm、ToolCall、Evidence 和 StoredEvent 的 discriminator.mapping 显式关联实际 kind/name 常量与对应 schema，不能省略映射后让生成器推断 schema 名作为字段值。独立事件/课程 schema 同步这些映射，前端直接引用生成类型；新增联合成员须通过映射一致性和生成类型回归。该修复见[接口更新](../docs/interface-update-2026-10-26.md)。
+
+字段、状态、事件名和语义变更必须同步说明、样例、生成类型并评估版本，同一个 PR 由双方审阅；Key 导入/模型目录、Tips 及复盘草稿均为增量补充，health.contract_version 仍为 0.1.0；第一关课件版本独立升级为 1.1.0。实现中遇到新需要先改契约，再改消费方；不得静默更名或用旧客户端假定所有未来字段兼容。
 
 格式依据：[OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html) 用于 HTTP 定义；SSE 的帧、id 和 Last-Event-ID 遵循 [WHATWG Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)。
 
-## 按需模型 Tips（2026-10-23 本地增量）
+## 10. 按需模型 Tips
 
 - GET `/runs/{run_id}/tips`：返回 `{tips: null}` 或已保存的 RunTips，不请求服务商。
 - POST 同路径：必需 Idempotency-Key，body 为 `{profile_id, expected_profile_revision}`；返回 200 RunTips。仅终态运行可生成；配置须已检查且有内存 Key。当前选择的配置可不同于原运行配置。
@@ -272,14 +275,83 @@ validate 检查 OpenAPI、所有 JSON Schema、样例、事件副本一致性、
 
 内部整理不删除对外兼容接口或旧数据字段。路由与分发操作的一致性由 `apps/api/tests/test_contract_wiring.py` 验证；TypeScript 类型仍由 `npm run types` 生成。当前核对结果见[清理记录](../docs/cleanup-2026-10-23.md)。
 
-## 第一关新版复盘（2026-10-25）
+## 11. 第一关新版复盘
 
-第一关 1.1.0 的 answer_form.kind=reflection，包含公开 challenge 的 id/title/notice/items；正确判断只存在课程私有 rules 中。旧版 1.0.0 仍可通过原 choice 字段提交，成绩不重算。当前功能在 PR #9 分支，完整范围见[统一交付](../docs/unified-practice-delivery.md)。
+第一关 1.1.0 的 answer_form.kind=reflection，包含公开 challenge 的 id/title/notice/items；正确判断只存在课程私有 rules 中。旧版 1.0.0 仍可通过原 choice 字段提交，成绩不重算。当前功能已合并 main，完整范围见[统一交付](../docs/unified-practice-delivery.md)。
 
 POST /submissions 的 answers 新增 ReflectionAnswers：kind=reflection；baseline_run_id/revised_run_id；change.category=goal|constraint|output 和 quote；evidence.before/after 分别含 message_id、event_seq、quote、start_offset；judgment=satisfied|partial|unsatisfied；explanation、next_instruction；challenge.challenge_id、judgments[item_id,decision=known|confirm] 和 instruction。完整必填与长度以 OpenAPI 为准。start_offset 为原始正文 Unicode 码点偏移，换行、空格和重复句均按原文核对，不按 HTML 或 UTF-16 单元计算。
 
-后端核对运行归属/终态/顺序、改动引用及指定消息的精确原文，再核对课程版本的变式题。引用真实不等于自由解释质量已判定，explanation 和 instruction 保存用于学习反馈，不以关键词/字数作为硬性通过条件。partial/unsatisfied 允许通过，须写后续指令。演示不计正式完成。
+后端先检查运行归属、指定消息/事件和变式 ID；不合法引用返回 422。随后按课程规则核对完成状态及持久创建顺序、改动引用、原文偏移和变式答案；结构合法但不满足规则时返回 201 Submission，逐项标记不通过。引用真实不等于自由解释质量已判定，explanation 和 challenge.instruction 必须含非空白内容（最多 6000 字符），这是输入完整性约束，不按字数、关键词或模型评价对解释质量评分。partial/unsatisfied 允许通过，须写后续指令。演示不计正式完成。
 
 GET /attempts/{attempt_id}/reflection-draft 未保存时返回 revision=0、draft=null、updated_at=null。PUT 携当前草稿 expected_revision 及 expected_attempt_revision，成功只使草稿 revision+1。所有草稿字段允许未完成值，但固定字段、长度和数量有上限；私有 Key 经现有 HTTP 边界脱敏。仅 active reflection 实验可写，历史草稿可读。冲突返回 409 REVISION_CONFLICT，前端保留当前编辑内容并让学生主动处理，不自动覆盖。该 PUT 不要求 Idempotency-Key；响应丢失后先 GET，不能盲目重试写入。
 
 正式提交冻结答案、规则和引用，草稿的后续修改不改变历史结果。ZIP 中包含草稿以及不可变提交，课程与引用均绑定原版本，排除凭据、连接参数和内部令牌。
+
+
+### 草稿字段与提交映射
+
+GET /attempts/{attempt_id}/reflection-draft 对归属正确的实验均可读取；没有记录时返回空草稿，包括旧版或其他关卡。PUT 仅允许 active 且 answer_form.kind=reflection 的实验。草稿是完整替换而不是 PATCH；下列字段全部必填，不能直接把 draft 作为正式 answers 提交。
+
+| ReflectionDraftData 字段 | 类型与未完成值 | 正式 ReflectionAnswers 映射 |
+| --- | --- | --- |
+| step | 整数 0—3 | 仅界面进度，不提交 |
+| beforeId / afterId | 字符串，可空 | baseline_run_id / revised_run_id |
+| beforeMessageId / afterMessageId | 字符串，可空 | evidence.before/after.message_id |
+| beforeEventSeq / afterEventSeq | 非负整数，初始 0 | evidence.before/after.event_seq，正式值至少 1 |
+| beforeStartOffset / afterStartOffset | 非负整数，初始 0 | evidence.before/after.start_offset |
+| changeKind / requirement | 字符串，可空 | change.category / change.quote；正式 category 为 goal/constraint/output |
+| beforeQuote / afterQuote | 字符串，可空 | evidence.before/after.quote |
+| judgment / explanation / nextInstruction | 字符串，可空 | judgment / explanation / next_instruction |
+| facts | 对象，初始 {} | challenge.judgments 转为 item_id/decision 数组 |
+| instruction | 字符串，可空 | challenge.instruction；challenge_id 取固定版本的公开表单 |
+
+草稿文本每项最多 6000 字符；facts 最多 20 项、值最多 40 字符，键须属于本课变式。整数上限 2147483647。非空运行 ID 须属于同一实验同一模式，已选完整消息须存在；保存草稿不检查是否已完成正式评分条件，也不代表通过。
+
+加载顺序：GET Attempt → 按 lesson_version 取课件 → GET reflection-draft。首次保存 expected_revision=0；之后用上次成功响应 revision。expected_attempt_revision 始终来自当前 Attempt；保存草稿只递增草稿 revision。任一版本不匹配均返回 409 REVISION_CONFLICT，需同时重读实验和草稿并让用户处理差异。重置后的旧实验写入返回 409 ATTEMPT_SUPERSEDED，新实验草稿从 0 开始。非复盘实验写入、草稿引用/字段不合法返回 422 VALIDATION_ERROR；不存在的资源返回 404 NOT_FOUND。
+
+PUT 不使用 Idempotency-Key，不进入创建类请求缓存；响应丢失先 GET 核对保存状态，不能自动重放。前端先加载再以 500ms 防抖串行保存，失败或冲突停止队列，保留编辑内容并提供下载/重读入口。正式提交以点击时的表单构造 answers，不由服务端自动把草稿转换为提交。
+
+### 原文引用与恢复
+
+ReflectionCitation.start_offset 是 message.completed.payload.content 中从 0 开始的 Unicode 码点位置。不要使用渲染后的 Markdown、trim 后正文或 JavaScript UTF-16 长度定位；可用 Array.from(rawText) 处理码点。重复引用必须保留所选出现位置。before/after 的运行 ID 由 baseline_run_id/revised_run_id 指定，消息和事件必须与对应运行一致。
+
+先后顺序由服务端持久创建顺序核验，不用分页排序、ID 字典序或跨运行的 event_seq 推断。新增要求 quote 必须逐字存在于第二轮 input_text，且不在第一轮 input_text 中；两个运行必须 completed 并有完整非空回答和完成事件。
+
+### Tips 与复盘的关联
+
+新生成 Tips 可包含目标改进轮对应的已保存草稿（afterId 等于目标运行，beforeId 在上下文中）、公开变式及符合范围的已提交复盘答案。草稿最多占 16000 字符，整体上下文受 60000 字符限制；裁掉基准运行时也移除草稿。不会发送私有评分答案；模型点评不改变 Submission.passed。
+
+Tips 缓存保留生成时快照：后续编辑草稿或再次提交不自动刷新缓存，也不自动计费。GET 返回 {tips: null} 或 {tips: RunTips}；POST 成功直接返回 RunTips，客户端应区分两个响应结构。
+
+可校验答案/响应样例见 [examples/http.json](examples/http.json) 中 reflection-answer 和 empty-reflection-draft；示例 ID 和 challenge_id 必须替换成实际实验、事件及固定版本表单中的 ID，结构合法不等于实际验收通过。
+
+首次保存未完成草稿的 PUT 请求示例（两个 revision 必须取当前 GET 结果）：
+
+```json
+{
+  "expected_revision": 0,
+  "expected_attempt_revision": 1,
+  "draft": {
+    "step": 0,
+    "beforeId": "",
+    "afterId": "",
+    "beforeMessageId": "",
+    "afterMessageId": "",
+    "beforeEventSeq": 0,
+    "afterEventSeq": 0,
+    "beforeStartOffset": 0,
+    "afterStartOffset": 0,
+    "changeKind": "",
+    "requirement": "",
+    "beforeQuote": "",
+    "afterQuote": "",
+    "judgment": "",
+    "explanation": "",
+    "nextInstruction": "",
+    "facts": {},
+    "instruction": ""
+  }
+}
+```
+
+成功响应为 200 ReflectionDraft，其中 attempt_id 是路径中的实验 ID，revision=1，draft 为已保存快照，updated_at 为服务端时间。重复发送这个旧请求会产生版本冲突，不会自动成为幂等重放。

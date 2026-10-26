@@ -1,14 +1,8 @@
 # 后端开发与联调
 
-2026-10-25 当前更新：统一实训、新版 1.1.0 正式复盘及草稿 API 已在 PR #9 功能分支接入，尚未合并 main。当前协议为 41 操作、102 schema；以下既有记录按日期保留，其“预览/未接入/37 或 39 操作”描述属于历史基线。最新功能与验证以[统一交付](unified-practice-delivery.md)和[当前索引](project-status.md)为准。
-
-2026-10-23 通过 feat/practice-tips-and-feedback 分支交付，尚未合并 main：新增按需模型 Tips（GET/POST `/runs/{run_id}/tips`），当前本地 39 个 HTTP 操作、92 个 schema；缓存按运行持久保存，独立于正式评分。用量与异常/中断处理见[契约说明](../contracts/README.md)，使用边界见[版本状态](project-status.md)。下文 2026-10-22 的数字与验证记录属于已合并历史基线。
-
-历史基线（2026-10-22）：后端本地实现 v0.1.0 的 37 个 HTTP 操作，已与前端接通课程、Key 管理、Agent 运行、授权、评分、下载和导出。已合并的 main 版本与验证边界见[版本状态](project-status.md)。
+更新：2026-10-26。统一实训已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并到 main `af36497`，包含第一关 1.1.0 正式复盘、草稿恢复、Tips 和提交弹窗。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。 接口以[契约说明](../contracts/README.md)为准，功能与验证见[统一交付](unified-practice-delivery.md)。
 
 ## 准备
-
-2026-10-24 前端变化：第一关旧单选提交已被复盘模板替换，新复盘不调用正式提交，也不能生成新通关成绩。后端旧契约作为兼容能力保留；第二至四关继续正式验收。新答案、评分、存储、回看和导出需按[后端清单](reflection-assessment-backend-handoff.md)先协调再实现。本文其余接口说明仍对应已发布 v0.1.0。
 
 需要 Python 3.11 或 3.12 与 uv。模型使用 AgentScope 2.0.10 SDK，不需要 Redis、数据库服务器或 Docker。锁文件固定依赖，项目级虚拟环境放 apps/api/.venv。
 
@@ -79,9 +73,17 @@ uv run --project apps/api uvicorn agent_school.main:app_factory --factory --host
 
 ## 验证与限制
 
-最近本地通过 91 项后端测试、197 项契约检查及 Ruff，见[后端验证报告](runtime-validation.md)。自动测试包含真实 SDK + 本地 HTTP 测试服务；2026-10-19 另有 DeepSeek 后端实测，四关正式提交通过但第四关依赖额外任务 ID 提示，详见[实测记录](live-model-validation.md)。新增 Key 导入/目录尚未用真实服务商复测，不能以旧实测代替。
+合并前重新验证：193 项后端、18 项前端单元、52 项浏览器、231 项契约结构检查全部通过。main `af36497` 的三类云端 CI 也全部通过。后端测试包含真实 SDK + 本地 HTTP 脚本服务，不消耗外部模型额度。2026-10-19 的 DeepSeek 后端实测为历史记录，不能代替新复盘、Tips 或 Key 导入的真实服务商验收，见[实测记录](live-model-validation.md)。
 
-当前 8 项前端与 26 项浏览器回归通过；浏览器用本地脚本模型，真实外部模型的浏览器验收仍待执行。TypeScript discriminator 适配、第四关指导和启动器未等待前端 HTTP 就绪仍待完善。首版不提供线上身份系统、任意 shell、文件上传或自定义 MCP 执行。
+本次接口更新已修复 discriminator 映射并删除前端适配，见[更新记录](interface-update-2026-10-26.md)。第四关 task_id 指导和启动器前端 HTTP 就绪等待仍待完善。首版不提供线上身份系统、任意 shell、文件上传或自定义 MCP 执行。
+
+## 复盘、Tips 与恢复接入
+
+第一关 1.1.0 根据公开 ReflectionForm 渲染，GET/PUT reflection-draft 使用独立 revision，正式 ReflectionAnswers 经 POST /submissions 冻结评分；旧 1.0.0 继续 choice。完整字段映射、错误与调用顺序见[复盘接入说明](reflection-assessment-backend-handoff.md)。
+
+草稿保存、正式提交、读取 Tips 都不调用模型。生成 Tips 需主动确认，POST 使用幂等键和已检查的当前配置；按运行缓存，失败手动重试，TIPS_UNCERTAIN 不再次请求。缓存可在清 Key 或重启后读取；编辑复盘不自动重评。服务端可以将匹配的已保存复盘提供给 Tips 模型，但私有评分参数不外发。
+
+重置请求只传 expected_revision，不接受 profile_id 或 Key；模型选择由前端继续携带，后端内存凭据及检查保留。旧实验 superseded 且只读，旧草稿可读取/导出，新草稿为空。完整后端重启才会清空 Key 并使检查失效。ZIP 的 learning.json 包含 reflection_draft 及冻结提交，不包含模型配置或 Key。
 
 ## 内部结构清理（2026-10-23）
 
