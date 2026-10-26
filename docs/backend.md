@@ -88,3 +88,7 @@ uv run --project apps/api uvicorn agent_school.main:app_factory --factory --host
 ## 内部结构清理（2026-10-23）
 
 HTTP 边界和业务服务共享 Contracts 实例，避免重复读取和构建契约校验器；直接创建 School 的测试仍支持自动加载。离线 SDK 模拟器移至 `apps/api/tests/runtime_probe.py`，不再随生产包安装。对外 HTTP 操作、字段和状态码保持兼容，核对结果见[清理记录](cleanup-2026-10-23.md)。
+
+## 实训模型连接恢复
+
+实训 SDK 使用 8 秒建连、30 秒读取超时，仅 ConnectError/ConnectTimeout 且请求尚未发送时重连一次；不重发已发送请求或中断的响应流。OpenAI SDK 和 AgentScope 的通用重试仍为 0。运行失败保留 MODEL_TIMEOUT、MODEL_AUTH_FAILED 或 MODEL_UNAVAILABLE 分类，日志只记运行 ID、类型链与 HTTP 状态，不写原始异常正文。覆盖范围与真实复测见[修复记录](model-connection-fix-2026-10-26.md)。

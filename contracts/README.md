@@ -131,6 +131,8 @@ Run 状态流转：queued → running ↔ awaiting_approval → completed/failed
 
 POST /runs 成功后立即返回 202，即使已开始运行也如此。同一个键返回原 Run，不再调用模型。终态前另起 Run 返回 409 RUN_BUSY。每轮最多 10 次模型请求、120 秒有效执行时间，不包含授权等待；600 秒授权等待超时后失败。模型未返回 token 用量时用 null，不能当作 0。
 
+实训模型连接超时为 8 秒、读取超时为 30 秒。仅底层明确为 ConnectError/ConnectTimeout、请求尚未发送的建连失败允许等待 0.25 秒后重连一次；不增加 Run 或已发送的推理请求数。读写失败、HTTP 错误和已经开始的响应流均不自动重发。连接检查、模型目录和 Tips 保持各自已有策略。取消和整轮执行预算仍覆盖建连与等待。
+
 ### SSE 事件字段
 
 每个事件都包含 schema_version、run_id、attempt_id、seq、mode、kind、created_at、payload。seq 从 1 开始、在一个 Run 内严格递增且连续，先持久化再发布。

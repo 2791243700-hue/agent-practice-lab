@@ -3,6 +3,8 @@ import json
 import logging
 from collections.abc import AsyncIterator, Callable
 
+import httpx
+import openai
 from agentscope.agent import Agent, ContextConfig, InjectionConfig, ModelConfig, ReActConfig
 from agentscope.credential import OpenAICredential
 from agentscope.event import (
@@ -121,17 +123,31 @@ class MeteredModel(ChatModelBase):
         }
 
 
+class ConnectionSafeChatModel(OpenAIChatModel):
+    async def _call_api(self, *args, **kwargs):
+        for attempt in range(2):
+            try:
+                return await super()._call_api(*args, **kwargs)
+            except openai.APIConnectionError as exc:
+                # These transport errors occur before the request is sent.
+                # Never replay a write/read failure or a started response stream.
+                if attempt or not isinstance(exc.__cause__, (httpx.ConnectError, httpx.ConnectTimeout)):
+                    raise
+                logging.getLogger(__name__).warning("Model connection not established; reconnecting once.")
+                await asyncio.sleep(0.25)
+
+
 def make_model(request: RuntimeRequest) -> OpenAIChatModel:
     access = request.model
     if access is None:
         raise RuntimeFailure("CREDENTIAL_MISSING")
-    return OpenAIChatModel(
+    return ConnectionSafeChatModel(
         OpenAICredential(api_key=access.api_key, base_url=access.base_url),
         model=access.model,
         parameters=OpenAIChatModel.Parameters(temperature=request.settings["temperature"]),
         stream=True,
         max_retries=0,
-        client_kwargs={"timeout": 30.0, "max_retries": 0},
+        client_kwargs={"timeout": httpx.Timeout(30.0, connect=8.0), "max_retries": 0},
         extra_body=basic_chat_options(access.base_url) or None,
     )
 
@@ -241,8 +257,26 @@ class AgentScopeRuntime:
             raise
         except RuntimeFailure:
             raise
-        except Exception:
-            raise RuntimeFailure("MODEL_UNAVAILABLE") from None
+        except Exception as exc:
+            code = "MODEL_UNAVAILABLE"
+            if isinstance(exc, (openai.APITimeoutError, httpx.TimeoutException, TimeoutError)):
+                code = "MODEL_TIMEOUT"
+            elif isinstance(exc, (openai.AuthenticationError, openai.PermissionDeniedError)):
+                code = "MODEL_AUTH_FAILED"
+            # Never log provider messages, response bodies, URLs, or traceback locals.
+            causes = []
+            cause = exc
+            while cause is not None and len(causes) < 5:
+                causes.append(type(cause).__name__)
+                cause = cause.__cause__ or cause.__context__
+            logging.getLogger(__name__).warning(
+                "Model failure run=%s category=%s types=%s status=%s",
+                request.run_id,
+                code,
+                "/".join(causes),
+                exc.status_code if isinstance(exc, openai.APIStatusError) else None,
+            )
+            raise RuntimeFailure(code) from None
         finally:
             self.usage_by_run[request.run_id] = model.usage()
             self.tasks.pop(request.run_id, None)

@@ -252,7 +252,16 @@ class RunService:
             self.finish(
                 context.run_id,
                 "failed",
-                {"error": error_body(code, "任务未完成，请查看工具记录或检查模型连接。")},
+                {
+                    "error": error_body(
+                        code,
+                        {
+                            "MODEL_TIMEOUT": "等待模型服务超时，本轮未完成。请稍后手动重新发送任务。",
+                            "MODEL_AUTH_FAILED": "模型服务未接受 API Key，请在模型设置中检查凭据。",
+                            "MODEL_UNAVAILABLE": "模型服务连接失败，本轮未完成。请检查网络后手动重新发送任务。",
+                        }.get(code, "任务未完成，请查看工具记录或检查模型连接。"),
+                    )
+                },
                 usage,
             )
         finally:
