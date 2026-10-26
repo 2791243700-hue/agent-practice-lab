@@ -11,7 +11,7 @@ for (const width of [1440, 390]) {
     await page
       .getByRole("button", { name: "先试试无 Key 演示（不计正式通过）" })
       .click();
-    const titles = ["这一关，做什么？", "材料与 Agent 设置", "产物与原文预览"];
+    const titles = ["这一关，做什么？", "材料与 Agent 设置", "产物"];
     const panels = [
       "#practice-mission",
       "#practice-preparation",
@@ -71,15 +71,17 @@ for (const width of [1440, 390]) {
     await opener.click();
     const preview = page.getByRole("region", { name: "课程通知预览" });
     await expect(
-      page.getByRole("button", { name: titles[2], exact: true }),
+      page.getByRole("button", { name: titles[1], exact: true }),
     ).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      page.locator("#practice-preparation .file-preview"),
+    ).toHaveCount(1);
     await expect(preview).toContainText("2026-11-04");
     await expect(preview).toBeFocused();
-    await page.getByRole("button", { name: titles[2], exact: true }).click();
-    await expect(preview).toBeHidden();
-    await page.getByRole("button", { name: titles[2], exact: true }).click();
-    await expect(preview).toContainText("2026-11-04");
     await page.getByRole("button", { name: titles[1], exact: true }).click();
+    await expect(preview).toBeHidden();
+    await page.getByRole("button", { name: titles[1], exact: true }).click();
+    await expect(preview).toContainText("2026-11-04");
     await page.getByRole("button", { name: "关闭预览", exact: true }).click();
     await expect(opener).toBeFocused();
     await expect(material).toBeChecked();

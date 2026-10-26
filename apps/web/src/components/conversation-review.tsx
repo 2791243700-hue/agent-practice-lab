@@ -55,7 +55,6 @@ export function ConversationReview({
     useReflectionDraft(attempt, onRefresh);
   const [issues, setIssues] = useState<string[]>([]);
   const heading = useRef<HTMLHeadingElement>(null);
-  const step = draft.step;
   const complete = (run?: Run) =>
     (events[run?.id ?? ""] ?? []).filter(
       (event): event is Extract<Event, { kind: "message.completed" }> =>
@@ -114,6 +113,9 @@ export function ConversationReview({
       ["known", "confirm"].includes(draft.facts[item.id]),
     );
   const ready = [pairReady, requirementReady, evidenceReady, variationReady];
+  const firstIncomplete = ready.findIndex((complete) => !complete);
+  const lastUnlocked = firstIncomplete < 0 ? steps.length - 1 : firstIncomplete;
+  const step = Math.min(draft.step, lastUnlocked);
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((old) => ({ ...old, [key]: value }));
     setIssues([]);
@@ -140,6 +142,7 @@ export function ConversationReview({
     setIssues([]);
   }
   function go(next: number) {
+    if (next > lastUnlocked) return;
     update("step", next);
     requestAnimationFrame(() => {
       heading.current?.focus({ preventScroll: true });
@@ -258,7 +261,8 @@ export function ConversationReview({
           <button
             type="button"
             key={label}
-            disabled={!loaded || disabled}
+            disabled={!loaded || disabled || index > lastUnlocked}
+            title={index > lastUnlocked ? "请先完成前面的步骤" : undefined}
             aria-current={step === index ? "step" : undefined}
             onClick={() => go(index)}
           >
@@ -273,6 +277,7 @@ export function ConversationReview({
           </button>
         ))}
       </nav>
+      <p className="small muted">完成当前步骤后解锁下一步，可返回前面修改。</p>
       <h3 ref={heading} tabIndex={-1} className="review-step-heading">
         {step + 1}.{" "}
         {

@@ -99,8 +99,13 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
     artifacts: true,
   });
   const previewRef = useRef<HTMLDivElement>(null);
+  const automaticPreview = useRef(false);
   const previewTriggerRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
+    if (automaticPreview.current) {
+      automaticPreview.current = false;
+      return;
+    }
     if (preview) {
       previewRef.current?.scrollIntoView({ block: "center" });
       previewRef.current?.focus({ preventScroll: true });
@@ -137,7 +142,10 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
       );
       previewTriggerRef.current = trigger;
       setSidebarOpen(true);
-      setPanels((old) => ({ ...old, artifacts: true }));
+      setPanels((old) => ({
+        ...old,
+        [value.file.kind === "material" ? "preparation" : "artifacts"]: true,
+      }));
       setPreview(value);
     });
   }
@@ -195,6 +203,20 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             "",
         );
       }
+      if (initial && l.id === "01-task" && l.allowed_tools.length === 0) {
+        const notice = f.items.find((file) => file.kind === "material");
+        if (notice) {
+          try {
+            const value = await api<Schema["FilePreview"]>(
+              `${endpoint}/files/${pathId(notice.id)}`,
+            );
+            automaticPreview.current = true;
+            setPreview(value);
+          } catch (error) {
+            setLoadError(error);
+          }
+        }
+      }
     },
     [endpoint, preferred],
   );
@@ -251,7 +273,8 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
       }
     }
     followingOutputRef.current = live;
-  }, [runs, events, pendingMessage, activeId]);
+    // The automatic material preview can change the page height after history restores.
+  }, [runs, events, pendingMessage, activeId, preview]);
   if (!attempt || !lesson)
     return (
       <>
@@ -277,6 +300,8 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
       selectedProfile.credential_status === "configured");
   const example = practiceExamples[lesson.id];
   const readsMaterials = lesson.allowed_tools.includes("read_material");
+  const directNotice =
+    lesson.id === "01-task" && lesson.allowed_tools.length === 0;
   const missingMaterials = readsMaterials && selectedFiles.length === 0;
   const preparationPending = dirty || missingMaterials;
   async function submit(answers: Schema["Answers"]) {
@@ -296,6 +321,45 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
     setFeedback(result);
     await refresh();
   }
+  const previewPanel = preview && (
+    <div
+      className="file-preview"
+      ref={previewRef}
+      role="region"
+      aria-label={`${preview.file.title}预览`}
+      tabIndex={-1}
+    >
+      <div>
+        <strong>{preview.file.title}</strong>
+        <button
+          className="text-button"
+          onClick={() => {
+            setPreview(null);
+            const trigger = previewTriggerRef.current;
+            if (trigger?.closest("#practice-preparation")) {
+              setSidebarOpen(true);
+              setPanels((old) => ({ ...old, preparation: true }));
+            }
+            requestAnimationFrame(() => trigger?.focus());
+          }}
+        >
+          关闭预览
+        </button>
+      </div>
+      <pre>{preview.content}</pre>
+      {preview.truncated && (
+        <p className="notice warning">
+          预览已截断，仅显示前 20000 字符。请下载完整文件。
+        </p>
+      )}
+      <a
+        className="text-button"
+        href={`/api/v1${endpoint}/files/${pathId(preview.file.id)}/download`}
+      >
+        下载完整文件 <Download size={14} />
+      </a>
+    </div>
+  );
   return (
     <>
       {lesson.id === "01-task" && lesson.version === "1.0.0" && (
@@ -523,18 +587,20 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                 {lesson.materials.map((m) => (
                   <div key={m.id}>
                     <label className="check-label">
-                      <input
-                        type="checkbox"
-                        disabled={historical || action.busy}
-                        checked={selectedFiles.includes(m.id)}
-                        onChange={(e) =>
-                          setSelectedFiles(
-                            e.target.checked
-                              ? [...selectedFiles, m.id]
-                              : selectedFiles.filter((x) => x !== m.id),
-                          )
-                        }
-                      />
+                      {!directNotice && (
+                        <input
+                          type="checkbox"
+                          disabled={historical || action.busy}
+                          checked={selectedFiles.includes(m.id)}
+                          onChange={(e) =>
+                            setSelectedFiles(
+                              e.target.checked
+                                ? [...selectedFiles, m.id]
+                                : selectedFiles.filter((x) => x !== m.id),
+                            )
+                          }
+                        />
+                      )}
                       <FileText size={15} />
                       {m.title}
                     </label>
@@ -550,12 +616,15 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                   </div>
                 ))}
               </div>
+              {preview?.file.kind === "material" && previewPanel}
               <fieldset disabled={historical || action.busy}>
                 <legend className="sr-only">下一轮运行设置</legend>
                 <p className="field-help">
                   {readsMaterials
                     ? "选中只是允许读取。实际读过与否，请查看工具执行结果。"
-                    : "本关不需要读取文件，可以保留默认的材料选择。"}
+                    : directNotice
+                      ? "本关通知原文会直接提供给 Agent，无需勾选或调用读取工具。"
+                      : "本关不需要读取文件，可以保留默认的材料选择。"}
                 </p>
                 <details>
                   <summary>调整 Agent 的工作方式</summary>
@@ -638,7 +707,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             <PracticePanel
               id="practice-artifacts"
               className="artifact-panel"
-              title="产物与原文预览"
+              title="产物"
               eyebrow="OUTPUT / CHECK THE RESULT"
               open={panels.artifacts}
               onToggle={() =>
@@ -672,45 +741,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                     </a>
                   </div>
                 ))}
-              {preview && (
-                <div
-                  className="file-preview"
-                  ref={previewRef}
-                  role="region"
-                  aria-label={`${preview.file.title}预览`}
-                  tabIndex={-1}
-                >
-                  <div>
-                    <strong>{preview.file.title}</strong>
-                    <button
-                      className="text-button"
-                      onClick={() => {
-                        setPreview(null);
-                        const trigger = previewTriggerRef.current;
-                        if (trigger?.closest("#practice-preparation")) {
-                          setSidebarOpen(true);
-                          setPanels((old) => ({ ...old, preparation: true }));
-                        }
-                        requestAnimationFrame(() => trigger?.focus());
-                      }}
-                    >
-                      关闭预览
-                    </button>
-                  </div>
-                  <pre>{preview.content}</pre>
-                  {preview.truncated && (
-                    <p className="notice warning">
-                      预览已截断，仅显示前 20000 字符。请下载完整文件。
-                    </p>
-                  )}
-                  <a
-                    className="text-button"
-                    href={`/api/v1${endpoint}/files/${pathId(preview.file.id)}/download`}
-                  >
-                    下载完整文件 <Download size={14} />
-                  </a>
-                </div>
-              )}
+              {preview?.file.kind === "artifact" && previewPanel}
             </PracticePanel>
           </div>
         </aside>

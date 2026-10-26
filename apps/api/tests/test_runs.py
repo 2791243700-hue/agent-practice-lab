@@ -1,6 +1,34 @@
 import time
 
+import pytest
+
+from agent_school.contracts import RuntimeEvent
 from conftest import create_attempt, post
+
+
+@pytest.mark.parametrize("lesson", ["02-context", "03-tools", "04-permission"])
+def test_tool_lessons_do_not_receive_material_contents_without_reading(client, lesson):
+    captured = []
+
+    class CaptureRuntime:
+        def __init__(self):
+            self.usage_by_run = {}
+
+        async def stream(self, request, invoke_tool):
+            captured.append(request)
+            yield RuntimeEvent(
+                kind="message.completed",
+                payload={"message_id": "capture-message", "role": "assistant", "content": "待核对。"},
+            )
+
+    client.app.state.school.runs.demo = CaptureRuntime()
+    attempt = create_attempt(client, lesson)
+    run = start(client, attempt)
+    assert wait_run(client, run["id"])["status"] == "completed"
+    assert captured[0].allowed_tools
+    prompt = captured[0].settings["system_instruction"]
+    assert "本关固定参考通知" not in prompt
+    assert "2026-11-04" not in prompt
 
 
 def wait_run(

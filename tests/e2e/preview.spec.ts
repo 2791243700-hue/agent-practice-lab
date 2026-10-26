@@ -5,7 +5,7 @@ for (const width of [1440, 390]) {
     page,
   }) => {
     await page.setViewportSize({ width, height: 800 });
-    await page.goto("/lessons/01-task");
+    await page.goto("/lessons/02-context");
     await page
       .getByRole("button", { name: "先试试无 Key 演示（不计正式通过）" })
       .click();
@@ -19,6 +19,10 @@ for (const width of [1440, 390]) {
     for (let index = 0; index < 2; index++) {
       await opener.click();
       const preview = page.locator(".file-preview");
+      await expect(prepare.locator(".file-preview")).toHaveCount(1);
+      await expect(
+        page.locator("#practice-artifacts .file-preview"),
+      ).toHaveCount(0);
       await expect(preview).toContainText("2026-11-04");
       await expect(preview).toBeInViewport({ ratio: 0.8 });
       await expect(preview).toBeFocused();
@@ -29,3 +33,25 @@ for (const width of [1440, 390]) {
     await expect(selection).not.toBeChecked();
   });
 }
+
+test("第一关默认在材料区展示原文，无需勾选或调用读取工具", async ({ page }) => {
+  await page.goto("/lessons/01-task");
+  await page
+    .getByRole("button", { name: "先试试无 Key 演示（不计正式通过）" })
+    .click();
+  const prepare = page.locator("#practice-preparation");
+  const preview = prepare.getByRole("region", { name: "课程通知预览" });
+  await expect(preview).toContainText("提交课程总结");
+  await expect(preview).toContainText("2026-11-04");
+  await expect(preview).toContainText("2026-11-06");
+  await expect(prepare.getByRole("checkbox", { name: "课程通知" })).toHaveCount(
+    0,
+  );
+  await expect(prepare).toContainText("直接提供给 Agent");
+  await expect(page.locator("#practice-artifacts .file-preview")).toHaveCount(
+    0,
+  );
+  await preview.getByRole("button", { name: "关闭预览" }).click();
+  await prepare.getByRole("button", { name: "预览原文", exact: true }).click();
+  await expect(preview).toBeFocused();
+});

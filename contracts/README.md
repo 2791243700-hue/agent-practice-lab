@@ -118,7 +118,7 @@ ModelProfile.provider 仍固定为 openai-compatible，表示 Chat Completions �
 - 固定 lesson_id：01-task、02-context、03-tools、04-permission。后续课程目录也使用这些 ID；修正原计划中的 02/03 目录命名，使 API 与课程包一致。
 - Attempt.mode 在创建时固定为 live 或 demo，后续不可修改。demo 仅在 /me.capabilities.demo_enabled=true 时可建，否则 403 DEMO_DISABLED。Run 模式从 Attempt 派生，前端不能直接指定。
 - 同一 Attempt 的多轮 Run 沿用已完成对话及产物；不同 Attempt 隔离。profile_id 在 live 启动时必须非 null，在 demo 时必须为 null，否则 422 MODE_MISMATCH。
-- 材料 ID 是该课程版本稳定的逻辑 ID，复制到不同 Attempt 后用相同逻辑 ID，但读取始终检查 Attempt 归属。selected_file_ids 只能包含本实验预置材料。空列表合法，工具读取只限被选材料。
+- 材料 ID 是该课程版本稳定的逻辑 ID，复制到不同 Attempt 后用相同逻辑 ID，但读取始终检查 Attempt 归属。selected_file_ids 只能包含本实验预置材料。空列表合法，工具读取只限被选材料。第一关（01-task 且 allowed_tools 为空）的固定通知直接从该实验归档课程材料提供给模型，不依赖 selected_file_ids，不伪造工具读取事件；其他关卡不会自动注入文件正文。浏览器材料预览不代表 Agent 已读取。
 - 产物 file_id 绑定不可变文件版本；每次保存分配新 ID，当前文件列表只显示最新一组。旧 file_id 在原实验内仍可读取，提交下载绑定提交快照，不能跳转到最新文件。
 - Settings 当前只包含 system_instruction（最多 2000 字符，可为空）和 temperature（0—1）。学生仅能修改 settings_policy.editable_fields 列出的字段，其余必须与原值相同，否则 422 VALIDATION_ERROR。后端应用模型参数兼容性检查，不静默忽略不支持参数。
 - 重置继承旧 lesson_version 和 mode，恢复课程默认设置/材料选择，清空运行对话和产物；旧 Attempt 转为 superseded，旧记录仍可读和导出，不能再启动运行、修改或提交（409 ATTEMPT_SUPERSEDED）。默认 selected_file_ids 为空。

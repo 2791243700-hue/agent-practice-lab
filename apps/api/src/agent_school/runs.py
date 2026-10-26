@@ -137,6 +137,10 @@ class RunService:
             "这些由独立的 Tips 功能按需提供。学生明确请求的任务内容仍应完整回答。"
             "当前课题：\n" + lesson["task"]
         )
+        if lesson["manifest"]["id"] == "01-task" and not lesson["manifest"]["allowed_tools"]:
+            platform += "\n本关固定参考通知（已提供，无需读取文件工具）：\n" + "\n\n".join(
+                material["title"] + "\n" + material["content"] for material in lesson["materials"]
+            )
         settings = {
             **attempt["settings"],
             "system_instruction": platform + "\n学生设置：\n" + attempt["settings"]["system_instruction"],
