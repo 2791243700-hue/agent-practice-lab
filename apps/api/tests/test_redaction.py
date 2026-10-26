@@ -1,10 +1,56 @@
 import asyncio
 
+import httpx
+import openai
 import pytest
 
 from agent_school.contracts import ChatMessage, RuntimeRequest
 from agent_school.runtime.agentscope_runtime import AgentScopeRuntime, RuntimeFailure
 from runtime_probe import ScriptedModel
+
+
+@pytest.mark.parametrize(
+    "kind,code",
+    [("timeout", "MODEL_TIMEOUT"), ("auth", "MODEL_AUTH_FAILED"), ("unknown", "MODEL_UNAVAILABLE")],
+)
+async def test_runtime_records_safe_provider_failure_category(caplog, kind, code):
+    request_http = httpx.Request("POST", "https://example.invalid/chat/completions")
+    if kind == "timeout":
+        failure = openai.APITimeoutError(request=request_http)
+    elif kind == "auth":
+        failure = openai.AuthenticationError(
+            "test-secret-runtime in provider response",
+            response=httpx.Response(401, request=request_http),
+            body={"error": "test-secret-runtime"},
+        )
+    else:
+        failure = ValueError("test-secret-runtime in provider error")
+
+    class Failing(ScriptedModel):
+        async def _call_api(self, *args, **kwargs):
+            raise failure
+
+    model = Failing("error")
+    runtime = AgentScopeRuntime(lambda request: model)
+    request = RuntimeRequest(
+        run_id="safe-diagnostic-run",
+        attempt_id="a",
+        messages=[ChatMessage(role="user", content="test")],
+        settings={},
+        allowed_tools=[],
+    )
+
+    async def invoke(call):
+        raise AssertionError("No tools expected")
+
+    with pytest.raises(RuntimeFailure) as caught:
+        async for event in runtime.stream(request, invoke):
+            pass
+    assert caught.value.code == code
+    assert type(failure).__name__ in caplog.text
+    assert "safe-diagnostic-run" in caplog.text
+    assert "test-secret-runtime" not in caplog.text + str(caught.value)
+    assert runtime.usage_by_run[request.run_id]["model_calls"] == 1
 
 
 async def test_sdk_provider_exception_cannot_log_credential(capfd):
