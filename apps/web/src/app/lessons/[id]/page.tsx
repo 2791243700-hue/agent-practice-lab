@@ -89,10 +89,12 @@ function LessonContent({
         !action.error && <Loading />
       ) : (
         <>
-          {lesson.id === "01-task" && lesson.version === "1.0.0" && (
+          {!lesson.assessment_policy && (
             <div className="notice warning">
-              正在阅读旧版 1.0.0。
-              <Link href="/lessons/01-task">阅读新版 1.1.0 导读 →</Link>
+              正在阅读旧版 {lesson.version}，沿用原验收规则。
+              <Link href={`/lessons/${pathId(lesson.id)}`}>
+                阅读包含模型验收的最新导读 →
+              </Link>
             </div>
           )}
           <Heading

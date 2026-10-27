@@ -410,7 +410,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 冻结当前证据和产物并执行规则评测 */
+        /**
+         * 冻结当前证据和产物并执行规则评测
+         * @description 按实验固定版本验收。新版本正式实训须显式 assessment 同意及已检查的模型；先校验客观证据，全部合格后额外调用一次模型。模型拒绝或不可用均不通过；不可用返回冻结 Submission，model_assessment.status=unavailable，可主动重新提交。相同幂等键不重复计费。旧课程和演示不调用验收模型。
+         */
         post: operations["createSubmission"];
         delete?: never;
         options?: never;
@@ -779,6 +782,7 @@ export interface components {
                 /** @constant */
                 approval_timeout_seconds: 600;
             };
+            assessment_policy?: components["schemas"]["AssessmentPolicy"];
         };
         AttemptCreate: {
             lesson_id: string;
@@ -977,6 +981,8 @@ export interface components {
             attempt_id: string;
             expected_attempt_revision: number;
             answers: components["schemas"]["Answers"];
+            assessment?: components["schemas"]["AssessmentConsent"];
+            learning_reflection?: string;
         };
         RuleResult: {
             rule_id: string;
@@ -1051,6 +1057,8 @@ export interface components {
             rules: components["schemas"]["RuleResult"][];
             evidence: components["schemas"]["Evidence"][];
             answers: components["schemas"]["Answers"];
+            model_assessment?: components["schemas"]["ModelAssessment"];
+            learning_reflection?: string;
         };
         SubmissionPage: {
             items: components["schemas"]["SubmissionSummary"][];
@@ -1505,6 +1513,49 @@ export interface components {
             expected_revision: number;
             expected_attempt_revision: number;
             draft: components["schemas"]["ReflectionDraftData"];
+        };
+        AssessmentCriterion: {
+            id: string;
+            title: string;
+            description: string;
+        };
+        AssessmentPolicy: {
+            /** @constant */
+            kind: "model";
+            rubric_version: string;
+            criteria: components["schemas"]["AssessmentCriterion"][];
+        };
+        AssessmentConsent: {
+            profile_id: string;
+            expected_profile_revision: number;
+            /** @constant */
+            consent: true;
+        };
+        AssessmentCitation: {
+            source_id: string;
+            quote: string;
+        };
+        AssessmentCheck: {
+            criterion_id: string;
+            passed: boolean;
+            reason: string;
+            suggestion: string;
+            citations: components["schemas"]["AssessmentCitation"][];
+        };
+        AssessmentModelResponse: {
+            checks: components["schemas"]["AssessmentCheck"][];
+        };
+        ModelAssessment: {
+            /** @enum {string} */
+            status: "completed" | "unavailable" | "skipped";
+            rubric_version: string;
+            model: string | null;
+            /** Format: date-time */
+            assessed_at: string;
+            message: string;
+            error_code: components["schemas"]["ErrorCode"] | null;
+            usage: components["schemas"]["Usage"];
+            checks: components["schemas"]["AssessmentCheck"][];
         };
     };
     responses: never;

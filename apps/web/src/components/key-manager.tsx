@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
+  ExternalLink,
   KeyRound,
+  Lightbulb,
   Link2,
   Plus,
   RefreshCw,
@@ -149,6 +151,33 @@ export default function KeyManager() {
         title="添加 Key，选择你的模型"
         description="DeepSeek、OpenAI 自动填写连接地址，也可接入其他兼容服务。"
       />
+      {profiles !== null && profile?.connection_check.status !== "passed" && (
+        <aside
+          className="notice model-setup-tip"
+          aria-labelledby="model-setup-tip-title"
+        >
+          <Lightbulb size={21} aria-hidden="true" />
+          <div>
+            <h2 id="model-setup-tip-title">
+              第一次配置模型？可以从 DeepSeek 开始
+            </h2>
+            <p>
+              建议新用户前往 DeepSeek 开放平台创建 API Key，回到这里选择
+              DeepSeek、获取模型并完成连接检查。已有其他服务商的 Key
+              也可以直接使用。
+            </p>
+            <a
+              href="https://platform.deepseek.com/api_keys"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              前往 DeepSeek 开放平台
+              <ExternalLink size={14} aria-hidden="true" />
+              <span className="sr-only">（新窗口打开）</span>
+            </a>
+          </div>
+        </aside>
+      )}
       <ErrorBox error={action.error} />
       {notice && (
         <div role="status" className="notice success">

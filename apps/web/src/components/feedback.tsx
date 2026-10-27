@@ -1,17 +1,29 @@
 "use client";
-import { useState } from "react";
+import { useId, useLayoutEffect, useState } from "react";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { pathId } from "@/lib/api";
 import type {
   Attempt,
   Event,
   Lesson,
+  Profile,
   Run,
   Schema,
   Submission,
 } from "@/lib/types";
 import { dateTime, ErrorBox, useAction } from "./ui";
 import { ConversationReview } from "./conversation-review";
+import {
+  focusValidationField,
+  validationAttributes,
+  ValidationSummary,
+  type ValidationIssue,
+} from "./form-validation";
+
+export type AssessmentSubmission = {
+  assessment?: Schema["AssessmentConsent"];
+  learning_reflection?: string;
+};
 
 export function SubmissionFeedback({
   submission,
@@ -20,13 +32,16 @@ export function SubmissionFeedback({
   submission: Submission;
   onViewEvent?: (runId: string, seq: number) => void;
 }) {
-  const title = submission.passed
-    ? "正式通过，做得有依据。"
-    : submission.mode === "demo"
-      ? submission.evaluation_passed
-        ? "演示检查通过 · 不计正式完成"
-        : "演示仍有待补充项 · 不计正式完成"
-      : "还差几步，按反馈继续尝试。";
+  const title =
+    submission.model_assessment?.status === "unavailable"
+      ? "模型验收未完成，请检查后主动重试。"
+      : submission.passed
+        ? "正式通过，做得有依据。"
+        : submission.mode === "demo"
+          ? submission.evaluation_passed
+            ? "演示检查通过 · 不计正式完成"
+            : "演示仍有待补充项 · 不计正式完成"
+          : "还差几步，按反馈继续尝试。";
   return (
     <div className="feedback" data-testid="submission-feedback">
       <div className={`feedback-title ${submission.passed ? "passed" : ""}`}>
@@ -40,6 +55,43 @@ export function SubmissionFeedback({
           </p>
         </div>
       </div>
+      {"kind" in submission.answers &&
+        submission.answers.kind === "reflection" &&
+        !submission.model_assessment && (
+          <p className="small muted">
+            本次采用原版本规则，不含正式模型内容评分。
+          </p>
+        )}
+      {submission.model_assessment && (
+        <div className="notice" data-testid="model-assessment-result">
+          <strong>{submission.model_assessment.message}</strong>
+          <p className="small">
+            评分标准 {submission.model_assessment.rubric_version} · 模型调用{" "}
+            {submission.model_assessment.usage.model_calls} 次
+            {submission.model_assessment.model &&
+              ` · ${submission.model_assessment.model}`}
+            {submission.model_assessment.error_code &&
+              ` · ${submission.model_assessment.error_code}`}
+          </p>
+          {submission.learning_reflection && (
+            <p>我的核对说明：{submission.learning_reflection}</p>
+          )}
+          {submission.model_assessment.checks.map((check) => (
+            <details key={check.criterion_id}>
+              <summary>
+                {check.passed ? "通过" : "需改进"} · {check.reason}
+              </summary>
+              {check.suggestion && <p>改进建议：{check.suggestion}</p>}
+              {check.citations.map((citation, index) => (
+                <blockquote key={index}>
+                  {citation.quote}
+                  <span className="small muted">（{citation.source_id}）</span>
+                </blockquote>
+              ))}
+            </details>
+          ))}
+        </div>
+      )}
       {"kind" in submission.answers &&
         submission.answers.kind === "reflection" && (
           <div
@@ -110,7 +162,10 @@ export function SubmissionFeedback({
               补充要求：{submission.answers.challenge.instruction || "未填写"}
             </p>
             <p className="small muted">
-              这份答案在提交时冻结，后续草稿修改不会改变本次记录。通过代表基础操作及结构化核对，不表示自由解释质量已自动验证。
+              这份答案在提交时冻结，后续草稿修改不会改变本次记录。
+              {submission.model_assessment
+                ? "本版本同时检查客观证据与模型内容评分；请结合引用核对模型反馈。"
+                : "通过代表基础操作及结构化核对，不表示自由解释质量已自动验证。"}
             </p>
           </div>
         )}
@@ -185,6 +240,7 @@ export function SubmissionPanel({
   onSubmit,
   onView,
   onRefresh,
+  assessmentProfile,
 }: {
   attempt: Attempt;
   lesson: Lesson;
@@ -192,9 +248,13 @@ export function SubmissionPanel({
   runs: Run[];
   events: Record<string, Event[]>;
   disabled: boolean;
-  onSubmit: (answers: Schema["Answers"]) => Promise<void>;
+  onSubmit: (
+    answers: Schema["Answers"],
+    options?: AssessmentSubmission,
+  ) => Promise<void>;
   onView: (id: string) => Promise<void>;
   onRefresh?: () => Promise<void>;
+  assessmentProfile?: Profile;
 }) {
   const action = useAction();
   const form = lesson.answer_form;
@@ -204,6 +264,89 @@ export function SubmissionPanel({
   >({});
   const [session, setSession] = useState("");
   const [room, setRoom] = useState("");
+  const [learningReflection, setLearningReflection] = useState("");
+  const [consentIdentity, setConsentIdentity] = useState<string | null>(null);
+  const prefix = useId();
+  const fieldId = (key: string) => `${prefix}-${key}`;
+  const [showValidation, setShowValidation] = useState(false);
+  const [focusRequest, setFocusRequest] = useState<{ id: string } | null>(null);
+  const modelAssessment = !!lesson.assessment_policy;
+  const needsConsent = modelAssessment && attempt.mode === "live";
+  const identity = assessmentProfile
+    ? `${assessmentProfile.id}/${assessmentProfile.revision}`
+    : null;
+  const modelReady =
+    !!assessmentProfile &&
+    assessmentProfile.credential_status === "configured" &&
+    assessmentProfile.connection_check.status === "passed";
+  const missing: ValidationIssue[] = [];
+  function check(key: string, valid: unknown, message: string) {
+    if (!valid) missing.push({ id: fieldId(key), message });
+  }
+  if (form.kind === "choice")
+    check("choice", option, "请选择本关理解题的答案。");
+  if (form.kind === "facts")
+    for (const task of form.tasks) {
+      check(
+        `date-${task.task_id}`,
+        facts[task.task_id]?.due_date,
+        `请填写“${task.label}”的截止日期。`,
+      );
+      check(
+        `source-${task.task_id}`,
+        facts[task.task_id]?.source_id,
+        `请选择“${task.label}”的依据来源。`,
+      );
+    }
+  if (form.kind === "course") {
+    check("session", session, "请根据实际查询结果填写课程日期。");
+    check("room", room.trim(), "请根据实际查询结果填写教室。");
+  }
+  if (needsConsent) {
+    if (form.kind !== "reflection")
+      check(
+        "reflection",
+        learningReflection.trim(),
+        "请用自己的话填写核对说明。",
+      );
+    check(
+      "model",
+      modelReady,
+      "请先选择已配置 Key、且通过连接检查的验收模型。",
+    );
+    if (modelReady)
+      check(
+        "consent",
+        identity !== null && consentIdentity === identity,
+        "请确认本次模型验收的内容发送范围和费用，并勾选同意。",
+      );
+  }
+  const issues = showValidation ? missing : [];
+  const field = (key: string) => validationAttributes(fieldId(key), issues);
+  useLayoutEffect(() => {
+    if (focusRequest) focusValidationField(focusRequest.id);
+  }, [focusRequest]);
+  function validateSubmission() {
+    setShowValidation(true);
+    if (!missing.length) return true;
+    setFocusRequest({ id: missing[0].id });
+    return false;
+  }
+  async function send(answers: Schema["Answers"]) {
+    if (!validateSubmission()) return;
+    setShowValidation(false);
+    const options: AssessmentSubmission = {};
+    if (needsConsent && assessmentProfile)
+      options.assessment = {
+        profile_id: assessmentProfile.id,
+        expected_profile_revision: assessmentProfile.revision,
+        consent: true,
+      };
+    if (needsConsent && form.kind !== "reflection")
+      options.learning_reflection = learningReflection;
+    setConsentIdentity(null);
+    await action.act(() => onSubmit(answers, options));
+  }
   const showReview = form.kind === "reflection";
   const titles = {
     reflection: "对照两轮尝试，完成复盘验收",
@@ -236,6 +379,74 @@ export function SubmissionPanel({
           {attempt.mode === "demo" ? "演示评测" : "正式验收"}
         </span>
       </div>
+      <ValidationSummary issues={issues} />
+      {modelAssessment && (
+        <div className="notice model-assessment-consent">
+          <strong>
+            {attempt.mode === "demo"
+              ? "演示只检查操作证据，不计正式通过"
+              : "正式通关需通过客观证据检查和模型内容验收"}
+          </strong>
+          <details>
+            <summary>查看本版本模型验收标准</summary>
+            <ul>
+              {lesson.assessment_policy!.criteria.map((criterion) => (
+                <li key={criterion.id}>
+                  <strong>{criterion.title}</strong>：{criterion.description}
+                </li>
+              ))}
+            </ul>
+          </details>
+          {needsConsent && (
+            <>
+              <p className="small">
+                提交会先核对实际操作证据；全部合格后额外调用一次模型，将课程资料、任务、回答、工具与产物、你的作答及解释发送到所选服务商。每次重新提交都可能产生费用；调用失败不放行、不自动重试。
+              </p>
+              <p className="small" tabIndex={-1} {...field("model")}>
+                验收模型：
+                {assessmentProfile
+                  ? `${assessmentProfile.name} · ${assessmentProfile.model} · ${assessmentProfile.base_url}`
+                  : "请先选择已通过连接检查的模型"}
+                {!modelReady && (
+                  <a
+                    href={`/settings?returnTo=${encodeURIComponent(`/practice/${attempt.id}`)}`}
+                  >
+                    前往模型设置
+                  </a>
+                )}
+              </p>
+              {form.kind !== "reflection" && (
+                <label>
+                  我的核对说明
+                  <textarea
+                    {...field("reflection")}
+                    maxLength={6000}
+                    rows={3}
+                    disabled={disabled || action.busy}
+                    value={learningReflection}
+                    onChange={(event) =>
+                      setLearningReflection(event.target.value)
+                    }
+                    placeholder="你核对了哪些具体依据？回答或产物与原文、工具结果怎样对应？有哪些问题，如何处理？"
+                  />
+                </label>
+              )}
+              <label className="check-label">
+                <input
+                  {...field("consent")}
+                  type="checkbox"
+                  checked={identity !== null && consentIdentity === identity}
+                  disabled={!modelReady || disabled || action.busy}
+                  onChange={(event) =>
+                    setConsentIdentity(event.target.checked ? identity : null)
+                  }
+                />
+                我同意发送上述内容，并接受本次模型验收可能产生的费用。
+              </label>
+            </>
+          )}
+        </div>
+      )}
       {form.kind === "reflection" ? (
         <ConversationReview
           attempt={attempt}
@@ -243,18 +454,26 @@ export function SubmissionPanel({
           events={events}
           disabled={disabled || action.busy}
           form={form}
+          modelAssessed={modelAssessment}
+          onValidateSubmission={validateSubmission}
           onRefresh={onRefresh}
           onSubmit={async (answers) => {
-            await action.act(() => onSubmit(answers));
+            await send(answers);
           }}
         />
       ) : (
         <p className="small muted">{guidance[form.kind]}</p>
       )}
       <ErrorBox error={action.error} />
+      {!!action.error && needsConsent && (
+        <p className="small muted">
+          若请求结果不明确，请先查看历史提交，避免重复调用。确认需要重新验收后，可刷新、重新勾选同意并主动提交；新请求可能再次计费。
+        </p>
+      )}
       {!showReview && (
         <>
           <form
+            noValidate
             onSubmit={(e) => {
               e.preventDefault();
               let answers: Schema["Answers"] = {};
@@ -274,7 +493,7 @@ export function SubmissionPanel({
                   session_date: session,
                   room,
                 };
-              void action.act(() => onSubmit(answers));
+              void send(answers);
             }}
           >
             <fieldset disabled={disabled || action.busy}>
@@ -284,19 +503,21 @@ export function SubmissionPanel({
                   <p>
                     <strong>{form.prompt}</strong>
                   </p>
-                  {form.options.map((o) => (
-                    <label className="option" key={o.id}>
-                      <input
-                        required
-                        type="radio"
-                        name="understanding"
-                        value={o.id}
-                        checked={option === o.id}
-                        onChange={() => setOption(o.id)}
-                      />
-                      {o.label}
-                    </label>
-                  ))}
+                  <div tabIndex={-1} {...field("choice")}>
+                    {form.options.map((o) => (
+                      <label className="option" key={o.id}>
+                        <input
+                          required
+                          type="radio"
+                          name="understanding"
+                          value={o.id}
+                          checked={option === o.id}
+                          onChange={() => setOption(o.id)}
+                        />
+                        {o.label}
+                      </label>
+                    ))}
+                  </div>
                 </>
               )}
               {form.kind === "facts" &&
@@ -306,6 +527,7 @@ export function SubmissionPanel({
                     <label>
                       截止日期
                       <input
+                        {...field(`date-${t.task_id}`)}
                         type="date"
                         required
                         value={facts[t.task_id]?.due_date ?? ""}
@@ -323,6 +545,7 @@ export function SubmissionPanel({
                     <label>
                       依据来源
                       <select
+                        {...field(`source-${t.task_id}`)}
                         required
                         value={facts[t.task_id]?.source_id ?? ""}
                         onChange={(e) =>
@@ -352,6 +575,7 @@ export function SubmissionPanel({
                     <label>
                       课程日期
                       <input
+                        {...field("session")}
                         required
                         type="date"
                         value={session}
@@ -361,6 +585,7 @@ export function SubmissionPanel({
                     <label>
                       教室
                       <input
+                        {...field("room")}
                         required
                         maxLength={120}
                         value={room}

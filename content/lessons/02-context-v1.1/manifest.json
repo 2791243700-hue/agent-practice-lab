@@ -1,0 +1,104 @@
+{
+  "schema_version": "0.1.0",
+  "id": "02-context",
+  "version": "1.1.0",
+  "order": 2,
+  "title": "给 Agent 足够的资料",
+  "description": "给 Agent 足够的资料的入门练习。",
+  "objectives": [
+    "给 Agent 足够的资料，并能核对操作过程和结果。"
+  ],
+  "intro_file": "intro.md",
+  "task_file": "task.md",
+  "completion_criteria": [
+    "成功读取指定资料并核对事实和来源。",
+    "客观证据合格，并通过模型对任务结果、依据与理解的逐项验收；模型不可用时验收未完成。"
+  ],
+  "initial_files": [
+    {
+      "id": "notice-week",
+      "title": "课程通知",
+      "path": "materials/notice.md",
+      "media_type": "text/markdown"
+    }
+  ],
+  "allowed_tools": [
+    "list_materials",
+    "read_material"
+  ],
+  "settings_policy": {
+    "editable_fields": [
+      "system_instruction",
+      "temperature"
+    ],
+    "defaults": {
+      "system_instruction": "根据课程资料完成任务，不猜测缺失信息，保存前请求批准。",
+      "temperature": 0.3
+    }
+  },
+  "answer_form": {
+    "kind": "facts",
+    "tasks": [
+      {
+        "task_id": "submit-summary",
+        "label": "提交总结"
+      },
+      {
+        "task_id": "reserve-lab",
+        "label": "预约实验室"
+      }
+    ],
+    "sources": [
+      {
+        "source_id": "notice-week",
+        "label": "课程通知"
+      }
+    ]
+  },
+  "limits": {
+    "max_model_calls": 10,
+    "execution_timeout_seconds": 120,
+    "approval_timeout_seconds": 600
+  },
+  "rules": [
+    {
+      "id": "read-and-facts",
+      "required": true,
+      "message": "成功读取指定资料并核对事实和来源。",
+      "evaluator": "read_and_check_facts",
+      "params": {
+        "required_source_ids": [
+          "notice-week"
+        ],
+        "expected_facts": [
+          {
+            "task_id": "submit-summary",
+            "due_date": "2026-11-04",
+            "source_id": "notice-week"
+          },
+          {
+            "task_id": "reserve-lab",
+            "due_date": "2026-11-06",
+            "source_id": "notice-week"
+          }
+        ]
+      }
+    }
+  ],
+  "assessment_policy": {
+    "kind": "model",
+    "rubric_version": "1.0.0",
+    "criteria": [
+      {
+        "id": "grounded-result",
+        "title": "回答有资料依据",
+        "description": "Agent 最终回答正确处理本关两项任务的日期和来源，不把资料未说明的提交方式或预约规则当事实。仅复述执行日志不足。"
+      },
+      {
+        "id": "source-understanding",
+        "title": "学生会核对来源",
+        "description": "学生的核对说明具体指出如何把回答与原文对应，识别已知与缺失信息。乱填、无关描述或仅说都对了不合格。"
+      }
+    ]
+  }
+}

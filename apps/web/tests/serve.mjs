@@ -68,6 +68,52 @@ const provider = createServer(async (request, response) => {
   const chunks = [];
   for await (const chunk of request) chunks.push(chunk);
   const body = JSON.parse(Buffer.concat(chunks).toString());
+  if (
+    body.messages?.some(
+      (entry) =>
+        entry.role === "system" && entry.content.includes("正式验收员"),
+    )
+  ) {
+    const context = JSON.parse(
+      body.messages.find((entry) => entry.role === "user").content,
+    );
+    const answers = JSON.parse(context.sources["student:answers"]);
+    if (answers.explanation?.includes("模拟验收超时")) {
+      response.writeHead(503, { "Content-Type": "application/json" });
+      response.end('{"error":{"message":"scripted assessment failure"}}');
+      return;
+    }
+    const passed = !answers.explanation?.includes("无关乱填");
+    const content = {
+      checks: context.rubric.criteria.map((criterion) => ({
+        criterion_id: criterion.id,
+        passed,
+        reason: passed
+          ? "解释与原文有具体对应。"
+          : "解释没有说明引用与要求的关系。",
+        suggestion: passed ? "" : "请结合引用说明新增要求的具体效果。",
+        citations: [
+          {
+            source_id: "student:answers",
+            quote: context.sources["student:answers"].slice(0, 100),
+          },
+        ],
+      })),
+    };
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(
+      JSON.stringify({
+        choices: [
+          {
+            finish_reason: "stop",
+            message: { role: "assistant", content: JSON.stringify(content) },
+          },
+        ],
+        usage: { prompt_tokens: 50, completion_tokens: 80 },
+      }),
+    );
+    return;
+  }
   const probe = body.tools?.some((t) => t.function.name === "connection_probe");
   const message = probe
     ? {

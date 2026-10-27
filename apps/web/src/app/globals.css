@@ -807,6 +807,30 @@ main {
   margin-left: 8px;
   text-decoration: underline;
 }
+.model-setup-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.model-setup-tip > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--green);
+}
+.model-setup-tip h2 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.model-setup-tip p {
+  margin: 0 0 8px;
+  line-height: 1.8;
+}
+.model-setup-tip a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 0;
+}
 .notice p:last-child {
   margin-bottom: 0;
 }
@@ -1771,6 +1795,34 @@ input[type="range"] {
   background: #fff;
   font-size: 12px;
 }
+.composer-shortcut-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 9px 0 0;
+  color: var(--green-dark);
+  font-size: 11px;
+  line-height: 1.8;
+}
+.composer-shortcut-hint > svg {
+  flex-shrink: 0;
+  color: #a17524;
+}
+.composer-shortcut-hint kbd {
+  border: 1px solid #d5dfcf;
+  border-radius: 4px;
+  padding: 1px 4px;
+  background: #edf3e8;
+  font: inherit;
+  font-weight: 600;
+}
+.send-shortcut {
+  border-left: 1px solid #ffffff40;
+  padding-left: 7px;
+  font: inherit;
+  font-size: 10px;
+  opacity: 0.85;
+}
 .composer-bottom {
   display: flex;
   justify-content: space-between;
@@ -1877,6 +1929,37 @@ input[type="range"] {
   font-size: 16px;
   margin-bottom: 16px;
   scroll-margin-top: 20px;
+}
+.validation-summary {
+  margin: 14px 0 18px;
+}
+.validation-summary ul {
+  padding-left: 20px;
+  margin: 8px 0 0;
+}
+.validation-summary li + li {
+  margin-top: 6px;
+}
+.validation-summary .text-button {
+  color: #8b481e;
+  font-size: 12px;
+  line-height: 1.8;
+  text-align: left;
+}
+[aria-invalid="true"] {
+  border-color: #bd6639;
+  outline: 2px solid #bd66393d;
+  outline-offset: 2px;
+  background-color: #fff8ef;
+  scroll-margin-block: 80px;
+}
+p[aria-invalid="true"],
+div[aria-invalid="true"] {
+  padding: 10px;
+  border-radius: 7px;
+}
+label:has(> [aria-invalid="true"]) {
+  color: #8b481e;
 }
 .review-fields,
 .review-judgment {
@@ -2098,9 +2181,6 @@ input[type="range"] {
 .practice-utilities p {
   font-size: 10px;
   margin: 5px 0;
-}
-.intro-review {
-  max-width: 900px;
 }
 .intro-review .markdown {
   max-width: 730px;
@@ -2650,31 +2730,65 @@ input[type="range"] {
 /* Optional learning advice, scoped to a completed conversation turn. */
 .run-tips {
   margin: 18px 0;
-  border: 1px solid var(--line);
+  border: 1px solid #e0d9bd;
+  border-left: 3px solid #bb913e;
   border-radius: 12px;
-  background: #f6f8f2;
+  background: linear-gradient(110deg, #fbf7e9, #f5f8ee);
   overflow: hidden;
 }
 .run-tips-toggle {
-  display: flex;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
   width: 100%;
-  padding: 12px 15px;
+  padding: 14px;
   border: 0;
   color: var(--green-dark);
   background: transparent;
   text-align: left;
   font-weight: 600;
 }
-.run-tips-toggle > span {
-  flex: 1;
+.run-tips-toggle:hover {
+  background: #f3ecd754;
 }
-.run-tips-toggle[aria-expanded="true"] > svg:last-child {
+.run-tips-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f2e6c5;
+  color: #8a621f;
+}
+.run-tips-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.run-tips-copy strong {
+  font-size: 13px;
+}
+.run-tips-copy > span {
+  color: #6e7564;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.run-tips-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.run-tips-toggle[aria-expanded="true"] .run-tips-action > svg {
   transform: rotate(180deg);
 }
 .run-tips-content {
-  padding: 0 16px 16px;
+  border-top: 1px solid #e6dfc9;
+  background: #fffef9;
+  padding: 14px 16px 16px;
   overflow-wrap: anywhere;
 }
 .run-tips-content > p:first-child {
@@ -2704,6 +2818,15 @@ input[type="range"] {
   margin-top: 5px;
   flex-shrink: 0;
   accent-color: var(--green);
+}
+@media (max-width: 650px) {
+  .run-tips-toggle {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+  .run-tips-action {
+    grid-column: 2;
+    justify-self: start;
+  }
 }
 
 /* Submission results open as a compact, optional-detail modal. */

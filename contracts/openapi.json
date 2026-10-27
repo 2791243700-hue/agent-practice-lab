@@ -1678,7 +1678,8 @@
               }
             }
           }
-        }
+        },
+        "description": "按实验固定版本验收。新版本正式实训须显式 assessment 同意及已检查的模型；先校验客观证据，全部合格后额外调用一次模型。模型拒绝或不可用均不通过；不可用返回冻结 Submission，model_assessment.status=unavailable，可主动重新提交。相同幂等键不重复计费。旧课程和演示不调用验收模型。"
       }
     },
     "/attempts/{attempt_id}/submissions": {
@@ -3122,6 +3123,9 @@
               "execution_timeout_seconds",
               "approval_timeout_seconds"
             ]
+          },
+          "assessment_policy": {
+            "$ref": "#/components/schemas/AssessmentPolicy"
           }
         },
         "required": [
@@ -4256,6 +4260,15 @@
           },
           "answers": {
             "$ref": "#/components/schemas/Answers"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/AssessmentConsent"
+          },
+          "learning_reflection": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 6000,
+            "pattern": "\\S"
           }
         },
         "required": [
@@ -4541,6 +4554,15 @@
           },
           "answers": {
             "$ref": "#/components/schemas/Answers"
+          },
+          "model_assessment": {
+            "$ref": "#/components/schemas/ModelAssessment"
+          },
+          "learning_reflection": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 6000,
+            "pattern": "\\S"
           }
         },
         "required": [
@@ -6372,6 +6394,232 @@
           "expected_revision",
           "expected_attempt_revision",
           "draft"
+        ]
+      },
+      "AssessmentCriterion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,39}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "pattern": "\\S"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1500,
+            "pattern": "\\S"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description"
+        ]
+      },
+      "AssessmentPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "model",
+            "type": "string"
+          },
+          "rubric_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "\\S"
+          },
+          "criteria": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentCriterion"
+            },
+            "minItems": 1,
+            "maxItems": 6
+          }
+        },
+        "required": [
+          "kind",
+          "rubric_version",
+          "criteria"
+        ]
+      },
+      "AssessmentConsent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "expected_profile_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "consent": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "profile_id",
+          "expected_profile_revision",
+          "consent"
+        ]
+      },
+      "AssessmentCitation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "\\S"
+          },
+          "quote": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S"
+          }
+        },
+        "required": [
+          "source_id",
+          "quote"
+        ]
+      },
+      "AssessmentCheck": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "\\S"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          },
+          "suggestion": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentCitation"
+            },
+            "minItems": 0,
+            "maxItems": 6
+          }
+        },
+        "required": [
+          "criterion_id",
+          "passed",
+          "reason",
+          "suggestion",
+          "citations"
+        ]
+      },
+      "AssessmentModelResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentCheck"
+            },
+            "minItems": 1,
+            "maxItems": 6
+          }
+        },
+        "required": [
+          "checks"
+        ]
+      },
+      "ModelAssessment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "unavailable",
+              "skipped"
+            ]
+          },
+          "rubric_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "\\S"
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "assessed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentCheck"
+            },
+            "minItems": 0,
+            "maxItems": 6
+          }
+        },
+        "required": [
+          "status",
+          "rubric_version",
+          "model",
+          "assessed_at",
+          "message",
+          "error_code",
+          "usage",
+          "checks"
         ]
       }
     }

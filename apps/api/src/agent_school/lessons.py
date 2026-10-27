@@ -61,6 +61,14 @@ class LessonCatalog:
         self.store.put("lesson", key, value, owner="system")
 
     def validate_grading(self, manifest):
+        policy = manifest.get("assessment_policy")
+        if policy:
+            from agent_school.model_assessment import ASSESSOR_PROMPTS
+
+            if policy["rubric_version"] not in ASSESSOR_PROMPTS:
+                raise ValueError("Unsupported assessment prompt version")
+        if policy and len({c["id"] for c in policy["criteria"]}) != len(policy["criteria"]):
+            raise ValueError("Duplicate model assessment criterion")
         form = manifest["answer_form"]
         material_ids = {material["id"] for material in manifest["initial_files"]}
         if form["kind"] == "facts" and any(
@@ -148,6 +156,11 @@ class LessonCatalog:
                 "limits",
             )
         } | {
+            **(
+                {"assessment_policy": copy.deepcopy(m["assessment_policy"])}
+                if "assessment_policy" in m
+                else {}
+            ),
             "completed": completed,
             "intro_markdown": value["intro"],
             "task_markdown": value["task"],
