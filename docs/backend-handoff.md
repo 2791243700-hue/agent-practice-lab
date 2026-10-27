@@ -1,10 +1,12 @@
 # Agent Practice Lab：前后端开发交接
 
-更新：2026-10-26。现行功能包括统一实训、第一关正式复盘、接口映射与通知上下文修复；当前契约为 41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
+> 2026-10-27 本版本接入正式模型验收：第一关 1.2.0、第二至四关 1.1.0，41 操作 / 109 schema。新增提交字段、费用确认、判定和失败处理以[模型验收说明](model-assessment-2026-10-27.md)为准；旧版本行为与历史验证按各自日期保留。
+
+更新：2026-10-27。现行功能包括正式模型验收、统一实训、第一关复盘与缺失项定位；当前契约为 41 个 HTTP 操作、109 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
 
 ## 当前代码与接收方式
 
-从 main 接手。PR #10 的前端预览已经由 PR #9 完成正式接入，合并提交 af36497；不再需要合并旧功能分支或另做一套复盘接口。第一关 1.1.0 使用 ReflectionForm/ReflectionAnswers，旧 1.0.0 保留 choice；第二至四关验收不变。
+从 main 接手。PR #10 的前端预览已经由 PR #9 完成正式接入，合并提交 af36497；不再需要合并旧功能分支或另做一套复盘接口。第一关 1.2.0 使用 ReflectionForm/ReflectionAnswers 并加入模型内容验收，旧 1.1.0 保留结构化规则、1.0.0 保留 choice；第二至四关新 1.1.0 同时检查客观证据和模型评分。
 
 主要接入入口：[完整契约](../contracts/README.md)、[复盘字段与联调](reflection-assessment-backend-handoff.md)、[OpenAPI](../contracts/openapi.json)。接口版本保持 v0.1.0，课程版本单独归档。历史预览记录见[预览交付](reflection-assessment-delivery.md)。
 
@@ -80,3 +82,7 @@ IdentityProvider/LocalIdentityProvider 目前只保留声明，服务、存储�
 | content/lessons/、scripts/ | 版本化课程和本地启停 |
 
 跨端更改先同步契约，课件变更发布新版本。问题交接附提交/课程版本、mode、资源 ID、事件序号、错误码和最短复现，先检查日志与截图无凭据。
+
+## 本版后端维护清单
+
+model_assessment.py 独立维护按 rubric_version 固定的评分提示词、脱敏证据和严格结果校验；submissions.py 两阶段准备与原子冻结；main.py 保留付费 pending 幂等记录；lessons.py 公开版本评分标准并拒绝未知版本；service.py 协调模型槽与凭据互斥。接口修改同步 OpenAPI、课件 Schema、示例、生成类型与回归。后续重点为真实模型教学质量、超长证据使用体验及第四关指导；不再需要另建一套模型验收接口。

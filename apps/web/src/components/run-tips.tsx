@@ -85,6 +85,7 @@ export function RunTips({
       <button
         type="button"
         className="run-tips-toggle"
+        aria-label="Tips · 本轮学习建议"
         aria-expanded={open}
         aria-controls={`tips-${runId}`}
         onClick={() => {
@@ -93,9 +94,23 @@ export function RunTips({
           if (next && !loaded && !busy) void load();
         }}
       >
-        <Lightbulb size={17} aria-hidden="true" />
-        <span>Tips · 本轮学习建议</span>
-        <ChevronDown size={16} aria-hidden="true" />
+        <span className="run-tips-icon" aria-hidden="true">
+          <Lightbulb size={20} />
+        </span>
+        <span className="run-tips-copy">
+          <strong>Tips · 本轮学习建议</strong>
+          <span>
+            {busy === "generate"
+              ? "正在生成，稍后即可查看"
+              : tips
+                ? "建议已保存，可随时展开回看"
+                : "不知道下一步怎么改？看看本轮建议"}
+          </span>
+        </span>
+        <span className="run-tips-action">
+          {open ? "收起建议" : "展开建议"}
+          <ChevronDown size={15} aria-hidden="true" />
+        </span>
       </button>
       {open && (
         <div id={`tips-${runId}`} className="run-tips-content">

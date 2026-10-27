@@ -77,7 +77,7 @@ class School:
         return value
 
     def idle(self, attempt):
-        if attempt["active_run_id"]:
+        if attempt["active_run_id"] or self.slot == "assessment:" + attempt["id"]:
             raise AppError("ATTEMPT_BUSY", "请等待当前运行结束或先停止。", 409, True)
 
     def page(self, values, params, scope="attempts"):
@@ -137,6 +137,8 @@ class School:
 
     def update_attempt(self, key, body):
         value = self.attempt(key, True)
+        if self.slot == "assessment:" + key:
+            raise AppError("ATTEMPT_BUSY", "正在验收当前证据，请等待验收完成后修改设置。", 409, True)
         revision(value, body["expected_revision"])
         lesson = self.catalog.get(value["lesson_id"], value["lesson_version"])
         policy = lesson["manifest"]["settings_policy"]
@@ -168,6 +170,8 @@ class School:
         return value
 
     async def prepare(self, operation, path, params, body):
+        if operation == "createSubmission":
+            return await self.submissions.prepare(body, params)
         if operation == "generateRunTips":
             return await self.tips.generate(path["run_id"], body)
         if operation == "connectProfile":
@@ -284,7 +288,7 @@ class School:
         if operation == "decideApproval":
             return self.approvals.decide(path["approval_id"], body["decision"])
         if operation == "createSubmission":
-            return self.submissions.submit(body)
+            return self.submissions.submit(body, prepared)
         if operation == "getSubmission":
             return self.store.get("submission", path["submission_id"])
         if operation == "listSubmissions":

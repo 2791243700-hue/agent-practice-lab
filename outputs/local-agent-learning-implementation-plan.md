@@ -1,5 +1,7 @@
 # 本地 Agent 教学平台 Implementation Plan
 
+2026-10-27 实现对照：第一关 1.2.0、其余三关 1.1.0 已接入客观证据与模型内容联合验收，契约 41 操作 / 109 schema / 11 事件。现行范围见[版本索引](../docs/project-status.md)，评分与接口见[验收说明](../docs/model-assessment-2026-10-27.md)。以下为原设计或原始分工归档，日期、旧版规则及待办须结合版本阅读，不覆盖已发布课件。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 按用户最新要求，改为两名开发者在同一个 GitHub 仓库协作，具体归属见 [双人协作方案](two-person-github-collaboration-plan.md)。两名开发者不等于两个自动代理。
 
 **Goal:** 构建浏览器内完成导读、配置、Agent 实训、授权、提交和反馈的本地单用户教学应用。

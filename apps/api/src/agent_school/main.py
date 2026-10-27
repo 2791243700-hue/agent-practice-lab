@@ -145,14 +145,19 @@ def create_app(config: Config | None = None):
                                     False,
                                 )
                             return JSONResponse(old["body"], status_code=old["status"])
-                        if operation_id == "checkConnection":
+                        paid_submission = (
+                            operation_id == "createSubmission" and body.get("assessment") is not None
+                        )
+                        if operation_id == "checkConnection" or paid_submission:
                             school.store.put("idempotency", key, {"digest": digest, "pending": True})
                         try:
                             prepared = await school.prepare(
                                 operation_id, dict(request.path_params), params, body
                             )
                         except BaseException:
-                            if operation_id == "checkConnection":
+                            if operation_id == "checkConnection" or (
+                                paid_submission and not params.get("_assessment_started")
+                            ):
                                 school.store.remove("idempotency", key)
                             raise
                         with school.store.atomic():

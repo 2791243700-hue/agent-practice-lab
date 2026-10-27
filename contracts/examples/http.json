@@ -654,6 +654,85 @@
         "draft": null,
         "updated_at": null
       }
+    },
+    {
+      "name": "submit-model-assessment",
+      "schema": "SubmissionCreate",
+      "value": {
+        "attempt_id": "attempt-model-example",
+        "expected_attempt_revision": 1,
+        "answers": {
+          "kind": "reflection",
+          "baseline_run_id": "run-before",
+          "revised_run_id": "run-after",
+          "change": {
+            "category": "constraint",
+            "quote": "未知事项先确认"
+          },
+          "evidence": {
+            "before": {
+              "message_id": "message-before",
+              "event_seq": 2,
+              "quote": "待办",
+              "start_offset": 0
+            },
+            "after": {
+              "message_id": "message-after",
+              "event_seq": 2,
+              "quote": "请确认",
+              "start_offset": 0
+            }
+          },
+          "judgment": "partial",
+          "explanation": "补充了确认要求，还需核对日期来源。",
+          "next_instruction": "为日期标注来源",
+          "challenge": {
+            "challenge_id": "activity-notice",
+            "judgments": [
+              {
+                "item_id": "start",
+                "decision": "known"
+              },
+              {
+                "item_id": "place",
+                "decision": "known"
+              },
+              {
+                "item_id": "end",
+                "decision": "confirm"
+              },
+              {
+                "item_id": "signup",
+                "decision": "confirm"
+              }
+            ],
+            "instruction": "仅依据通知整理，未说明的事项先确认。"
+          }
+        },
+        "assessment": {
+          "profile_id": "profile-model-example",
+          "expected_profile_revision": 2,
+          "consent": true
+        }
+      }
+    },
+    {
+      "name": "model-assessment-unavailable",
+      "schema": "ModelAssessment",
+      "value": {
+        "status": "unavailable",
+        "rubric_version": "1.0.0",
+        "model": "example-model",
+        "assessed_at": "2026-10-27T00:00:00Z",
+        "message": "验收未完成，不能通关；请主动重新提交。",
+        "error_code": "MODEL_TIMEOUT",
+        "usage": {
+          "model_calls": 1,
+          "input_tokens": null,
+          "output_tokens": null
+        },
+        "checks": []
+      }
     }
   ]
 }

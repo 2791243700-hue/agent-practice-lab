@@ -160,6 +160,9 @@ test("第一关：模型设置、认证失败、两次运行、刷新续接、�
   await expect(
     page.getByRole("combobox", { name: "结束时间", exact: true }),
   ).toHaveValue("known");
+  await page
+    .getByRole("checkbox", { name: /本次模型验收可能产生的费用/ })
+    .check();
   await page.getByRole("button", { name: "提交验收", exact: true }).click();
   await expect(page.getByTestId("submission-dialog")).toContainText(
     "本次尚未通过",
@@ -168,6 +171,9 @@ test("第一关：模型设置、认证失败、两次运行、刷新续接、�
   await page
     .getByRole("combobox", { name: "结束时间", exact: true })
     .selectOption("confirm");
+  await page
+    .getByRole("checkbox", { name: /本次模型验收可能产生的费用/ })
+    .check();
   await page.getByRole("button", { name: "提交验收", exact: true }).click();
   await expect(page.getByTestId("submission-dialog")).toContainText(
     "本关已通关",

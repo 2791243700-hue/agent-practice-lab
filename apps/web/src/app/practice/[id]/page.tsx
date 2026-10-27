@@ -43,7 +43,10 @@ import {
   formatLearningDate,
 } from "@/components/learning-status";
 import { PracticePanel } from "@/components/practice-panel";
-import { SubmissionPanel } from "@/components/feedback";
+import {
+  SubmissionPanel,
+  type AssessmentSubmission,
+} from "@/components/feedback";
 import { SubmissionDialog } from "@/components/submission-dialog";
 
 const practiceExamples: Record<string, string> = {
@@ -114,7 +117,18 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profileId, setProfileId] = useState("");
   const [input, setInput] = useState("");
+  const [showShortcutHint, setShowShortcutHint] = useState(false);
+  useEffect(() => {
+    try {
+      setShowShortcutHint(
+        localStorage.getItem("agent-practice-lab:task-shortcut-used") !== "1",
+      );
+    } catch {
+      setShowShortcutHint(true);
+    }
+  }, []);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [grading, setGrading] = useState(false);
   const historyRef = useRef<HTMLDivElement>(null);
   const historyEndRef = useRef<HTMLDivElement>(null);
   const followingOutputRef = useRef(false);
@@ -304,22 +318,41 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
     lesson.id === "01-task" && lesson.allowed_tools.length === 0;
   const missingMaterials = readsMaterials && selectedFiles.length === 0;
   const preparationPending = dirty || missingMaterials;
-  async function submit(answers: Schema["Answers"]) {
+  const canSend =
+    !historical &&
+    !preparationPending &&
+    ready &&
+    !active &&
+    !syncing &&
+    !grading &&
+    !action.busy &&
+    pendingMessage === null &&
+    !!input.trim();
+  async function submit(
+    answers: Schema["Answers"],
+    options: AssessmentSubmission = {},
+  ) {
     feedbackTriggerRef.current =
       document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
-    const result = await api<Submission>("/submissions", {
-      method: "POST",
-      idempotent: true,
-      body: {
-        attempt_id: id,
-        expected_attempt_revision: attempt!.revision,
-        answers,
-      } satisfies Schema["SubmissionCreate"],
-    });
-    setFeedback(result);
-    await refresh();
+    setGrading(true);
+    try {
+      const result = await api<Submission>("/submissions", {
+        method: "POST",
+        idempotent: true,
+        body: {
+          attempt_id: id,
+          expected_attempt_revision: attempt!.revision,
+          answers,
+          ...options,
+        } satisfies Schema["SubmissionCreate"],
+      });
+      setFeedback(result);
+      await refresh();
+    } finally {
+      setGrading(false);
+    }
   }
   const previewPanel = preview && (
     <div
@@ -362,11 +395,11 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
   );
   return (
     <>
-      {lesson.id === "01-task" && lesson.version === "1.0.0" && (
+      {!lesson.assessment_policy && (
         <div className="notice warning">
-          这是旧版 1.0.0 实训，可继续原版单选验收。
-          <Link href="/lessons/01-task">
-            阅读新版 1.1.0 导读并开始新版实训 →
+          这是旧版 {lesson.version} 实训，沿用原规则，不含正式模型内容验收。
+          <Link href={`/lessons/${pathId(lesson.id)}`}>
+            阅读最新导读并新建包含模型验收的实训 →
           </Link>
         </div>
       )}
@@ -508,11 +541,6 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             </Link>
           )}
         </div>
-      )}
-      {intro && (
-        <article className="panel intro-review">
-          <Markdown text={lesson.intro_markdown} />
-        </article>
       )}
       <div
         className={`practice-layout${sidebarOpen ? "" : " sidebar-collapsed"}`}
@@ -746,6 +774,11 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
           </div>
         </aside>
         <div className="practice-main">
+          {intro && (
+            <article className="panel intro-review">
+              <Markdown text={lesson.intro_markdown} />
+            </article>
+          )}
           <section className="panel conversation">
             <div className="panel-heading">
               <div>
@@ -779,6 +812,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                   tipsProfile={selectedProfile}
                   tipsDisabled={
                     !!active ||
+                    grading ||
                     syncing ||
                     action.busy ||
                     pendingMessage !== null
@@ -811,7 +845,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                           aria-label="本轮模型"
                           value={profileId}
                           onChange={(e) => setProfileId(e.target.value)}
-                          disabled={!!active || action.busy}
+                          disabled={!!active || action.busy || grading}
                         >
                           <option value="">选择已检查的模型</option>
                           {profiles.map((p) => (
@@ -850,16 +884,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    if (
-                      preparationPending ||
-                      !ready ||
-                      active ||
-                      syncing ||
-                      action.busy ||
-                      pendingMessage !== null ||
-                      !input.trim()
-                    )
-                      return;
+                    if (!canSend) return;
                     void action.act(async () => {
                       const text = input.trim();
                       setPendingMessage(text);
@@ -900,9 +925,47 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                     rows={4}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    aria-describedby={
+                      showShortcutHint ? "task-shortcut-hint" : undefined
+                    }
+                    onKeyDown={(event) => {
+                      if (
+                        event.key !== "Enter" ||
+                        !event.ctrlKey ||
+                        event.altKey ||
+                        event.shiftKey ||
+                        event.metaKey ||
+                        event.nativeEvent.isComposing
+                      )
+                        return;
+                      event.preventDefault();
+                      if (event.repeat || !canSend) return;
+                      event.currentTarget.form?.requestSubmit();
+                      setShowShortcutHint(false);
+                      try {
+                        localStorage.setItem(
+                          "agent-practice-lab:task-shortcut-used",
+                          "1",
+                        );
+                      } catch {
+                        // The hint still dismisses for this page when storage is unavailable.
+                      }
+                    }}
                     placeholder="你希望 Agent 做什么？有什么限制？结果应该是什么样子？"
-                    disabled={!!active || action.busy}
+                    disabled={!!active || action.busy || grading}
                   />
+                  {showShortcutHint && (
+                    <p
+                      id="task-shortcut-hint"
+                      className="composer-shortcut-hint"
+                    >
+                      <Lightbulb size={14} aria-hidden="true" />
+                      <span>
+                        试试 <kbd>Ctrl</kbd> + <kbd>Enter</kbd> 直接发送，Enter
+                        换行
+                      </span>
+                    </p>
+                  )}
                   <div className="composer-bottom">
                     <span>发送会调用你的模型，可能消耗额度。</span>
                     {active ? (
@@ -929,16 +992,14 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                     ) : (
                       <button
                         className="button"
-                        disabled={
-                          !ready ||
-                          action.busy ||
-                          syncing ||
-                          preparationPending ||
-                          !input.trim()
-                        }
+                        disabled={!canSend}
+                        title="发送任务（Ctrl+Enter）"
                       >
                         <Send size={15} />
                         {action.busy ? "正在发送…" : "发送任务"}
+                        <kbd className="send-shortcut" aria-hidden="true">
+                          Ctrl ↵
+                        </kbd>
                       </button>
                     )}
                   </div>
@@ -977,6 +1038,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             )}
           </section>
           <SubmissionPanel
+            assessmentProfile={selectedProfile}
             attempt={attempt}
             lesson={lesson}
             history={submissions}
@@ -984,6 +1046,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             events={events}
             disabled={
               !!active ||
+              grading ||
               historical ||
               dirty ||
               syncing ||

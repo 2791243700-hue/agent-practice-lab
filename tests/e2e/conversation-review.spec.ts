@@ -492,7 +492,11 @@ test("空实训不会伪造两轮，历史实训读取草稿但禁止编辑", as
   );
   await expect(
     page.getByRole("button", { name: "下一步", exact: true }),
-  ).toBeDisabled();
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "下一步", exact: true }).click();
+  await expect(page.locator(".validation-summary")).toContainText(
+    "先完成至少两轮",
+  );
   await page.unrouteAll();
   await fixture(page, { historical: true });
   await expect(
@@ -513,12 +517,12 @@ test("旧版实训保留单选提交与新版导读入口", async ({ page }) => 
   await page.goto(`/practice/${attempt.id}`);
   await expect(page.getByTestId("conversation-review")).toHaveCount(0);
   await expect(
-    page.getByText("这是旧版 1.0.0 实训，可继续原版单选验收。", {
+    page.getByText("这是旧版 1.0.0 实训，沿用原规则，不含正式模型内容验收。", {
       exact: false,
     }),
   ).toBeVisible();
   const link = page.getByRole("link", {
-    name: "阅读新版 1.1.0 导读并开始新版实训 →",
+    name: "阅读最新导读并新建包含模型验收的实训 →",
   });
   await expect(link).toHaveAttribute("href", "/lessons/01-task");
   await page
@@ -541,18 +545,129 @@ test("自由说明要求填写但不按长度或关键词评判", async ({ page 
   });
   await review.getByLabel("给 Agent 补充一条要求").fill("   ");
   await review.getByRole("button", { name: "提交验收", exact: true }).click();
-  await expect(review.getByRole("alert")).toContainText("给新情境写一条要求");
+  await expect(review.getByRole("alert")).toContainText(
+    "给新情境补充一条具体要求",
+  );
   expect(state.submissions).toHaveLength(0);
   await review.getByRole("button", { name: /核对回答/ }).click();
   await review.getByLabel("结合引用，说说你的判断").fill("  ");
   await expect(
     review.getByRole("button", { name: "下一步", exact: true }),
-  ).toBeDisabled();
+  ).toBeEnabled();
+  await review.getByRole("button", { name: "下一步", exact: true }).click();
+  await expect(review.getByLabel("结合引用，说说你的判断")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await expect(review.getByLabel("结合引用，说说你的判断")).toBeFocused();
   await review.getByLabel("结合引用，说说你的判断").fill("是");
   await expect(
     review.getByRole("button", { name: "下一步", exact: true }),
   ).toBeEnabled();
 });
+
+for (const width of [1440, 390]) {
+  test(`下一步和提交标记具体缺失项并聚焦，修正自动清除且不误提交（${width}px）`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    const state = await fixture(page);
+    const review = page.getByTestId("conversation-review");
+    const next = review.getByRole("button", { name: "下一步", exact: true });
+    const before = review.getByRole("combobox", {
+      name: "第一次尝试",
+      exact: true,
+    });
+    const after = review.getByRole("combobox", {
+      name: "改进后的尝试",
+      exact: true,
+    });
+    await next.click();
+    await expect(before).toHaveAttribute("aria-invalid", "true");
+    await expect(before).toBeFocused();
+    await expect(before).toBeInViewport();
+    await before.selectOption("review-before");
+    await expect(before).not.toHaveAttribute("aria-invalid", "true");
+    await expect(after).toHaveAttribute("aria-invalid", "true");
+    await after.selectOption("review-after");
+    await expect(review.locator(".validation-summary")).toHaveCount(0);
+    await next.click();
+    await next.click();
+    const category = review.getByRole("combobox", {
+      name: "主要改动是什么？",
+      exact: true,
+    });
+    await expect(category).toBeFocused();
+    await category.selectOption("constraint");
+    const change = review.getByLabel("引用新增或改写的要求");
+    await change.fill("不是原文");
+    await expect(change).toHaveAttribute("aria-invalid", "true");
+    await next.click();
+    await expect(change).toBeFocused();
+    await change.fill(requirement);
+    await expect(change).not.toHaveAttribute("aria-invalid", "true");
+    await next.click();
+    await next.click();
+    const beforeMessage = review.getByRole("combobox", {
+      name: "第一次引用消息",
+      exact: true,
+    });
+    await expect(beforeMessage).toBeFocused();
+    await beforeMessage.selectOption({ index: 1 });
+    await review
+      .getByLabel("第一次回答的依据", { exact: true })
+      .fill("日期未知");
+    await review
+      .getByRole("combobox", { name: "改进后引用消息", exact: true })
+      .selectOption({ index: 1 });
+    await review
+      .getByLabel("改进后回答的依据", { exact: true })
+      .fill("日期已列");
+    await review.getByRole("radio", { name: "部分满足", exact: true }).check();
+    await review
+      .getByLabel("结合引用，说说你的判断")
+      .fill("还应确认未说明的信息。");
+    await next.click();
+    const correction = review.getByLabel("如果再试一次，你会怎样修改指令？");
+    await expect(correction).toHaveAttribute("aria-invalid", "true");
+    await expect(correction).toBeFocused();
+    await correction.fill("请列出需要我确认的信息。");
+    await next.click();
+    const submit = review.getByRole("button", {
+      name: "提交验收",
+      exact: true,
+    });
+    await submit.click();
+    const start = review.getByRole("combobox", {
+      name: "开始时间",
+      exact: true,
+    });
+    await expect(start).toBeFocused();
+    await expect(start).toHaveAttribute("aria-invalid", "true");
+    await expect(review.locator(".validation-summary")).toContainText(
+      "还需补充 5 项",
+    );
+    await review.screenshot({
+      path: testInfo.outputPath(`missing-fields-${width}.png`),
+    });
+    for (const name of ["开始时间", "集合地点", "结束时间", "是否需要报名"])
+      await review
+        .getByRole("combobox", { name, exact: true })
+        .selectOption(
+          name === "开始时间" || name === "集合地点" ? "known" : "confirm",
+        );
+    await submit.click();
+    const instruction = review.getByLabel("给 Agent 补充一条要求");
+    await expect(instruction).toBeFocused();
+    await expect(instruction).toBeInViewport();
+    expect(state.submissions).toHaveLength(0);
+    await instruction.fill("请先确认通知没有说明的信息。");
+    await expect(review.locator(".validation-summary")).toHaveCount(0);
+    await submit.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    expect(state.submissions).toHaveLength(1);
+  });
+}
 
 test("SPA 后退和前进后恢复未保存填写，恢复时不静默覆盖服务端", async ({
   page,

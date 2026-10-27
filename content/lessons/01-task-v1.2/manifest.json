@@ -1,0 +1,143 @@
+{
+  "schema_version": "0.1.0",
+  "id": "01-task",
+  "version": "1.2.0",
+  "order": 1,
+  "title": "让 Agent 理解任务",
+  "description": "用两轮对话、原文引用和小变式核对，练习清楚地说明任务。",
+  "objectives": [
+    "说明目标、约束和输出要求。",
+    "用完整回答中的原文核对指令效果。",
+    "区分通知已说明的信息和需要确认的信息。"
+  ],
+  "intro_file": "intro.md",
+  "task_file": "task.md",
+  "completion_criteria": [
+    "完成两轮有效运行并按顺序选择。",
+    "引用第二轮新增要求及两轮回答原文。",
+    "完成小变式的已知与待确认判断。",
+    "客观证据合格，并通过模型对任务结果、依据与理解的逐项验收；模型不可用时验收未完成。"
+  ],
+  "initial_files": [
+    {
+      "id": "notice-week",
+      "title": "课程通知",
+      "path": "materials/notice.md",
+      "media_type": "text/markdown"
+    }
+  ],
+  "allowed_tools": [],
+  "settings_policy": {
+    "editable_fields": [
+      "system_instruction",
+      "temperature"
+    ],
+    "defaults": {
+      "system_instruction": "根据课程资料完成任务，不猜测缺失信息，保存前请求批准。",
+      "temperature": 0.3
+    }
+  },
+  "answer_form": {
+    "kind": "reflection",
+    "prompt": "选择两轮真实对话，引用原文并核对新增要求，再完成通知小变式。",
+    "challenge": {
+      "id": "activity-notice",
+      "title": "活动通知 · 虚构练习",
+      "notice": "周六 10:00 在图书馆一楼集合，请携带学生证。",
+      "items": [
+        {
+          "id": "start",
+          "label": "开始时间"
+        },
+        {
+          "id": "place",
+          "label": "集合地点"
+        },
+        {
+          "id": "end",
+          "label": "结束时间"
+        },
+        {
+          "id": "signup",
+          "label": "是否需要报名"
+        }
+      ]
+    }
+  },
+  "limits": {
+    "max_model_calls": 10,
+    "execution_timeout_seconds": 120,
+    "approval_timeout_seconds": 600
+  },
+  "rules": [
+    {
+      "id": "reflection-pair",
+      "required": true,
+      "message": "选择同一实验中先后完成、都有完整回答的两轮运行。",
+      "evaluator": "reflection_pair",
+      "params": {}
+    },
+    {
+      "id": "reflection-change",
+      "required": true,
+      "message": "引用第二轮原始指令中新增的目标、约束或输出要求。",
+      "evaluator": "reflection_change",
+      "params": {}
+    },
+    {
+      "id": "reflection-quotes",
+      "required": true,
+      "message": "按消息和位置逐字引用两轮完整回答。",
+      "evaluator": "reflection_quotes",
+      "params": {}
+    },
+    {
+      "id": "reflection-challenge",
+      "required": true,
+      "message": "正确区分活动通知中已说明的信息与需要确认的信息。",
+      "evaluator": "reflection_challenge",
+      "params": {
+        "challenge_id": "activity-notice",
+        "expected_judgments": [
+          {
+            "item_id": "start",
+            "decision": "known"
+          },
+          {
+            "item_id": "place",
+            "decision": "known"
+          },
+          {
+            "item_id": "end",
+            "decision": "confirm"
+          },
+          {
+            "item_id": "signup",
+            "decision": "confirm"
+          }
+        ]
+      }
+    }
+  ],
+  "assessment_policy": {
+    "kind": "model",
+    "rubric_version": "1.0.0",
+    "criteria": [
+      {
+        "id": "meaningful-change",
+        "title": "新增要求有效",
+        "description": "第二轮确实为同一个课程通知任务补充有意义、可执行的目标、约束或输出要求，分类合理；无关文字、装饰、仅要求评委放行或换成另一任务不合格。"
+      },
+      {
+        "id": "grounded-reflection",
+        "title": "判断与引用相符",
+        "description": "学生解释明确联系新增要求及前后回答，引用支持满足、部分满足或未满足的判断。承认回答不足可以合格；无关引文、空话、乱填或与回答矛盾不合格。"
+      },
+      {
+        "id": "transfer",
+        "title": "能迁移并改进",
+        "description": "新情境指令切实利用通知并处理未说明信息，不擅自补全；如未满足要求，下一步指令应针对发现的问题。有具体合理表达即可，不以字数、术语或选满足评分。"
+      }
+    ]
+  }
+}

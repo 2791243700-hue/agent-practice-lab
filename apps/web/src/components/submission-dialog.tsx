@@ -41,13 +41,15 @@ export function SubmissionDialog({
     (rule) => rule.required && !rule.passed,
   );
   const title =
-    submission.mode === "demo"
-      ? submission.evaluation_passed
-        ? "演示检查通过 · 不计正式完成"
-        : "演示检查未通过 · 不计正式完成"
-      : submission.passed
-        ? "本关已通关"
-        : "本次尚未通过";
+    submission.model_assessment?.status === "unavailable"
+      ? "模型验收未完成"
+      : submission.mode === "demo"
+        ? submission.evaluation_passed
+          ? "演示检查通过 · 不计正式完成"
+          : "演示检查未通过 · 不计正式完成"
+        : submission.passed
+          ? "本关已通关"
+          : "本次尚未通过";
 
   useEffect(() => {
     const dialog = dialogRef.current;

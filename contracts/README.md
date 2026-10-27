@@ -1,12 +1,14 @@
 # 前后端接口契约 v0.1.0
 
-更新：2026-10-26。统一实训已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并到 main `af36497`，包含第一关 1.1.0 正式复盘、草稿恢复、Tips 和提交弹窗。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。 本页按合并实现维护；机器可读字段见 OpenAPI，样例用于结构验证，不代表真实模型调用。
+> 2026-10-27 本版本接入正式模型验收：第一关 1.2.0、第二至四关 1.1.0，41 操作 / 109 schema。新增提交字段、费用确认、判定和失败处理以[模型验收说明](../docs/model-assessment-2026-10-27.md)为准；旧版本行为与历史验证按各自日期保留。
+
+更新：2026-10-27。现行契约 v0.1.0 包含 41 个 HTTP 操作、109 个 schema、11 类 SSE 事件。正式模型验收兼容扩展原提交接口，适用性由课程版本决定。机器可读字段见 OpenAPI，样例仅证明结构，不代表真实模型调用。
 
 ## 文件与唯一来源
 
 | 文件 | 用途 |
 | --- | --- |
-| [openapi.json](openapi.json) | 41 个 HTTP 操作、102 个 schema 的请求、响应、字段约束和操作 ID |
+| [openapi.json](openapi.json) | 41 个 HTTP 操作、109 个 schema 的请求、响应、字段约束和操作 ID |
 | [events.schema.json](events.schema.json) | 11 类 SSE 事件及每类 payload 的 JSON Schema |
 | [lesson.schema.json](lesson.schema.json) | 服务端私有课程 manifest，包括评分规则和参考事实 |
 | [types.d.ts](types.d.ts) | 从 OpenAPI 生成的 TypeScript 类型，不手工修改 |
@@ -245,7 +247,7 @@ fields.path 使用 JSON Pointer，如 /answers/facts/0/due_date。retryable 表�
 
 后端 B：实现 Pydantic/路由与全局运行锁、事务及各业务规则；运行事件、四种工具和评分证据对齐 schema。内部 AgentRuntime、CredentialStore 等接口继续遵循实施计划，不把它们全部暴露为 HTTP。
 
-当前契约包含 231 项结构检查；动态行为由后端及浏览器测试覆盖，最新执行结果和对应 CI 见[版本索引](../docs/project-status.md)。本次清理未更改请求、响应、事件或生成类型。外部实测和限制见[真实模型记录](../docs/live-model-validation.md)。结构验证命令：
+当前契约包含 244 项结构检查；动态行为由后端及浏览器测试覆盖，最新执行结果和对应 CI 见[版本索引](../docs/project-status.md)。本次清理未更改请求、响应、事件或生成类型。外部实测和限制见[真实模型记录](../docs/live-model-validation.md)。结构验证命令：
 
 ```powershell
 cd contracts
@@ -283,7 +285,7 @@ AnswerForm、ToolCall、Evidence 和 StoredEvent 的 discriminator.mapping 显�
 
 POST /submissions 的 answers 新增 ReflectionAnswers：kind=reflection；baseline_run_id/revised_run_id；change.category=goal|constraint|output 和 quote；evidence.before/after 分别含 message_id、event_seq、quote、start_offset；judgment=satisfied|partial|unsatisfied；explanation、next_instruction；challenge.challenge_id、judgments[item_id,decision=known|confirm] 和 instruction。完整必填与长度以 OpenAPI 为准。start_offset 为原始正文 Unicode 码点偏移，换行、空格和重复句均按原文核对，不按 HTML 或 UTF-16 单元计算。
 
-后端先检查运行归属、指定消息/事件和变式 ID；不合法引用返回 422。随后按课程规则核对完成状态及持久创建顺序、改动引用、原文偏移和变式答案；结构合法但不满足规则时返回 201 Submission，逐项标记不通过。引用真实不等于自由解释质量已判定，explanation 和 challenge.instruction 必须含非空白内容（最多 6000 字符），这是输入完整性约束，不按字数、关键词或模型评价对解释质量评分。partial/unsatisfied 允许通过，须写后续指令。演示不计正式完成。
+后端先检查运行归属、指定消息/事件和变式 ID；不合法引用返回 422。随后按课程规则核对完成状态及持久创建顺序、改动引用、原文偏移和变式答案；结构合法但不满足规则时返回 201 Submission，逐项标记不通过。第一关原版 1.1.0 的引用真实不等于自由解释质量已判定，explanation 和 challenge.instruction 必须含非空白内容（最多 6000 字符），这是输入完整性约束，不按字数、关键词或模型评价对解释质量评分。partial/unsatisfied 允许通过，须写后续指令。演示不计正式完成。
 
 GET /attempts/{attempt_id}/reflection-draft 未保存时返回 revision=0、draft=null、updated_at=null。PUT 携当前草稿 expected_revision 及 expected_attempt_revision，成功只使草稿 revision+1。所有草稿字段允许未完成值，但固定字段、长度和数量有上限；私有 Key 经现有 HTTP 边界脱敏。仅 active reflection 实验可写，历史草稿可读。冲突返回 409 REVISION_CONFLICT，前端保留当前编辑内容并让学生主动处理，不自动覆盖。该 PUT 不要求 Idempotency-Key；响应丢失后先 GET，不能盲目重试写入。
 
@@ -357,3 +359,17 @@ Tips 缓存保留生成时快照：后续编辑草稿或再次提交不自动刷
 ```
 
 成功响应为 200 ReflectionDraft，其中 attempt_id 是路径中的实验 ID，revision=1，draft 为已保存快照，updated_at 为服务端时间。重复发送这个旧请求会产生版本冲突，不会自动成为幂等重放。
+
+## 13. 正式模型验收（2026-10-27）
+
+新课件第一关 1.2.0、其余三关 1.1.0 在 LessonDetail.assessment_policy 公开 kind=model、rubric_version 及 criteria。旧课件不返回该字段，沿用原规则。路径及事件不变；新增 7 个 schema 与可选请求/响应字段，类型由 npm run types 生成。
+
+- 新正式版本的 POST /submissions 仍传 attempt_id、expected_attempt_revision、answers 和 Idempotency-Key，并强制 assessment={profile_id,expected_profile_revision,consent:true}；第二至四关另传非空白 learning_reflection（最多 6000 字符）。第一关继续使用 ReflectionAnswers 的解释与改写。客户端不得传评分结论。
+- 后端先执行固定版本的客观规则，全部合格才解析已通过检查的内存模型并额外请求一次。客观失败返回 201 Submission，model_assessment.status=skipped、调用数 0；不会用模型取代工具或文件证据。
+- model_assessment.status=completed 时保存每项 criterion_id、passed、reason、suggestion、citations（真实 source_id 与逐字 quote），追加 model-* 必要规则。Submission.passed 仍由服务端按 live 模式及所有必要规则共同计算。
+- 认证、网络、超时或模型返回缺项、重复项、伪造引用、工具调用、无效格式时返回 201 冻结的 unavailable 提交，passed=false、error_code 为安全分类。usage.model_calls=1 表示一次请求尝试，不证明服务商接收或扣费；未知 Token 为 null。再次提交必须主动确认费用，无后台重试。
+- demo 不要求模型同意、不请求验收模型；model_assessment=skipped，evaluation_passed 仅反映客观项，passed 永远 false。
+- 历史 Submission 可无 model_assessment 或 learning_reflection。新报告、核对说明与课件标准随提交冻结并进入历史/ZIP，不修改旧成绩。
+- 模型等待在数据库长事务外；全局槽及 profile 互斥。付费准备前记录 pending，未知结果或响应回滚后同一键不再调用；用户先查历史，再主动新请求可能再次计费。
+
+请求/响应示例见 examples/http.json 的 submit-model-assessment 与 model-assessment-unavailable。完整上下文边界、引用校验、恢复和维护责任见[验收说明](../docs/model-assessment-2026-10-27.md)。前端缺失项提示只校验填写完整性，不替代正式评分。

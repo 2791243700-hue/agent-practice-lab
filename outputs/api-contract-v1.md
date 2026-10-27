@@ -1,28 +1,22 @@
 # 接口确定结果：v0.1.0
 
-首次确定：2026-10-17；同步：2026-10-26。更新：2026-10-26。统一实训已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并到 main `af36497`，包含第一关 1.1.0 正式复盘、草稿恢复、Tips 和提交弹窗。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。
+首次确定：2026-10-17；同步：2026-10-27。现行契约为 **41 个 HTTP 操作、109 个 schema、11 类 SSE 事件**，通过同源 `/api/v1` 访问。完整规范为 [contracts/README.md](../contracts/README.md)，机器可读文件为 [OpenAPI](../contracts/openapi.json)、[事件 Schema](../contracts/events.schema.json)、[课程 Schema](../contracts/lesson.schema.json)和[生成类型](../contracts/types.d.ts)。
 
-完整说明见 [contracts/README.md](../contracts/README.md)。机器可读文件包括 [OpenAPI](../contracts/openapi.json)、[事件 Schema](../contracts/events.schema.json)、[课程模板 Schema](../contracts/lesson.schema.json) 和 [TypeScript 类型](../contracts/types.d.ts)。
-
-| 模块 | 本次确定的内容 |
+| 模块 | 现行约定 |
 | --- | --- |
-| 身份与配置 | local-owner；Key 仅进后端内存，多个连接可切换、重命名、清除或删除；非敏感配置持久化 |
-| 模型发现 | connectProfile、listProfileModels；DeepSeek/OpenAI 官方地址和兼容服务手动入口；列表不代表工具检查通过 |
-| 课程与实训 | 每关导读、固定课件版本、独立实训、材料选择和恢复 |
-| Agent 运行 | 单运行槽、幂等启动、设置快照、取消和中断 |
-| 模型 Tips | GET/POST `/runs/{run_id}/tips`；主动确认后生成，按运行缓存，不参与正式评分 |
-| 过程事件 | 11 类 SSE 事件，按序号重放并去重 |
-| 工具授权 | 明确的保存参数、逐次批准/拒绝、过期和取消失效 |
-| 复盘草稿 | GET/PUT reflection-draft；独立 revision + expected_attempt_revision，保存不等于提交 |
-| 验收 | 新版 ReflectionAnswers 和旧 choice/facts/course/artifact，服务端规则、证据引用和不可变提交 |
-| 文件与导出 | 按 ID 获取预览/附件；提交下载读取冻结快照 |
+| 身份与模型 | local-owner；多个模型连接；Key 仅存后端内存，重启需重新输入 |
+| 模型发现与检查 | connectProfile、listProfileModels；服务商目录不替代文本/工具连接检查 |
+| 课程与实训 | 固定 Attempt.lesson_version；最新第一关 1.2.0，其余三关 1.1.0，旧实验保持原规则 |
+| 运行与过程 | 单模型槽、设置快照、幂等启动、取消；SSE 按 seq 恢复，不重发运行 |
+| 授权与文件 | 逐次批准/拒绝；实际 tool.completed 成功后才显示已保存，提交冻结文件 |
+| 复盘草稿 | GET/PUT reflection-draft；独立 revision，保存不等于提交或调用模型 |
+| 正式验收 | 复用 POST /submissions；新正式课程需 assessment 同意及选定模型，其余三关另填 learning_reflection；客观项和模型项共同决定通过 |
+| 模型反馈 | Submission.model_assessment 保存状态、逐项结论、引用、建议、模型及用量；无效/不可用结果不能通关 |
+| 模型 Tips | GET/POST /runs/{run_id}/tips，主动确认、按轮缓存，只给建议、不改成绩 |
+| 历史与导出 | 读取不可变提交、快照文件和 ZIP；不导出连接配置、Key 或内部令牌 |
 
-41 个 HTTP 操作、102 个 schema，统一使用 /api/v1，11 类事件不变。前端不执行评分，不提交身份和证据，不接触后端的私有运行令牌。真实/演示模式在创建实训时确定，演示即使规则通过也不能获得正式完成状态。
+本次没有新增 HTTP 路径或 SSE 种类；SubmissionCreate、Submission、LessonDetail 通过可选字段兼容扩展，是否强制模型验收由固定课程版本的 assessment_policy 决定。客户端不得提交 passed、评分报告或身份，正式通关始终读取服务器 Submission.passed；demo 始终不计正式通过。
 
-Tips 与正式复盘已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并 main。重置保留内存 Key 与所选模型，提交后的弹窗和下一关跳转属于前端交互，不新增 HTTP 操作。Tips 的 evidence 字段仅保留旧数据兼容，新生成结果为空，界面不展示。
+模型验收在长数据库事务之外等待；客观证据不合格不调用模型；相同幂等键不重复计费。结果不明确时保留 pending、阻止原键重发。详见[正式模型验收与错误处理](../docs/model-assessment-2026-10-27.md)。草稿、正式答案、Unicode 引用偏移、历史兼容见[复盘接入](../docs/reflection-assessment-backend-handoff.md)。
 
-两端使用同一 JSON 契约：HTTP 边界与 School 共用一个 Contracts 实例，路由边界校验，内部使用 Pydantic，尚未全量切换模型导出。TypeScript 类型由 OpenAPI 生成，四组 discriminator 已显式映射到实际字段值，前端直接复用；不手改生成文件。接口更新见[接口更新](../docs/interface-update-2026-10-26.md)。变更联动接口、事件副本、实现、测试和文档。
-
-当前契约：231 项结构检查，覆盖 41 操作、102 schema、25 个 HTTP 样例和 6 个事件场景；合并前 193 后端/18 前端/52 浏览器测试通过，main af36497 三类 CI 通过。测试使用本地模型服务，外部模型历史实测见[独立记录](../docs/live-model-validation.md)，不将结构校验作为真实服务商验证。
-
-新版 1.1.0 复盘复用 /submissions；旧 1.0.0 不变。详细调用顺序、字段映射、引用码点和冲突恢复见[复盘接入说明](../docs/reflection-assessment-backend-handoff.md)。完整端点、状态码、幂等和所有字段约束统一维护于[契约说明](../contracts/README.md)，不要继续使用旧预览文档中的拟议字段。
+OpenAPI、事件副本和课件 Schema 结构由验证脚本核对，TypeScript 自动生成。2026-10-27 本地结构验证为 244 项、27 个 HTTP 示例、6 个事件场景；动态测试与云端检查分开记录于[版本索引](../docs/project-status.md)。脚本结果不能代替真实服务商判断质量验证，历史外部测试见[独立记录](../docs/live-model-validation.md)。

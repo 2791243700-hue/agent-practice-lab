@@ -1,5 +1,7 @@
 # 复盘验收与首页提示：前端交付记录
 
+历史记录：本页保留 2026-10-24 的复盘预览及 2026-10-26 的接入状态；现行正式模型验收与版本见[版本索引](project-status.md)和[模型验收交付](model-assessment-2026-10-27.md)。
+
 更新：2026-10-26。统一实训已通过 [PR #9](https://github.com/2791243700-hue/agent-practice-lab/pull/9) 合并到 main `af36497`，包含第一关 1.1.0 正式复盘、草稿恢复、Tips 和提交弹窗。当前契约 v0.1.0：41 个 HTTP 操作、102 个 schema、11 类 SSE 事件。 接口以[契约说明](../contracts/README.md)为准，功能与验证见[统一交付](unified-practice-delivery.md)。
 
 以下按原日期保留验证历史；其中预览、未接入、未合并及旧接口数量仅描述当时状态，不作为当前接入说明。

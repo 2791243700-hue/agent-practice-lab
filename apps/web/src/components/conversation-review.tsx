@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Download } from "lucide-react";
 import { quoteMatches } from "@/lib/reflection";
 import {
@@ -8,6 +8,12 @@ import {
 } from "@/lib/use-reflection-draft";
 import type { Attempt, Event, Run, Schema } from "@/lib/types";
 import { dateTime } from "./ui";
+import {
+  focusValidationField,
+  validationAttributes,
+  ValidationSummary,
+  type ValidationIssue,
+} from "./form-validation";
 const steps = ["选择两轮", "标出改动", "核对回答", "换个情境"];
 function Highlight({
   text,
@@ -42,6 +48,8 @@ export function ConversationReview({
   form,
   onSubmit,
   onRefresh,
+  modelAssessed = false,
+  onValidateSubmission,
 }: {
   attempt: Attempt;
   runs: Run[];
@@ -50,11 +58,17 @@ export function ConversationReview({
   form: Omit<Schema["ReflectionForm"], "kind">;
   onSubmit: (answers: Schema["ReflectionAnswers"]) => Promise<void>;
   onRefresh?: () => Promise<void>;
+  modelAssessed?: boolean;
+  onValidateSubmission?: () => boolean;
 }) {
   const { draft, setDraft, loaded, dirty, saving, error, conflict, reload } =
     useReflectionDraft(attempt, onRefresh);
-  const [issues, setIssues] = useState<string[]>([]);
+  const prefix = useId();
+  const fieldId = (key: string) => `${prefix}-${key}`;
+  const [showValidation, setShowValidation] = useState(false);
+  const [focusRequest, setFocusRequest] = useState<{ id: string } | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const focusStepHeading = useRef(false);
   const complete = (run?: Run) =>
     (events[run?.id ?? ""] ?? []).filter(
       (event): event is Extract<Event, { kind: "message.completed" }> =>
@@ -116,9 +130,104 @@ export function ConversationReview({
   const firstIncomplete = ready.findIndex((complete) => !complete);
   const lastUnlocked = firstIncomplete < 0 ? steps.length - 1 : firstIncomplete;
   const step = Math.min(draft.step, lastUnlocked);
+  const missing: (ValidationIssue & { step: number })[] = [];
+  function check(at: number, key: string, valid: unknown, message: string) {
+    if (!valid) missing.push({ step: at, id: fieldId(key), message });
+  }
+  check(
+    0,
+    "beforeId",
+    before,
+    candidates.length < 2
+      ? "先完成至少两轮有完整回答的任务，再选择第一次尝试。"
+      : "请选择第一次尝试。",
+  );
+  check(
+    0,
+    "afterId",
+    after &&
+      before &&
+      before.id !== after.id &&
+      before.input_text.trim() !== after.input_text.trim(),
+    "请选择另一轮已完成、任务说明不同的改进后尝试。",
+  );
+  check(1, "changeKind", draft.changeKind, "请选择主要改动的类型。");
+  check(
+    1,
+    "requirement",
+    draft.requirement.trim() &&
+      after?.input_text.includes(draft.requirement.trim()) &&
+      !before?.input_text.includes(draft.requirement.trim()),
+    "请引用第二轮新增的要求：文字须与第二轮原文一致，且第一轮没有这一片段。",
+  );
+  for (const side of ["before", "after"] as const) {
+    const label = side === "before" ? "第一次" : "改进后";
+    const selected = complete(side === "before" ? before : after).find(
+      (event) =>
+        event.payload.message_id === draft[`${side}MessageId`] &&
+        event.seq === draft[`${side}EventSeq`],
+    );
+    check(2, `${side}MessageId`, selected, `请选择${label}回答的完整消息。`);
+    const matches = quoteMatches(
+      selected?.payload.content ?? "",
+      draft[`${side}Quote`],
+    );
+    check(
+      2,
+      `${side}Quote`,
+      matches.length > 0,
+      `请从${label}的完整回答中引用一段准确原文，保留文字和标点。`,
+    );
+    if (matches.length)
+      check(
+        2,
+        `${side}StartOffset`,
+        citation(side),
+        `请核对${label}引文的出现位置。`,
+      );
+  }
+  check(2, "judgment", draft.judgment, "请选择改进后的回答是否满足新增要求。");
+  check(
+    2,
+    "explanation",
+    draft.explanation.trim(),
+    "请结合引用，说明你的判断理由。",
+  );
+  if (draft.judgment && draft.judgment !== "satisfied")
+    check(
+      2,
+      "nextInstruction",
+      draft.nextInstruction.trim(),
+      "尚未完全满足要求，请填写下一次准备修改的指令。",
+    );
+  for (const item of form.challenge.items)
+    check(
+      3,
+      `fact-${item.id}`,
+      ["known", "confirm"].includes(draft.facts[item.id]),
+      `请判断“${item.label}”是通知已说明，还是需要确认。`,
+    );
+  check(
+    3,
+    "instruction",
+    draft.instruction.trim(),
+    "请给新情境补充一条具体要求。",
+  );
+  const issues = showValidation
+    ? missing.filter((issue) => issue.step === step)
+    : [];
+  const field = (key: string) => validationAttributes(fieldId(key), issues);
+  useLayoutEffect(() => {
+    if (focusRequest) focusValidationField(focusRequest.id);
+  }, [focusRequest, step]);
+  useLayoutEffect(() => {
+    if (!focusStepHeading.current) return;
+    focusStepHeading.current = false;
+    heading.current?.focus({ preventScroll: true });
+    heading.current?.scrollIntoView({ block: "nearest" });
+  }, [step]);
   function update<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((old) => ({ ...old, [key]: value }));
-    setIssues([]);
   }
   function selectRun(key: "beforeId" | "afterId", value: string) {
     setDraft((old) => ({
@@ -139,37 +248,17 @@ export function ConversationReview({
       explanation: "",
       nextInstruction: "",
     }));
-    setIssues([]);
   }
   function go(next: number) {
     if (next > lastUnlocked) return;
+    focusStepHeading.current = next !== step;
+    setFocusRequest(null);
+    setShowValidation(false);
     update("step", next);
-    requestAnimationFrame(() => {
-      heading.current?.focus({ preventScroll: true });
-      heading.current?.scrollIntoView({ block: "nearest" });
-    });
   }
   function finish() {
-    const problems: string[] = [];
-    if (!pairReady) problems.push("请选择前后两轮已完成、任务说明不同的尝试。");
-    if (!requirementReady)
-      problems.push(
-        "请从改进后的指令中引用一处新增或改写的要求，并选择改动类型。",
-      );
-    if (!evidenceReady)
-      problems.push(
-        "请引用两次回答的完整消息原文并选择引用位置；未满足要求时再写一条改进指令。",
-      );
-    if (!draft.explanation.trim()) problems.push("请写下你的判断理由。");
-    if (!draft.instruction.trim()) problems.push("请给新情境写一条要求。");
-    if (
-      !form.challenge.items.every((item) =>
-        ["known", "confirm"].includes(draft.facts[item.id]),
-      )
-    )
-      problems.push("请完成通知信息判断。");
-    setIssues(problems);
-    if (problems.length) return;
+    if (!validate(missing)) return;
+    if (onValidateSubmission && !onValidateSubmission()) return;
     const answers: Schema["ReflectionAnswers"] = {
       kind: "reflection",
       baseline_run_id: before!.id,
@@ -192,6 +281,15 @@ export function ConversationReview({
       },
     };
     void onSubmit(structuredClone(answers));
+  }
+  function validate(problems: typeof missing) {
+    setShowValidation(true);
+    if (!problems.length) return true;
+    const first = problems[0];
+    focusStepHeading.current = false;
+    setDraft((old) => ({ ...old, step: first.step }));
+    setFocusRequest({ id: first.id });
+    return false;
   }
   function download() {
     const text = JSON.stringify(
@@ -217,7 +315,9 @@ export function ConversationReview({
     <div className="conversation-review" data-testid="conversation-review">
       <p className="review-note">
         {form.prompt}{" "}
-        通过代表基础操作及结构化核对完成，解释与改写质量不自动评分。
+        {modelAssessed
+          ? "本版本需同时通过真实证据检查和模型对改动、引用解释及新情境指令的内容验收。"
+          : "通过代表基础操作及结构化核对完成，解释与改写质量不自动评分。"}
       </p>
       <p className="small muted">
         想听取模型对解释的建议，可先等草稿保存，再到改进后那一轮主动生成
@@ -291,6 +391,7 @@ export function ConversationReview({
       </h3>
       <fieldset disabled={disabled || !loaded} className="review-fields">
         <legend className="sr-only">{steps[step]}</legend>
+        <ValidationSummary issues={issues} />
         {step === 0 && (
           <>
             <p className="small muted">
@@ -310,6 +411,7 @@ export function ConversationReview({
                     <label>
                       {side === "before" ? "第一次尝试" : "改进后的尝试"}
                       <select
+                        {...field(side === "before" ? "beforeId" : "afterId")}
                         value={
                           draft[side === "before" ? "beforeId" : "afterId"]
                         }
@@ -380,6 +482,7 @@ export function ConversationReview({
               <label>
                 主要改动是什么？
                 <select
+                  {...field("changeKind")}
                   value={draft.changeKind}
                   onChange={(event) => update("changeKind", event.target.value)}
                 >
@@ -392,6 +495,7 @@ export function ConversationReview({
               <label>
                 引用新增或改写的要求
                 <textarea
+                  {...field("requirement")}
                   rows={2}
                   maxLength={4000}
                   value={draft.requirement}
@@ -439,6 +543,7 @@ export function ConversationReview({
                           ? "第一次引用消息"
                           : "改进后引用消息"}
                         <select
+                          {...field(`${side}MessageId`)}
                           value={selected?.seq ?? ""}
                           onChange={(event) => {
                             const message = available.find(
@@ -473,6 +578,7 @@ export function ConversationReview({
                           ? "第一次回答的依据"
                           : "改进后回答的依据"}
                         <textarea
+                          {...field(`${side}Quote`)}
                           rows={3}
                           maxLength={4000}
                           value={draft[`${side}Quote`]}
@@ -497,6 +603,7 @@ export function ConversationReview({
                         <label>
                           引用位置（{side === "before" ? "第一次" : "改进后"}）
                           <select
+                            {...field(`${side}StartOffset`)}
                             value={draft[`${side}StartOffset`]}
                             onChange={(event) =>
                               update(
@@ -517,7 +624,11 @@ export function ConversationReview({
                   );
                 })}
               </div>
-              <fieldset className="review-judgment">
+              <fieldset
+                className="review-judgment"
+                tabIndex={-1}
+                {...field("judgment")}
+              >
                 <legend>改进后的回答是否满足新增要求？</legend>
                 {[
                   ["satisfied", "满足要求"],
@@ -539,6 +650,7 @@ export function ConversationReview({
               <label>
                 结合引用，说说你的判断
                 <textarea
+                  {...field("explanation")}
                   rows={3}
                   maxLength={2000}
                   required
@@ -546,13 +658,18 @@ export function ConversationReview({
                   onChange={(event) =>
                     update("explanation", event.target.value)
                   }
-                  placeholder="指出要求和回答之间的具体对应，或仍然存在的问题。解释不自动评分。"
+                  placeholder={
+                    modelAssessed
+                      ? "结合原文说明新增要求与前后回答的具体对应，或仍存在的问题。"
+                      : "指出要求和回答之间的具体对应，或仍然存在的问题。解释不自动评分。"
+                  }
                 />
               </label>
               {draft.judgment && draft.judgment !== "satisfied" && (
                 <label>
                   如果再试一次，你会怎样修改指令？
                   <textarea
+                    {...field("nextInstruction")}
                     rows={2}
                     maxLength={2000}
                     value={draft.nextInstruction}
@@ -579,6 +696,7 @@ export function ConversationReview({
                 <label key={item.id}>
                   {item.label}
                   <select
+                    {...field(`fact-${item.id}`)}
                     value={draft.facts[item.id] ?? ""}
                     onChange={(event) =>
                       update("facts", {
@@ -597,6 +715,7 @@ export function ConversationReview({
             <label>
               给 Agent 补充一条要求
               <textarea
+                {...field("instruction")}
                 rows={3}
                 maxLength={2000}
                 required
@@ -605,19 +724,11 @@ export function ConversationReview({
               />
             </label>
             <p className="small muted">
-              这道练习不调用模型。系统核对信息判断，不自动评价你的解释和改写质量。
+              {modelAssessed
+                ? "填写这道练习不会调用模型，正式提交时才进行内容验收。"
+                : "这道练习不调用模型。系统核对信息判断，不自动评价你的解释和改写质量。"}
             </p>
           </>
-        )}
-        {issues.length > 0 && (
-          <div className="notice warning" role="alert">
-            <strong>还有这些地方需要核对</strong>
-            <ul>
-              {issues.map((issue) => (
-                <li key={issue}>{issue}</li>
-              ))}
-            </ul>
-          </div>
         )}
         <div className="review-actions">
           <span className="small muted">
@@ -638,8 +749,10 @@ export function ConversationReview({
               <button
                 className="button"
                 type="button"
-                disabled={!ready[step]}
-                onClick={() => go(step + 1)}
+                onClick={() => {
+                  if (validate(missing.filter((issue) => issue.step <= step)))
+                    go(step + 1);
+                }}
               >
                 下一步
                 <ArrowRight size={15} />

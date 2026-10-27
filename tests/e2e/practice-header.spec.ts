@@ -3,7 +3,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { Attempt } from "../../apps/web/src/lib/types";
 
-for (const width of [1440, 390]) {
+for (const width of [1600, 1440, 390]) {
   test(`实训顶部紧凑排列，日期可通过键盘查看且功能入口保留（${width}px）`, async ({
     page,
   }) => {
@@ -12,7 +12,7 @@ for (const width of [1440, 390]) {
       id: `header-fixture-${width}`,
       owner_id: "local-owner",
       lesson_id: "01-task",
-      lesson_version: "1.1.0",
+      lesson_version: "1.2.0",
       mode: "live",
       progress: "in_progress",
       status: "active",
@@ -74,7 +74,7 @@ for (const width of [1440, 390]) {
     }).format(new Date(attempt.created_at));
     await expect(date).toHaveText(expectedDate);
     await expect(header.locator(".practice-info-popover")).toContainText(
-      "1.1.0",
+      "1.2.0",
     );
     const during = await page.locator(".practice-layout").boundingBox();
     expect(during!.y).toBe(before!.y);
@@ -88,6 +88,33 @@ for (const width of [1440, 390]) {
     await expect(info).toBeFocused();
     await header.getByRole("button", { name: "查看本关介绍" }).click();
     await expect(page.locator(".intro-review")).toBeVisible();
+    async function expectIntroAlignment() {
+      const intro = await page
+        .locator(".practice-main > .intro-review")
+        .boundingBox();
+      const conversation = await page.locator(".conversation").boundingBox();
+      expect(intro).not.toBeNull();
+      expect(conversation).not.toBeNull();
+      expect(Math.abs(intro!.x - conversation!.x)).toBeLessThan(1);
+      expect(Math.abs(intro!.width - conversation!.width)).toBeLessThan(1);
+    }
+    await expectIntroAlignment();
+    await page
+      .getByRole("button", { name: "收起任务与设置侧栏", exact: true })
+      .click();
+    await expect(page.locator(".practice-layout")).toHaveClass(
+      /sidebar-collapsed/,
+    );
+    await expectIntroAlignment();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await page
+      .getByRole("button", { name: "展开任务与设置侧栏", exact: true })
+      .click();
+    await expectIntroAlignment();
     await header.getByRole("button", { name: "收起导读" }).click();
     await expect(page.locator(".intro-review")).toHaveCount(0);
     const screenshots = path.resolve(

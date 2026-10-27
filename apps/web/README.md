@@ -1,6 +1,8 @@
 # Agent Practice Lab Web
 
-当前功能与最近合并版本见[版本索引](../../docs/project-status.md)。第一关按课程版本使用正式复盘或旧版 choice，草稿后端恢复；固定通知直接进入 Agent 上下文，并在材料区默认展示；四步复盘按完成条件顺序解锁。Tips、重置、结果弹窗和其余三关保留。当前接口为 41 操作、102 schema。
+> 2026-10-27 本版本接入正式模型验收：第一关 1.2.0、第二至四关 1.1.0，41 操作 / 109 schema。新增提交字段、费用确认、判定和失败处理以[模型验收说明](../../docs/model-assessment-2026-10-27.md)为准；旧版本行为与历史验证按各自日期保留。
+
+当前功能与最近合并版本见[版本索引](../../docs/project-status.md)。第一关按课程版本使用正式复盘或旧版 choice，草稿后端恢复；固定通知直接进入 Agent 上下文，并在材料区默认展示；四步复盘按完成条件顺序解锁。Tips、重置、结果弹窗和其余三关保留。最新课件为第一关 1.2.0、其余三关 1.1.0，正式验收需客观证据及模型内容评分均合格；当前接口为 41 操作、109 schema。
 
 Next.js App Router + TypeScript。课程、评分和身份通过现有后端获取，页面不复制正式评分逻辑，不修改已发布课程。
 
@@ -26,3 +28,9 @@ npm run test:e2e
 `components/key-manager.tsx` 管理 Key 与模型；`components/learning-status.tsx` 统一日期和通关展示；`lib/api.ts` 保留结果不明确时的幂等键，操作体缓存只保留 SHA-256 指纹，不保留 Key 明文。Key 不写入 localStorage/sessionStorage。服务商建议不等于认证成功；模型列表不等于文本和工具兼容检查通过。
 
 当前测试与 CI 证据统一记录在[版本索引](../../docs/project-status.md)，本次冗余样式清理见[清理记录](../../docs/cleanup-2026-10-26.md)。浏览器测试使用脚本模型和虚构凭据；Ubuntu CI 使用运行器预装 Chrome，本地默认使用 Playwright Chromium，也可设 `PLAYWRIGHT_CHROMIUM_CHANNEL=chrome`。不要在日常 dev 使用的同一 .next 中执行 build。
+
+## 当前交互与验收
+
+DeepSeek 申领提示按当前模型连接检查显隐。导读与主任务对齐；Ctrl+Enter 复用发送校验，首次使用后只保留键位标记；Tips 卡片按需展开，确认后才生成。下一步和提交在缺失输入时列出具体问题、标记字段并聚焦，补齐后自动清除；运行/只读状态仍禁用操作，校验失败不调用验收。
+
+新正式课程提交 assessment（已检查 profile、revision、consent=true），第二至四关另填 learning_reflection。展示 model_assessment 与逐项必要规则，模型不可用不能通关。旧课件和历史记录兼容；浏览器不自行决定通过。见[模型验收](../../docs/model-assessment-2026-10-27.md)与[缺失项交付](../../docs/form-validation-2026-10-27.md)。
