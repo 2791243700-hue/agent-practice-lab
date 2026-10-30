@@ -2946,6 +2946,9 @@
           },
           {
             "$ref": "#/components/schemas/ReflectionForm"
+          },
+          {
+            "$ref": "#/components/schemas/BriefReflectionForm"
           }
         ],
         "discriminator": {
@@ -2955,7 +2958,8 @@
             "facts": "#/components/schemas/FactsForm",
             "course": "#/components/schemas/CourseForm",
             "artifact": "#/components/schemas/ArtifactForm",
-            "reflection": "#/components/schemas/ReflectionForm"
+            "reflection": "#/components/schemas/ReflectionForm",
+            "brief_reflection": "#/components/schemas/BriefReflectionForm"
           }
         }
       },
@@ -4096,6 +4100,11 @@
                 "type": "null"
               }
             ]
+          },
+          "creation_index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "同一实验内从 0 开始的真实创建序号，不随时钟变化。新运行持久化此字段；列表为旧运行补齐。旧版冻结记录可省略。"
           }
         },
         "required": [
@@ -4241,6 +4250,9 @@
           },
           {
             "$ref": "#/components/schemas/ReflectionAnswers"
+          },
+          {
+            "$ref": "#/components/schemas/BriefReflectionAnswers"
           }
         ],
         "description": "Server selects exactly the lesson-specific shape. No expected answer values are returned by lesson APIs."
@@ -6621,6 +6633,75 @@
           "usage",
           "checks"
         ]
+      },
+      "BriefReflectionForm": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "brief_reflection"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "challenge": {
+            "$ref": "#/components/schemas/ReflectionChallenge"
+          },
+          "self_check": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "kind",
+          "prompt",
+          "challenge",
+          "self_check"
+        ]
+      },
+      "BriefReflectionAnswers": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "brief_reflection"
+          },
+          "baseline_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "revised_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "judgment": {
+            "type": "string",
+            "enum": [
+              "satisfied",
+              "partial",
+              "unsatisfied"
+            ]
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 6000,
+            "pattern": "\\S"
+          }
+        },
+        "required": [
+          "kind",
+          "baseline_run_id",
+          "revised_run_id",
+          "judgment",
+          "explanation"
+        ],
+        "description": "第一关 1.1.0 正式复盘答案。evidence 为待服务端核验的消息引用；不等同于服务端生成的 Submission.evidence。解释须非空白但不按语义质量自动评分。"
       }
     }
   },

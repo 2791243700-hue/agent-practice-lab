@@ -533,7 +533,7 @@ test("旧版实训保留单选提交与新版导读入口", async ({ page }) => 
   await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
   await link.click();
   await expect(
-    page.getByText("完成两轮有效运行并按顺序选择。", { exact: true }),
+    page.getByText("完成两轮先后进行、各有完整回答的对话。", { exact: true }),
   ).toBeVisible();
 });
 

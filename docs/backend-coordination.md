@@ -1,8 +1,8 @@
 # 前后端接入协调记录
 
-> 2026-10-27 本版本接入正式模型验收：第一关 1.2.0、第二至四关 1.1.0，41 操作 / 109 schema。新增提交字段、费用确认、判定和失败处理以[模型验收说明](model-assessment-2026-10-27.md)为准；旧版本行为与历史验证按各自日期保留。
+> 2026-10-30：第一关 1.3.0 简版复盘与第二关 Tips 兼容修复已接入；当前 41 操作 / 111 schema / 11 类事件。详见[精简验收说明](brief-reflection-2026-10-30.md)。
 
-更新：2026-10-27。现行功能包括正式模型验收、统一实训、第一关复盘与缺失项定位；当前契约为 41 个 HTTP 操作、109 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
+更新：2026-10-30。现行功能包括正式模型验收、统一实训、第一关复盘与缺失项定位；当前契约为 41 个 HTTP 操作、111 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
 
 本页保留历史问题原因并维护当前处理状态，当前交付见[版本状态](project-status.md)。
 
@@ -23,9 +23,9 @@ Key 优先模型设置通过两个新增端点导入连接和读取模型列表�
 
 ## 已合并的统一实训接口
 
-PR #9 已合并到 main af36497：GET/POST /runs/{run_id}/tips 提供独立模型建议；GET/PUT /attempts/{attempt_id}/reflection-draft 提供草稿；POST /submissions 复用原提交链路，新增 ReflectionAnswers。当前共 41 个操作、102 个 schema；提交弹窗、下一关和前端模型选择不另造 API。
+PR #9 已合并到 main af36497：GET/POST /runs/{run_id}/tips 提供独立模型建议；GET/PUT /attempts/{attempt_id}/reflection-draft 提供草稿；POST /submissions 复用原提交链路，新增 ReflectionAnswers。该历史版本共 41 个操作、102 个 schema；提交弹窗、下一关和前端模型选择不另造 API。
 
-复盘草稿采用独立 revision 和 expected_attempt_revision，冲突保留本地输入并停止覆盖。刷新恢复后端草稿；SPA 后退/前进可恢复当前页面进程的未保存备份，不写浏览器持久存储。引用按原文 Unicode 码点定位。正式成绩只覆盖结构化核对，自由解释与 Tips 独立；旧版本按原规则继续，不重算历史成绩。
+复盘草稿采用独立 revision 和 expected_attempt_revision，冲突保留本地输入并停止覆盖。刷新恢复后端草稿；SPA 后退/前进可恢复当前页面进程的未保存备份，不写浏览器持久存储。引用按原文 Unicode 码点定位。该旧版本正式成绩只覆盖结构化核对，自由解释与 Tips 独立；旧版本按原规则继续，不重算历史成绩。
 
 当前验证与 CI 状态见[版本索引](project-status.md)，字段与联调要求见[复盘接入](reflection-assessment-backend-handoff.md)。历史分轮记录保留原测试数字。
 

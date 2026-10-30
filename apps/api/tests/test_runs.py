@@ -6,6 +6,33 @@ from agent_school.contracts import RuntimeEvent
 from conftest import create_attempt, post
 
 
+def test_task_notice_default_referent_is_sent_to_runtime(client):
+    captured = []
+
+    class CaptureRuntime:
+        usage_by_run = {}
+
+        async def stream(self, request, invoke_tool):
+            captured.append(request)
+            yield RuntimeEvent(
+                kind="message.completed",
+                payload={
+                    "message_id": "notice",
+                    "role": "assistant",
+                    "content": "课程总结 11月4日。",
+                },
+            )
+
+    client.app.state.school.runs.demo = CaptureRuntime()
+    attempt = create_attempt(client)
+    run = start(client, attempt, text="帮我看看这段通知")
+    assert wait_run(client, run["id"])["status"] == "completed"
+    prompt = captured[0].settings["system_instruction"]
+    assert "未另附通知" in prompt and "默认指本关固定参考通知" in prompt
+    assert "2026-11-04" in prompt and "2026-11-06" in prompt
+    assert "优先使用学生明确提供或指定的通知" in prompt
+
+
 @pytest.mark.parametrize("lesson", ["02-context", "03-tools", "04-permission"])
 def test_tool_lessons_do_not_receive_material_contents_without_reading(client, lesson):
     captured = []

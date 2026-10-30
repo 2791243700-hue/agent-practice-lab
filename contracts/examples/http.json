@@ -733,6 +733,17 @@
         },
         "checks": []
       }
+    },
+    {
+      "name": "brief-reflection-answer",
+      "schema": "BriefReflectionAnswers",
+      "value": {
+        "kind": "brief_reflection",
+        "baseline_run_id": "run-baseline",
+        "revised_run_id": "run-revised",
+        "judgment": "partial",
+        "explanation": "第二轮列出了事项，但尚未按日期排序。"
+      }
     }
   ]
 }

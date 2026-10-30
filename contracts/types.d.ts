@@ -747,7 +747,7 @@ export interface components {
             kind: "artifact";
             prompt: string;
         };
-        AnswerForm: components["schemas"]["ChoiceForm"] | components["schemas"]["FactsForm"] | components["schemas"]["CourseForm"] | components["schemas"]["ArtifactForm"] | components["schemas"]["ReflectionForm"];
+        AnswerForm: components["schemas"]["ChoiceForm"] | components["schemas"]["FactsForm"] | components["schemas"]["CourseForm"] | components["schemas"]["ArtifactForm"] | components["schemas"]["ReflectionForm"] | components["schemas"]["BriefReflectionForm"];
         LessonSummary: {
             id: string;
             version: string;
@@ -951,6 +951,8 @@ export interface components {
             created_at: string;
             started_at: string | null;
             ended_at: string | null;
+            /** @description 同一实验内从 0 开始的真实创建序号，不随时钟变化。新运行持久化此字段；列表为旧运行补齐。旧版冻结记录可省略。 */
+            creation_index?: number;
         };
         RunPage: {
             items: components["schemas"]["Run"][];
@@ -976,7 +978,7 @@ export interface components {
             room: string;
         };
         /** @description Server selects exactly the lesson-specific shape. No expected answer values are returned by lesson APIs. */
-        Answers: components["schemas"]["ChoiceAnswers"] | components["schemas"]["FactsAnswers"] | components["schemas"]["CourseAnswers"] | components["schemas"]["Empty"] | components["schemas"]["ReflectionAnswers"];
+        Answers: components["schemas"]["ChoiceAnswers"] | components["schemas"]["FactsAnswers"] | components["schemas"]["CourseAnswers"] | components["schemas"]["Empty"] | components["schemas"]["ReflectionAnswers"] | components["schemas"]["BriefReflectionAnswers"];
         SubmissionCreate: {
             attempt_id: string;
             expected_attempt_revision: number;
@@ -1556,6 +1558,26 @@ export interface components {
             error_code: components["schemas"]["ErrorCode"] | null;
             usage: components["schemas"]["Usage"];
             checks: components["schemas"]["AssessmentCheck"][];
+        };
+        BriefReflectionForm: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "brief_reflection";
+            prompt: string;
+            challenge: components["schemas"]["ReflectionChallenge"];
+            self_check: string;
+        };
+        /** @description 第一关 1.1.0 正式复盘答案。evidence 为待服务端核验的消息引用；不等同于服务端生成的 Submission.evidence。解释须非空白但不按语义质量自动评分。 */
+        BriefReflectionAnswers: {
+            /** @constant */
+            kind: "brief_reflection";
+            baseline_run_id: string;
+            revised_run_id: string;
+            /** @enum {string} */
+            judgment: "satisfied" | "partial" | "unsatisfied";
+            explanation: string;
         };
     };
     responses: never;

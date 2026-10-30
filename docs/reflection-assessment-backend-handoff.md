@@ -1,8 +1,12 @@
 # 复盘验收接口与联调
 
-> 2026-10-27 本版本接入正式模型验收：第一关 1.2.0、第二至四关 1.1.0，41 操作 / 109 schema。新增提交字段、费用确认、判定和失败处理以[模型验收说明](model-assessment-2026-10-27.md)为准；旧版本行为与历史验证按各自日期保留。
+> 2026-10-30：第一关 1.3.0 使用简版复盘，第二至四关 1.1.0；41 操作 / 111 schema / 11 类事件。新增字段与旧版兼容见[精简验收说明](brief-reflection-2026-10-30.md)。第二关 Tips 已修复无 prompt 字段时的内部错误。
 
-更新：2026-10-27。现行功能包括正式模型验收、统一实训、第一关复盘与缺失项定位；当前契约为 41 个 HTTP 操作、109 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
+更新：2026-10-30。现行功能包括正式模型验收、统一实训、第一关复盘与缺失项定位；当前契约为 41 个 HTTP 操作、111 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
+
+## 当前简版接入
+
+第一关 1.3.0 的正式 answers 仅含 kind=brief_reflection、baseline_run_id、revised_run_id、judgment、explanation；两轮顺序以 Run.creation_index 为准。前端自动取证，一句依据替代手工摘录和改写。草稿沿用原接口；facts/instruction 只存选做自查，不进入正式评分。仍须 assessment 费用同意，不另传 learning_reflection。以下章节描述旧版引用流程，新版字段以[契约](../contracts/README.md)为准。
 
 ## 版本与职责
 

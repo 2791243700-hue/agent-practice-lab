@@ -270,8 +270,11 @@ class School:
             return self.store.get("run", path["run_id"])
         if operation == "listRuns":
             self.attempt(path["attempt_id"])
+            ordered = [
+                r for r in self.store.list_in_creation_order("run") if r["attempt_id"] == path["attempt_id"]
+            ]
             return self.page(
-                [r for r in self.store.list("run") if r["attempt_id"] == path["attempt_id"]],
+                [{**r, "creation_index": index} for index, r in enumerate(ordered)],
                 params,
                 scope="runs:" + path["attempt_id"],
             )

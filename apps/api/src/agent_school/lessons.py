@@ -88,7 +88,11 @@ class LessonCatalog:
         }
         for rule in manifest["rules"]:
             evaluator, params = rule["evaluator"], rule["params"]
-            if evaluator in forms and form["kind"] != forms[evaluator]:
+            if (
+                evaluator in forms
+                and form["kind"] != forms[evaluator]
+                and not (evaluator == "reflection_pair" and form["kind"] == "brief_reflection")
+            ):
                 raise ValueError("Answer form does not match grading evaluator")
             if evaluator == "choice_answer" and (
                 params["question_id"] != form["question_id"]

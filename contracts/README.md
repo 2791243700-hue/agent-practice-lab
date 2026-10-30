@@ -1,14 +1,14 @@
 # 前后端接口契约 v0.1.0
 
-> 2026-10-27 本版本接入正式模型验收：第一关 1.2.0、第二至四关 1.1.0，41 操作 / 109 schema。新增提交字段、费用确认、判定和失败处理以[模型验收说明](../docs/model-assessment-2026-10-27.md)为准；旧版本行为与历史验证按各自日期保留。
+> 2026-10-30：第一关 1.3.0 使用简版复盘，第二至四关 1.1.0；41 操作 / 111 schema / 11 类事件。新增字段与旧版兼容见[精简验收说明](../docs/brief-reflection-2026-10-30.md)。第二关 Tips 已修复无 prompt 字段时的内部错误。
 
-更新：2026-10-27。现行契约 v0.1.0 包含 41 个 HTTP 操作、109 个 schema、11 类 SSE 事件。正式模型验收兼容扩展原提交接口，适用性由课程版本决定。机器可读字段见 OpenAPI，样例仅证明结构，不代表真实模型调用。
+更新：2026-10-30。现行契约 v0.1.0 包含 41 个 HTTP 操作、111 个 schema、11 类 SSE 事件。正式模型验收兼容扩展原提交接口，适用性由课程版本决定。机器可读字段见 OpenAPI，样例仅证明结构，不代表真实模型调用。
 
 ## 文件与唯一来源
 
 | 文件 | 用途 |
 | --- | --- |
-| [openapi.json](openapi.json) | 41 个 HTTP 操作、109 个 schema 的请求、响应、字段约束和操作 ID |
+| [openapi.json](openapi.json) | 41 个 HTTP 操作、111 个 schema 的请求、响应、字段约束和操作 ID |
 | [events.schema.json](events.schema.json) | 11 类 SSE 事件及每类 payload 的 JSON Schema |
 | [lesson.schema.json](lesson.schema.json) | 服务端私有课程 manifest，包括评分规则和参考事实 |
 | [types.d.ts](types.d.ts) | 从 OpenAPI 生成的 TypeScript 类型，不手工修改 |
@@ -367,9 +367,26 @@ Tips 缓存保留生成时快照：后续编辑草稿或再次提交不自动刷
 - 新正式版本的 POST /submissions 仍传 attempt_id、expected_attempt_revision、answers 和 Idempotency-Key，并强制 assessment={profile_id,expected_profile_revision,consent:true}；第二至四关另传非空白 learning_reflection（最多 6000 字符）。第一关继续使用 ReflectionAnswers 的解释与改写。客户端不得传评分结论。
 - 后端先执行固定版本的客观规则，全部合格才解析已通过检查的内存模型并额外请求一次。客观失败返回 201 Submission，model_assessment.status=skipped、调用数 0；不会用模型取代工具或文件证据。
 - model_assessment.status=completed 时保存每项 criterion_id、passed、reason、suggestion、citations（真实 source_id 与逐字 quote），追加 model-* 必要规则。Submission.passed 仍由服务端按 live 模式及所有必要规则共同计算。
+- 第一关复盘的内部评分上下文额外提供公开小变式：lesson.challenge 包含 id/title/items/notice_source_id，原文位于 sources["challenge:<challenge_id>"]，与实验固定课件版本一致。模型可引用该 source_id；未知来源或不匹配的引文仍拒绝。仅补齐内部证据，不新增 HTTP 字段或向模型发送私有评分答案。
 - 认证、网络、超时或模型返回缺项、重复项、伪造引用、工具调用、无效格式时返回 201 冻结的 unavailable 提交，passed=false、error_code 为安全分类。usage.model_calls=1 表示一次请求尝试，不证明服务商接收或扣费；未知 Token 为 null。再次提交必须主动确认费用，无后台重试。
 - demo 不要求模型同意、不请求验收模型；model_assessment=skipped，evaluation_passed 仅反映客观项，passed 永远 false。
 - 历史 Submission 可无 model_assessment 或 learning_reflection。新报告、核对说明与课件标准随提交冻结并进入历史/ZIP，不修改旧成绩。
 - 模型等待在数据库长事务外；全局槽及 profile 互斥。付费准备前记录 pending，未知结果或响应回滚后同一键不再调用；用户先查历史，再主动新请求可能再次计费。
 
 请求/响应示例见 examples/http.json 的 submit-model-assessment 与 model-assessment-unavailable。完整上下文边界、引用校验、恢复和维护责任见[验收说明](../docs/model-assessment-2026-10-27.md)。前端缺失项提示只校验填写完整性，不替代正式评分。
+
+## 第一关 1.3.0 简版复盘
+
+新增 `BriefReflectionForm` 与 `BriefReflectionAnswers`，共 111 个 schema，操作与 SSE 不变。`kind=brief_reflection` 的正式答案只有 `baseline_run_id`、`revised_run_id`、`judgment`、`explanation`；解释必须非空白。无 `change`、`evidence`、`next_instruction` 或 `challenge`，这些旧版字段仍只适用于 `ReflectionAnswers`。
+
+后台验证两轮来自同一实验同一模式、实际创建顺序正确、均已完成且各有非空助手完整消息与终态事件。模型从原始运行输入和完整消息自动取得依据，评分标准 1.1.0 仅含“新增要求有效”和“判断有依据”。回答不符合要求但学生判断准确可以通过。仍要求模型引用真实来源，不自动接受学生的自评结论。
+
+`Run.creation_index` 为同一实验内从 0 开始的真实创建序号：新运行持久化，列表从数据库插入顺序为旧运行补齐；旧版冻结记录可省略。分页仍保持原时间游标协议，简版页面取得完整列表后按此序号选择和校验先后，避免电脑时间相同或回拨导致轮次颠倒。
+
+`BriefReflectionForm.challenge` 与 `self_check` 为独立选做练习及公开自查提示，不属于正式题目；填写、留空或答错均不阻挡提交。其内容随既有 `ReflectionDraftData.facts/instruction` 保存，但不送入正式模型验收或基础 Tips。`/reflection-draft` 同时支持 `reflection` 和 `brief_reflection`，沿用独立修订号、恢复和冲突语义。
+
+旧课件、实验和成绩保持固定版本；1.2.0 的模型仍需要并收到归档小变式原文。新版不覆盖旧课程包。详见[精简验收说明](../docs/brief-reflection-2026-10-30.md)。
+
+## Tips 表单兼容修复（2026-10-30）
+
+Tips 内部上下文按公开表单实际字段生成：facts 提供 tasks/sources，其他表单提供已有 prompt；不假定所有类型都有 prompt。修复第二关新旧版本生成 Tips 的 INTERNAL_ERROR。HTTP 请求、响应、错误码与缓存语义不变；此次异常在调用模型前发生。新增覆盖五种表单、七个课程版本的回归。简版答案结构样例见 examples/http.json 的 brief-reflection-answer。

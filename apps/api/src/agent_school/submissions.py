@@ -27,7 +27,7 @@ class SubmissionService:
             raise AppError(message="正式验收需要同意额外模型调用并选择验收模型。")
         if (
             live
-            and lesson["manifest"]["answer_form"]["kind"] != "reflection"
+            and lesson["manifest"]["answer_form"]["kind"] not in ("reflection", "brief_reflection")
             and not body.get("learning_reflection", "").strip()
         ):
             raise AppError(message="请用自己的话填写核对说明。")

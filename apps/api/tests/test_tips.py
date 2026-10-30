@@ -678,3 +678,53 @@ def test_tips_drop_reflection_draft_when_evidence_budget_drops_baseline(client):
     assert context["context_truncated"] is True
     assert "reflection_draft" not in context
     assert [run["id"] for run in context["runs"]] == [after["id"]]
+
+
+@pytest.mark.parametrize(
+    ("lesson_id", "version"),
+    [
+        ("01-task", "1.0.0"),
+        ("01-task", "1.2.0"),
+        ("01-task", "1.3.0"),
+        ("02-context", "1.0.0"),
+        ("02-context", "1.1.0"),
+        ("03-tools", "1.1.0"),
+        ("04-permission", "1.1.0"),
+    ],
+)
+def test_tips_generate_for_every_course_form(client, lesson_id, version):
+    school = client.app.state.school
+    response = post(
+        client,
+        "/attempts",
+        {"lesson_id": lesson_id, "lesson_version": version, "mode": "demo"},
+        "tips-course-attempt",
+    )
+    assert response.status_code == 201, response.text
+    run = seed_run(school, response.json())
+    profile = checked_profile(client)
+    requests = []
+
+    def handle(request):
+        requests.append(json.loads(request.content))
+        return provider_response()
+
+    model = httpx.AsyncClient(transport=httpx.MockTransport(handle))
+    school.tips.client = model
+    try:
+        result = generate(client, run, profile)
+    finally:
+        client.portal.call(model.aclose)
+    assert result.status_code == 200, result.text
+    assert len(requests) == 1
+    form = json.loads(requests[0]["messages"][1]["content"])["lesson"]["answer_form"]
+    public = school.catalog.get(lesson_id, version)["manifest"]["answer_form"]
+    assert form["kind"] == public["kind"]
+    if public["kind"] == "facts":
+        assert form["tasks"] == public["tasks"]
+        assert form["sources"] == public["sources"]
+        assert "prompt" not in form
+    else:
+        assert form["prompt"] == public["prompt"]
+    if public["kind"] == "brief_reflection":
+        assert "challenge" not in form and "self_check" not in form

@@ -2,9 +2,9 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**本版本（2026-10-27）：正式模型验收与缺失项定位。** 第一关 1.2.0、第二至四关 1.1.0 需同时通过真实证据与模型内容评分；费用明确确认、单次请求、失败不放行，旧版本及成绩保留。见[新验收与接口说明](docs/model-assessment-2026-10-27.md)。
+**本版本（2026-10-30）：第一关精简验收。** 第一关 1.3.0 必做为两轮对话和一句复盘，小变式选做；第二至四关仍为 1.1.0。真实证据与模型内容评分、费用确认、单次请求和失败不放行保留；旧实验及成绩沿用原规则。见[精简验收说明](docs/brief-reflection-2026-10-30.md)。
 
-开发基线为 main `0b15af9`（PR #14）。实训支持 Ctrl+Enter、醒目的 Tips 卡片及缺失项标记定位；完整范围、验证与历史见[版本索引](docs/project-status.md)。
+开发基线为 main `3aebaa7`（PR #15）。实训支持 Ctrl+Enter、醒目的 Tips 卡片及缺失项标记定位；完整范围、验证与历史见[版本索引](docs/project-status.md)。
 
 ## 本地启动（Windows）
 
@@ -44,7 +44,7 @@ npm --prefix apps/web ci
 - [四关导读](outputs/lesson-introductions.md)
 - [分阶段实施计划](outputs/local-agent-learning-implementation-plan.md)
 - [双人分工与 GitHub 协作](outputs/two-person-github-collaboration-plan.md)
-- [v0.1.0 接口契约与调用规则](contracts/README.md)（41 个 HTTP 操作、109 个 schema、11 类事件）
+- [v0.1.0 接口契约与调用规则](contracts/README.md)（41 个 HTTP 操作、111 个 schema、11 类事件）
 - [机器可读 OpenAPI](contracts/openapi.json)与[生成的 TypeScript 类型](contracts/types.d.ts)
 - [后端安装、启动与前端联调](docs/backend.md)
 - [后端验证报告](docs/runtime-validation.md)

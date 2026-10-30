@@ -48,5 +48,5 @@ test("generated union discriminators match every JSON wire constant", () => {
       checked++;
     }
   }
-  assert.equal(checked, 24);
+  assert.equal(checked, 25);
 });
