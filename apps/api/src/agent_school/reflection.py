@@ -23,7 +23,7 @@ class ReflectionService:
             attempt = self.school.attempt(attempt_id, True)
             revision(attempt, body["expected_attempt_revision"])
             lesson = self.school.catalog.get(attempt["lesson_id"], attempt["lesson_version"])
-            if lesson["manifest"]["answer_form"]["kind"] != "reflection":
+            if lesson["manifest"]["answer_form"]["kind"] not in ("reflection", "brief_reflection"):
                 raise AppError(message="此实验不使用复盘草稿。")
             self.school.contracts.validate("ReflectionDraftData", body["draft"])
             current = self.get_draft(attempt_id)

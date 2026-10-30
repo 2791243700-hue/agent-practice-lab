@@ -75,6 +75,69 @@ def install(client, school, handle):
     return model
 
 
+@pytest.mark.parametrize("version_case", ["current", "newer_exists", "newer_quote"])
+def test_reflection_assessment_receives_pinned_citable_challenge(client, assessment, version_case):
+    school, attempt, _, body = assessment
+    lesson = school.catalog.get(attempt["lesson_id"], attempt["lesson_version"])
+    challenge = lesson["manifest"]["answer_form"]["challenge"]
+    source_id = "challenge:" + challenge["id"]
+    future_notice = "周日 15:00 在体育馆集合，请携带运动鞋。"
+    if version_case != "current":
+        newer = copy.deepcopy(lesson)
+        newer["manifest"]["version"] = "1.99.0"
+        newer["manifest"]["answer_form"]["challenge"]["notice"] = future_notice
+        school.catalog.publish(newer)
+        assert school.catalog.get(attempt["lesson_id"])["manifest"]["version"] == "1.99.0"
+    requests = []
+
+    def handle(request):
+        requests.append(json.loads(json.loads(request.content)["messages"][1]["content"]))
+        result = response_for(request)
+        transfer = next(check for check in result["checks"] if check["criterion_id"] == "transfer")
+        transfer["citations"] = [
+            {
+                "source_id": source_id,
+                "quote": future_notice if version_case == "newer_quote" else challenge["notice"],
+            }
+        ]
+        return provider(result)
+
+    model = install(client, school, handle)
+    try:
+        response = post(client, "/submissions", body, "pinned-challenge-assessment")
+        replay = post(client, "/submissions", body, "pinned-challenge-assessment")
+    finally:
+        client.portal.call(model.aclose)
+    assert response.status_code == 201, response.text
+    assert replay.json() == response.json()
+    assert len(requests) == 1
+    context = requests[0]
+    assert challenge["notice"] in json.dumps(context, ensure_ascii=False)
+    assert context["sources"][source_id] == challenge["notice"]
+    assert context["lesson"]["version"] == attempt["lesson_version"]
+    assert context["lesson"]["challenge"] == {
+        "id": challenge["id"],
+        "title": challenge["title"],
+        "items": challenge["items"],
+        "notice_source_id": source_id,
+    }
+    encoded = json.dumps(context, ensure_ascii=False)
+    assert future_notice not in encoded
+    assert "expected_judgments" not in encoded
+    assert "rules" not in context["lesson"]
+    assert SECRET not in encoded
+    grade = response.json()
+    assert grade["passed"] is (version_case != "newer_quote")
+    assert grade["model_assessment"]["status"] == (
+        "unavailable" if version_case == "newer_quote" else "completed"
+    )
+    if version_case != "newer_quote":
+        transfer = next(
+            check for check in grade["model_assessment"]["checks"] if check["criterion_id"] == "transfer"
+        )
+        assert transfer["citations"] == [{"source_id": source_id, "quote": challenge["notice"]}]
+
+
 @pytest.mark.parametrize("passed", [True, False])
 def test_model_content_is_required_and_same_idempotency_key_calls_once(client, assessment, passed):
     school, attempt, _, body = assessment
@@ -291,7 +354,7 @@ def test_paid_response_rollback_keeps_pending_key_to_prevent_second_charge(clien
 
 @pytest.mark.parametrize(
     "lesson_id,version",
-    [("01-task", "1.2.0"), ("02-context", "1.1.0"), ("03-tools", "1.1.0"), ("04-permission", "1.1.0")],
+    [("01-task", "1.3.0"), ("02-context", "1.1.0"), ("03-tools", "1.1.0"), ("04-permission", "1.1.0")],
 )
 def test_latest_versions_publish_model_rubric_and_demo_never_calls_model(client, lesson_id, version):
     latest = client.get("/api/v1/lessons/" + lesson_id).json()
@@ -313,6 +376,12 @@ def test_latest_versions_publish_model_rubric_and_demo_never_calls_model(client,
         answers["facts"] = [
             {"task_id": "submit-summary", "due_date": "2026-11-04", "source_id": "notice-week"}
         ]
+    if form["kind"] == "brief_reflection":
+        original = pair(client, attempt)
+        answers = {
+            key: original[key] for key in ("baseline_run_id", "revised_run_id", "judgment", "explanation")
+        }
+        answers["kind"] = "brief_reflection"
     result = post(
         client,
         "/submissions",
@@ -395,6 +464,8 @@ def test_tool_lessons_require_both_real_tools_and_model_understanding(client, mo
     def handle(request):
         calls.append(request)
         context = json.loads(json.loads(request.content)["messages"][1]["content"])
+        assert "challenge" not in context["lesson"]
+        assert not any(key.startswith("challenge:") for key in context["sources"])
         passed = context["sources"]["student:reflection"] != "乱填"
         return provider(response_for(request, passed))
 

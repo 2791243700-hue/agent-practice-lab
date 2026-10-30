@@ -97,7 +97,8 @@ test("第一关：模型设置、认证失败、两次运行、刷新续接、�
         );
     }
   });
-  await page.goto("/lessons/01-task");
+  // Keep this full legacy four-step workflow pinned; zz-brief-review.spec covers 1.3.0.
+  await page.goto("/lessons/01-task?version=1.2.0");
   await page.getByRole("button", { name: "开始实训", exact: true }).click();
   await expect(page).toHaveURL(/\/practice\//);
   const attemptUrl = page.url();
@@ -190,8 +191,13 @@ test("第一关：模型设置、认证失败、两次运行、刷新续接、�
   );
   await page.getByRole("button", { name: "留在当前关卡", exact: true }).click();
   await page.goto("/");
-  await expect(page.getByText("已正式通过", { exact: true })).toHaveCount(1);
-  await page.getByRole("link", { name: "继续实训" }).click();
+  // Passing archived 1.2.0 must not count as passing latest 1.3.0.
+  await expect(page.getByText("已正式通过", { exact: true })).toHaveCount(0);
+  const savedAttempt = await page.request.get(
+    `/api/v1/attempts/${new URL(attemptUrl).pathname.split("/").at(-1)}`,
+  );
+  expect((await savedAttempt.json()).progress).toBe("completed");
+  await page.goto(attemptUrl);
   await expect(page).toHaveURL(
     new RegExp(`${new URL(attemptUrl).pathname}(?:\\?|$)`),
   );

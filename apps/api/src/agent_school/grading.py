@@ -82,6 +82,7 @@ class Grader:
             "course": "CourseAnswers",
             "artifact": "Empty",
             "reflection": "ReflectionAnswers",
+            "brief_reflection": "BriefReflectionAnswers",
         }[kind]
         try:
             self.school.contracts.validate(schema, self.answers)
@@ -108,6 +109,13 @@ class Grader:
             raise AppError(message="请核对本关指定的课程。")
         elif kind == "reflection":
             self.validate_reflection(form)
+        elif kind == "brief_reflection":
+            self.reflection_runs = []
+            for field in ("baseline_run_id", "revised_run_id"):
+                run = self.run_map.get(self.answers[field])
+                if run is None:
+                    raise AppError(message="只能引用本实验同一模式的运行。")
+                self.reflection_runs.append(run)
 
     def validate_reflection(self, form):
         self.reflection_runs = []
@@ -162,6 +170,7 @@ class Grader:
                     if (
                         event["run_id"] == run["id"]
                         and event["kind"] == "message.completed"
+                        and event["payload"]["role"] == "assistant"
                         and event["payload"]["content"].strip()
                     )
                 ]

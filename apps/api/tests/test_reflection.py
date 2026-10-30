@@ -161,7 +161,7 @@ def submit_reflection(client, attempt, answers, key="reflection-submit"):
 
 
 def test_reflection_published_separately_and_private_answers_not_exposed(client):
-    latest = client.get("/api/v1/lessons/01-task").json()
+    latest = client.get("/api/v1/lessons/01-task?version=1.2.0").json()
     assert latest["version"] == "1.2.0"
     assert latest["assessment_policy"]["kind"] == "model"
     assert latest["answer_form"]["kind"] == "reflection"

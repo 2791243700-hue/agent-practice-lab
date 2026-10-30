@@ -1,12 +1,12 @@
 # Agent Practice Lab：前后端开发交接
 
-> 2026-10-27 本版本接入正式模型验收：第一关 1.2.0、第二至四关 1.1.0，41 操作 / 109 schema。新增提交字段、费用确认、判定和失败处理以[模型验收说明](model-assessment-2026-10-27.md)为准；旧版本行为与历史验证按各自日期保留。
+> 2026-10-30：第一关 1.3.0 使用简版复盘，第二至四关 1.1.0；41 操作 / 111 schema / 11 类事件。新增字段与旧版兼容见[精简验收说明](brief-reflection-2026-10-30.md)。第二关 Tips 已修复无 prompt 字段时的内部错误。
 
-更新：2026-10-27。现行功能包括正式模型验收、统一实训、第一关复盘与缺失项定位；当前契约为 41 个 HTTP 操作、109 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
+更新：2026-10-30。现行功能包括正式模型验收、统一实训、第一关复盘与缺失项定位；当前契约为 41 个 HTTP 操作、111 个 schema、11 类 SSE 事件。最新合并版本与分轮验证见[版本索引](project-status.md)，协议以[契约说明](../contracts/README.md)为准。
 
 ## 当前代码与接收方式
 
-从 main 接手。PR #10 的前端预览已经由 PR #9 完成正式接入，合并提交 af36497；不再需要合并旧功能分支或另做一套复盘接口。第一关 1.2.0 使用 ReflectionForm/ReflectionAnswers 并加入模型内容验收，旧 1.1.0 保留结构化规则、1.0.0 保留 choice；第二至四关新 1.1.0 同时检查客观证据和模型评分。
+从 main 接手。PR #10 的前端预览已经由 PR #9 完成正式接入，合并提交 af36497；不再需要合并旧功能分支或另做一套复盘接口。第一关 1.3.0 使用 BriefReflectionForm/BriefReflectionAnswers，自动取两轮证据并进行两项模型验收；旧 1.2.0 使用 ReflectionForm/ReflectionAnswers 并加入模型内容验收，旧 1.1.0 保留结构化规则、1.0.0 保留 choice；第二至四关新 1.1.0 同时检查客观证据和模型评分。
 
 主要接入入口：[完整契约](../contracts/README.md)、[复盘字段与联调](reflection-assessment-backend-handoff.md)、[OpenAPI](../contracts/openapi.json)。接口版本保持 v0.1.0，课程版本单独归档。历史预览记录见[预览交付](reflection-assessment-delivery.md)。
 

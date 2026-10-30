@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
+  // Isolate browser-test builds from a running development server.
+  distDir: process.env.AGENT_SCHOOL_NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
   async headers() {
     return [

@@ -602,6 +602,9 @@
         },
         {
           "$ref": "#/$defs/ReflectionForm"
+        },
+        {
+          "$ref": "#/$defs/BriefReflectionForm"
         }
       ],
       "discriminator": {
@@ -611,7 +614,8 @@
           "facts": "#/$defs/FactsForm",
           "course": "#/$defs/CourseForm",
           "artifact": "#/$defs/ArtifactForm",
-          "reflection": "#/$defs/ReflectionForm"
+          "reflection": "#/$defs/ReflectionForm",
+          "brief_reflection": "#/$defs/BriefReflectionForm"
         }
       }
     },
@@ -1011,6 +1015,35 @@
         "id",
         "title",
         "description"
+      ]
+    },
+    "BriefReflectionForm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "brief_reflection"
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "challenge": {
+          "$ref": "#/$defs/ReflectionChallenge"
+        },
+        "self_check": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        }
+      },
+      "required": [
+        "kind",
+        "prompt",
+        "challenge",
+        "self_check"
       ]
     }
   }

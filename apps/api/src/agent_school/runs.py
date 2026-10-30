@@ -80,6 +80,7 @@ class RunService:
         run = {
             "id": new_id("run"),
             "attempt_id": attempt["id"],
+            "creation_index": sum(r["attempt_id"] == attempt["id"] for r in self.store.list("run")),
             "mode": attempt["mode"],
             "status": "queued",
             "last_seq": 0,
@@ -138,6 +139,11 @@ class RunService:
             "当前课题：\n" + lesson["task"]
         )
         if lesson["manifest"]["id"] == "01-task" and not lesson["manifest"]["allowed_tools"]:
+            platform += (
+                "\n学生未另附通知时，‘这段通知’、‘通知’默认指本关固定参考通知。"
+                "请直接使用已提供材料，不要再次要求学生粘贴通知。"
+                "优先使用学生明确提供或指定的通知；确实缺少的信息再简短澄清，不得猜测。"
+            )
             platform += "\n本关固定参考通知（已提供，无需读取文件工具）：\n" + "\n\n".join(
                 material["title"] + "\n" + material["content"] for material in lesson["materials"]
             )

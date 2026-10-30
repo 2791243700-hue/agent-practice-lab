@@ -113,7 +113,7 @@ class TipsService:
                                     json.dumps(submission["answers"], ensure_ascii=False), 16000
                                 )
                             }
-                            if submission.get("answers", {}).get("kind") == "reflection"
+                            if submission.get("answers", {}).get("kind") in ("reflection", "brief_reflection")
                             else {}
                         ),
                         "created_at": submission["created_at"],
@@ -131,8 +131,9 @@ class TipsService:
                 "completion_criteria": lesson["manifest"]["completion_criteria"],
                 "available_tools": lesson["manifest"]["allowed_tools"],
                 "answer_form": {
-                    "kind": lesson["manifest"]["answer_form"]["kind"],
-                    "prompt": lesson["manifest"]["answer_form"]["prompt"],
+                    key: value
+                    for key, value in lesson["manifest"]["answer_form"].items()
+                    if key in ("kind", "prompt", "tasks", "sources")
                 },
                 "task": bounded(lesson["task"], 8000),
             },
@@ -142,10 +143,13 @@ class TipsService:
             "submissions": submissions[-3:],
             "context_truncated": truncated,
         }
-        if lesson["manifest"]["answer_form"]["kind"] == "reflection":
-            context["lesson"]["answer_form"]["challenge"] = lesson["manifest"]["answer_form"]["challenge"]
+        if lesson["manifest"]["answer_form"]["kind"] in ("reflection", "brief_reflection"):
+            if lesson["manifest"]["answer_form"]["kind"] == "reflection":
+                context["lesson"]["answer_form"]["challenge"] = lesson["manifest"]["answer_form"]["challenge"]
             saved = self.store.get("reflection-draft", attempt["id"], missing_ok=True)
             draft = saved and saved["draft"]
+            if draft and lesson["manifest"]["answer_form"]["kind"] == "brief_reflection":
+                draft = {key: draft[key] for key in ("beforeId", "afterId", "judgment", "explanation")}
             if draft and draft.get("afterId") == run["id"] and draft.get("beforeId") in included:
                 context["reflection_draft"] = {
                     "revision": saved["revision"],

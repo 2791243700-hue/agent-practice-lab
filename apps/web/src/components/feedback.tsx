@@ -13,6 +13,7 @@ import type {
 } from "@/lib/types";
 import { dateTime, ErrorBox, useAction } from "./ui";
 import { ConversationReview } from "./conversation-review";
+import { BriefReview } from "./brief-review";
 import {
   focusValidationField,
   validationAttributes,
@@ -169,6 +170,31 @@ export function SubmissionFeedback({
             </p>
           </div>
         )}
+      {"kind" in submission.answers &&
+        submission.answers.kind === "brief_reflection" && (
+          <div className="reflection-submitted" data-testid="brief-submitted">
+            <h3>提交时的一句话复盘</h3>
+            <p>
+              我的判断：
+              {
+                {
+                  satisfied: "符合",
+                  partial: "部分符合",
+                  unsatisfied: "不符合",
+                }[submission.answers.judgment]
+              }
+            </p>
+            <p>判断依据：{submission.answers.explanation}</p>
+            <details>
+              <summary>所选两轮对话</summary>
+              <p>第一次：{submission.answers.baseline_run_id}</p>
+              <p>改进后：{submission.answers.revised_run_id}</p>
+            </details>
+            <p className="small muted">
+              答案已冻结；系统已关联两轮真实对话，后续修改草稿不会改变本次记录。选做练习不影响成绩。
+            </p>
+          </div>
+        )}
       {submission.rules.map((rule) => (
         <div className="rule" key={rule.rule_id}>
           {rule.passed ? (
@@ -303,7 +329,7 @@ export function SubmissionPanel({
     check("room", room.trim(), "请根据实际查询结果填写教室。");
   }
   if (needsConsent) {
-    if (form.kind !== "reflection")
+    if (form.kind !== "reflection" && form.kind !== "brief_reflection")
       check(
         "reflection",
         learningReflection.trim(),
@@ -342,13 +368,19 @@ export function SubmissionPanel({
         expected_profile_revision: assessmentProfile.revision,
         consent: true,
       };
-    if (needsConsent && form.kind !== "reflection")
+    if (
+      needsConsent &&
+      form.kind !== "reflection" &&
+      form.kind !== "brief_reflection"
+    )
       options.learning_reflection = learningReflection;
     setConsentIdentity(null);
     await action.act(() => onSubmit(answers, options));
   }
-  const showReview = form.kind === "reflection";
+  const showReview =
+    form.kind === "reflection" || form.kind === "brief_reflection";
   const titles = {
+    brief_reflection: "两轮对话，一句话复盘",
     reflection: "对照两轮尝试，完成复盘验收",
     choice: "核对理解，提交验收",
     facts: "核对事实与来源",
@@ -356,6 +388,7 @@ export function SubmissionPanel({
     artifact: "核对授权与保存产物",
   };
   const guidance = {
+    brief_reflection: "核对两轮对话，选择结果判断并说明一句依据。",
     reflection: "核对两轮引用，提交正式结构化验收。",
     choice: "运行完成只是一步。请核对材料和结果，再提交本次实训的证据与答案。",
     facts: "系统会核对实际读取记录、日期与原文来源；只勾选材料不代表已经读取。",
@@ -369,9 +402,7 @@ export function SubmissionPanel({
       <div className="panel-heading">
         <div>
           <div className="eyebrow">CHECK YOUR UNDERSTANDING</div>
-          <h2>
-            {showReview ? "对照两轮尝试，完成复盘验收" : titles[form.kind]}
-          </h2>
+          <h2>{titles[form.kind]}</h2>
         </div>
         <span
           className={`badge ${attempt.mode === "demo" ? "demo" : "subtle"}`}
@@ -415,22 +446,23 @@ export function SubmissionPanel({
                   </a>
                 )}
               </p>
-              {form.kind !== "reflection" && (
-                <label>
-                  我的核对说明
-                  <textarea
-                    {...field("reflection")}
-                    maxLength={6000}
-                    rows={3}
-                    disabled={disabled || action.busy}
-                    value={learningReflection}
-                    onChange={(event) =>
-                      setLearningReflection(event.target.value)
-                    }
-                    placeholder="你核对了哪些具体依据？回答或产物与原文、工具结果怎样对应？有哪些问题，如何处理？"
-                  />
-                </label>
-              )}
+              {form.kind !== "reflection" &&
+                form.kind !== "brief_reflection" && (
+                  <label>
+                    我的核对说明
+                    <textarea
+                      {...field("reflection")}
+                      maxLength={6000}
+                      rows={3}
+                      disabled={disabled || action.busy}
+                      value={learningReflection}
+                      onChange={(event) =>
+                        setLearningReflection(event.target.value)
+                      }
+                      placeholder="你核对了哪些具体依据？回答或产物与原文、工具结果怎样对应？有哪些问题，如何处理？"
+                    />
+                  </label>
+                )}
               <label className="check-label">
                 <input
                   {...field("consent")}
@@ -447,7 +479,18 @@ export function SubmissionPanel({
           )}
         </div>
       )}
-      {form.kind === "reflection" ? (
+      {form.kind === "brief_reflection" ? (
+        <BriefReview
+          attempt={attempt}
+          runs={runs}
+          events={events}
+          disabled={disabled || action.busy}
+          form={form}
+          onValidateSubmission={validateSubmission}
+          onRefresh={onRefresh}
+          onSubmit={send}
+        />
+      ) : form.kind === "reflection" ? (
         <ConversationReview
           attempt={attempt}
           runs={runs}
