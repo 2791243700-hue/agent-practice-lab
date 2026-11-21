@@ -19,6 +19,14 @@ import { ErrorBox, Heading, Loading, useAction } from "./ui";
 
 type Provider = "deepseek" | "openai" | "openai-compatible";
 type Catalog = Schema["ModelCatalog"];
+function checkResult(
+  check: Profile["connection_check"],
+  step: "text" | "tools",
+) {
+  if (check.status === "unchecked") return "待检查";
+  if (step === "tools" && !check.text_ok) return "未执行";
+  return (step === "text" ? check.text_ok : check.tools_ok) ? "通过" : "未通过";
+}
 function providerName(profile: Profile) {
   const host = new URL(profile.base_url).hostname;
   return host === "api.deepseek.com"
@@ -47,9 +55,11 @@ export default function KeyManager() {
   const [editingName, setEditingName] = useState("");
   const [editingModel, setEditingModel] = useState("");
   const [notice, setNotice] = useState("");
+  const [checkingId, setCheckingId] = useState<string | null>(null);
   const [checkConsent, setCheckConsent] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const profile = profiles?.find((p) => p.id === selected);
+  const checking = !!profile && checkingId === profile.id;
   const catalog = profile ? catalogs[profile.id] : null;
 
   async function load() {
@@ -647,27 +657,34 @@ export default function KeyManager() {
                 <hr />
                 <h2>检查连接</h2>
                 <div
-                  className={`connection-state ${profile.connection_check.status}`}
+                  className={`connection-state ${checking ? "unchecked" : profile.connection_check.status}`}
+                  aria-live="polite"
                 >
                   <Link2 size={20} />
                   <div>
                     <strong>
-                      {profile.connection_check.status === "passed"
-                        ? "连接检查通过"
-                        : profile.connection_check.status === "failed"
-                          ? "连接检查未通过"
-                          : "尚未通过连接检查"}
+                      {checking
+                        ? "正在检查连接…"
+                        : profile.connection_check.status === "passed"
+                          ? "连接检查通过"
+                          : profile.connection_check.status === "failed"
+                            ? "连接检查未通过"
+                            : "尚未通过连接检查"}
                     </strong>
-                    <p>{profile.connection_check.message}</p>
+                    {!checking && <p>{profile.connection_check.message}</p>}
                     <span>
                       文本调用：
-                      {profile.connection_check.text_ok ? "通过" : "未通过"} ·
-                      工具调用：
-                      {profile.connection_check.tools_ok ? "通过" : "未通过"}
+                      {checking
+                        ? "检查中"
+                        : checkResult(profile.connection_check, "text")}{" "}
+                      · 工具调用：
+                      {checking
+                        ? "等待结果"
+                        : checkResult(profile.connection_check, "tools")}
                     </span>
                   </div>
                 </div>
-                {profile.connection_check.error_code && (
+                {!checking && profile.connection_check.error_code && (
                   <p className="small danger-text">
                     {profile.connection_check.error_code} ·
                     核对服务商、额度和工具支持情况后重试。
@@ -691,6 +708,7 @@ export default function KeyManager() {
                     }
                     onClick={() =>
                       void action.act(async () => {
+                        setCheckingId(profile.id);
                         setNotice("正在检查，最多约 30 秒…");
                         try {
                           await api(
@@ -702,13 +720,17 @@ export default function KeyManager() {
                             },
                           );
                         } finally {
-                          const items = await load();
-                          setNotice(
-                            items.find((p) => p.id === profile.id)
-                              ?.connection_check.status === "passed"
-                              ? "文本和工具检查均通过，可以开始实训。"
-                              : "检查未通过，请查看检查结果。",
-                          );
+                          try {
+                            const items = await load();
+                            setNotice(
+                              items.find((p) => p.id === profile.id)
+                                ?.connection_check.status === "passed"
+                                ? "文本和工具检查均通过，可以开始实训。"
+                                : "请查看当前连接检查结果。",
+                            );
+                          } finally {
+                            setCheckingId(null);
+                          }
                         }
                       })
                     }
@@ -718,7 +740,7 @@ export default function KeyManager() {
                   {back && profile.connection_check.status === "passed" && (
                     <Link
                       className="button secondary"
-                      href={`${back}?profile=${pathId(profile.id)}`}
+                      href={`${back}?from=settings&profile=${pathId(profile.id)}`}
                     >
                       返回实训 →
                     </Link>

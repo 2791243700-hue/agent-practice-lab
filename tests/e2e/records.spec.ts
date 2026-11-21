@@ -1,7 +1,7 @@
 import { test, expect } from "../../apps/web/tests/browser";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import type { Attempt } from "../../apps/web/src/lib/types";
+import type { Schema } from "../../apps/web/src/lib/types";
 
 const examples = [
   { mode: "live", progress: "completed", status: "active", passed: true },
@@ -12,23 +12,28 @@ const examples = [
 
 for (const width of [1440, 390]) {
   test(`学习记录右侧显示日期与红绿通关状态（${width}px）`, async ({ page }) => {
-    const attempts: Attempt[] = examples.map((item, index) => ({
-      id: `record-${index}`,
-      owner_id: "local-owner",
-      lesson_id: `lesson-${index}`,
-      lesson_version: "1.0.0",
-      mode: item.mode,
-      progress: item.progress,
-      status: item.status,
-      revision: 1,
-      settings: { system_instruction: "", temperature: 0.3 },
-      selected_file_ids: [],
-      active_run_id: null,
-      latest_submission_id: null,
-      reset_to_attempt_id: item.status === "superseded" ? "record-next" : null,
-      created_at: "2026-10-19T16:08:00Z",
-      updated_at: "2026-10-20T00:00:00Z",
-    }));
+    const attempts: Schema["AttemptListItem"][] = examples.map(
+      (item, index) => ({
+        id: `record-${index}`,
+        owner_id: "local-owner",
+        lesson_id: `lesson-${index}`,
+        lesson_version: "1.0.0",
+        completed_run_count: index,
+        latest_task_preview: index ? `学习任务 ${index}` : null,
+        mode: item.mode,
+        progress: item.progress,
+        status: item.status,
+        revision: 1,
+        settings: { system_instruction: "", temperature: 0.3 },
+        selected_file_ids: [],
+        active_run_id: null,
+        latest_submission_id: null,
+        reset_to_attempt_id:
+          item.status === "superseded" ? "record-next" : null,
+        created_at: "2026-10-19T16:08:00Z",
+        updated_at: "2026-10-20T00:00:00Z",
+      }),
+    );
     await page.route("**/api/v1/attempts?**", (route) =>
       route.fulfill({ json: { items: attempts, next_cursor: null } }),
     );
@@ -51,6 +56,8 @@ for (const width of [1440, 390]) {
     await page.goto("/records");
     const rows = page.locator(".records-list article");
     await expect(rows).toHaveCount(examples.length);
+    await expect(rows.nth(1)).toContainText("已完成 1 轮");
+    await expect(rows.nth(1)).toContainText("学习任务 1");
     for (let index = 0; index < examples.length; index++) {
       const row = rows.nth(index);
       const status = row.locator(".learning-status");

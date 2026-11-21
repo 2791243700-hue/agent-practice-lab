@@ -569,13 +569,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 读取当前实验的复盘草稿，不调用模型
-         * @description 读取实验的持久化复盘草稿；未保存返回 revision=0、draft=null、updated_at=null。旧实验可读，无模型调用。
+         * 读取本次实训的作答草稿
+         * @description 按实训读取固定课件版本的作答草稿。未保存返回 revision=0、draft=null、updated_at=null。历史实训可读。
          */
         get: operations["getReflectionDraft"];
         /**
-         * 按独立草稿版本保存复盘，不修改实验版本
-         * @description 完整替换 active reflection 实验的草稿。expected_revision 对应草稿，expected_attempt_revision 对应实验；成功只递增草稿 revision。不使用 Idempotency-Key，响应丢失先 GET；不产生正式提交或模型调用。
+         * 以独立修订号保存当前实训的作答草稿
+         * @description 完整替换进行中实训的草稿，只递增草稿 revision。第一关复盘沿用原快照，第二至四关按 facts、course、artifact 保存。未接到响应时先 GET；草稿保存不提交验收，不调用模型。
          */
         put: operations["putReflectionDraft"];
         post?: never;
@@ -819,7 +819,7 @@ export interface components {
             updated_at: string;
         };
         AttemptPage: {
-            items: components["schemas"]["Attempt"][];
+            items: components["schemas"]["AttemptListItem"][];
             next_cursor: string | null;
         };
         FileInfo: {
@@ -1508,13 +1508,13 @@ export interface components {
         ReflectionDraft: {
             attempt_id: string;
             revision: number;
-            draft: components["schemas"]["ReflectionDraftData"] | null;
+            draft: components["schemas"]["AttemptDraftData"] | null;
             updated_at: string | null;
         };
         PutReflectionDraftRequest: {
             expected_revision: number;
             expected_attempt_revision: number;
-            draft: components["schemas"]["ReflectionDraftData"];
+            draft: components["schemas"]["AttemptDraftData"];
         };
         AssessmentCriterion: {
             id: string;
@@ -1579,6 +1579,55 @@ export interface components {
             judgment: "satisfied" | "partial" | "unsatisfied";
             explanation: string;
         };
+        AttemptListItem: {
+            id: string;
+            /** @constant */
+            owner_id: "local-owner";
+            lesson_id: string;
+            lesson_version: string;
+            /** @enum {string} */
+            mode: "live" | "demo";
+            revision: number;
+            /** @enum {string} */
+            status: "active" | "superseded";
+            settings: components["schemas"]["Settings"];
+            selected_file_ids: string[];
+            /** @enum {string} */
+            progress: "not_started" | "in_progress" | "completed";
+            active_run_id: string | null;
+            latest_submission_id: string | null;
+            reset_to_attempt_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            completed_run_count: number;
+            latest_task_preview: string | null;
+        };
+        FactsDraftData: {
+            /** @constant */
+            kind: "facts";
+            facts: {
+                [key: string]: {
+                    due_date: "" | string;
+                    source_id: string;
+                };
+            };
+            learning_reflection: string;
+        };
+        CourseDraftData: {
+            /** @constant */
+            kind: "course";
+            session_date: "" | string;
+            room: string;
+            learning_reflection: string;
+        };
+        ArtifactDraftData: {
+            /** @constant */
+            kind: "artifact";
+            learning_reflection: string;
+        };
+        AttemptDraftData: components["schemas"]["ReflectionDraftData"] | components["schemas"]["FactsDraftData"] | components["schemas"]["CourseDraftData"] | components["schemas"]["ArtifactDraftData"];
     };
     responses: never;
     parameters: never;
@@ -3112,7 +3161,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description 字段或引用不合法，或实验不使用 reflection 表单。 */
+            /** @description 字段、引用或草稿与实训固定版本的表单不匹配。 */
             422: {
                 headers: {
                     [name: string]: unknown;

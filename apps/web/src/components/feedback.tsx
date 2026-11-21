@@ -13,6 +13,7 @@ import type {
 } from "@/lib/types";
 import { dateTime, ErrorBox, useAction } from "./ui";
 import { ConversationReview } from "./conversation-review";
+import { usePracticeDraft } from "@/lib/use-reflection-draft";
 import { BriefReview } from "./brief-review";
 import {
   focusValidationField,
@@ -262,6 +263,7 @@ export function SubmissionPanel({
   history,
   runs,
   events,
+  incompleteHistory,
   disabled,
   onSubmit,
   onView,
@@ -273,6 +275,7 @@ export function SubmissionPanel({
   history: Schema["SubmissionSummary"][];
   runs: Run[];
   events: Record<string, Event[]>;
+  incompleteHistory: number[];
   disabled: boolean;
   onSubmit: (
     answers: Schema["Answers"],
@@ -285,12 +288,17 @@ export function SubmissionPanel({
   const action = useAction();
   const form = lesson.answer_form;
   const [option, setOption] = useState("");
-  const [facts, setFacts] = useState<
-    Record<string, { due_date: string; source_id: string }>
-  >({});
-  const [session, setSession] = useState("");
-  const [room, setRoom] = useState("");
-  const [learningReflection, setLearningReflection] = useState("");
+  const saved = usePracticeDraft(attempt, form.kind, onRefresh);
+  const { draft, setDraft } = saved;
+  const hasPracticeDraft = ["facts", "course", "artifact"].includes(form.kind);
+  const waitingForDraft = hasPracticeDraft && !saved.loaded;
+  const facts = draft.kind === "facts" ? draft.facts : {};
+  const session = draft.kind === "course" ? draft.session_date : "";
+  const room = draft.kind === "course" ? draft.room : "";
+  const learningReflection = draft.learning_reflection;
+  function setFacts(value: Schema["FactsDraftData"]["facts"]) {
+    setDraft((old) => (old.kind === "facts" ? { ...old, facts: value } : old));
+  }
   const [consentIdentity, setConsentIdentity] = useState<string | null>(null);
   const prefix = useId();
   const fieldId = (key: string) => `${prefix}-${key}`;
@@ -411,6 +419,64 @@ export function SubmissionPanel({
         </span>
       </div>
       <ValidationSummary issues={issues} />
+      {incompleteHistory.length > 0 && (
+        <p className="notice warning">
+          第 {incompleteHistory.join("、")}{" "}
+          轮的历史证据尚未读全。可在对应轮次重试，再核对该轮回答。
+        </p>
+      )}
+      {hasPracticeDraft && (
+        <div className="small" aria-live="polite">
+          {saved.error ? (
+            <div className="notice warning" role="alert">
+              {saved.error}
+              {saved.dirty && (
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => {
+                    const url = URL.createObjectURL(
+                      new Blob([JSON.stringify(draft, null, 2)], {
+                        type: "application/json",
+                      }),
+                    );
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = `draft-${attempt.id}.json`;
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  }}
+                >
+                  下载当前草稿备份
+                </button>
+              )}
+              <button
+                className="text-button"
+                type="button"
+                onClick={() => {
+                  if (
+                    !saved.dirty ||
+                    confirm("重新读取将替换本页修改，继续吗？")
+                  )
+                    void saved.reload();
+                }}
+              >
+                重新读取服务端草稿
+              </button>
+            </div>
+          ) : (
+            <p role="status">
+              {!saved.loaded
+                ? "正在读取作答草稿…"
+                : saved.dirty || saved.saving
+                  ? "正在保存作答草稿…"
+                  : saved.hasSaved
+                    ? "作答草稿已保存"
+                    : "填写后会自动保存草稿"}
+            </p>
+          )}
+        </div>
+      )}
       {modelAssessment && (
         <div className="notice model-assessment-consent">
           <strong>
@@ -454,11 +520,15 @@ export function SubmissionPanel({
                       {...field("reflection")}
                       maxLength={6000}
                       rows={3}
-                      disabled={disabled || action.busy}
+                      disabled={disabled || action.busy || waitingForDraft}
                       value={learningReflection}
-                      onChange={(event) =>
-                        setLearningReflection(event.target.value)
-                      }
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setDraft((old) => ({
+                          ...old,
+                          learning_reflection: value,
+                        }));
+                      }}
                       placeholder="你核对了哪些具体依据？回答或产物与原文、工具结果怎样对应？有哪些问题，如何处理？"
                     />
                   </label>
@@ -481,6 +551,7 @@ export function SubmissionPanel({
       )}
       {form.kind === "brief_reflection" ? (
         <BriefReview
+          incompleteHistory={incompleteHistory.length > 0}
           attempt={attempt}
           runs={runs}
           events={events}
@@ -539,7 +610,7 @@ export function SubmissionPanel({
               void send(answers);
             }}
           >
-            <fieldset disabled={disabled || action.busy}>
+            <fieldset disabled={disabled || action.busy || waitingForDraft}>
               <legend className="sr-only">本关作答</legend>
               {form.kind === "choice" && (
                 <>
@@ -622,7 +693,14 @@ export function SubmissionPanel({
                         required
                         type="date"
                         value={session}
-                        onChange={(e) => setSession(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setDraft((old) =>
+                            old.kind === "course"
+                              ? { ...old, session_date: value }
+                              : old,
+                          );
+                        }}
                       />
                     </label>
                     <label>
@@ -632,7 +710,14 @@ export function SubmissionPanel({
                         required
                         maxLength={120}
                         value={room}
-                        onChange={(e) => setRoom(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setDraft((old) =>
+                            old.kind === "course"
+                              ? { ...old, room: value }
+                              : old,
+                          );
+                        }}
                         placeholder="根据查询结果填写"
                       />
                     </label>

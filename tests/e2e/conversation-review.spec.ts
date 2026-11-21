@@ -418,7 +418,10 @@ test("自动保存串行处理慢请求，不丢失最后修改", async ({ page 
   await expect.poll(() => state.writes.length).toBe(1);
   await input.fill("最后一次填写");
   await expect
-    .poll(() => state.draft().draft?.instruction)
+    .poll(() => {
+      const draft = state.draft().draft;
+      return draft && "instruction" in draft ? draft.instruction : undefined;
+    })
     .toBe("最后一次填写");
   expect(state.maximumWrites()).toBe(1);
   expect(state.writes.map((write) => write.expected_revision)).toEqual([1, 2]);

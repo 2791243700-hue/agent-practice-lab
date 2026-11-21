@@ -135,6 +135,17 @@ class School:
         self.workspace.create(value["id"], lesson)
         return value
 
+    def list_attempts(self, params):
+        page = self.page(self.store.list("attempt"), params)
+        summaries = self.store.run_summaries([item["id"] for item in page["items"]])
+        for item in page["items"]:
+            count, task = summaries.get(item["id"], (0, None))
+            preview = " ".join(task.split()) if task is not None else None
+            if preview and len(preview) > 120:
+                preview = preview[:119] + "…"
+            item.update(completed_run_count=count, latest_task_preview=preview)
+        return page
+
     def update_attempt(self, key, body):
         value = self.attempt(key, True)
         if self.slot == "assessment:" + key:
@@ -228,7 +239,7 @@ class School:
         if operation == "getAttempt":
             return self.attempt(path["attempt_id"])
         if operation == "listAttempts":
-            return self.page(self.store.list("attempt"), params)
+            return self.list_attempts(params)
         if operation == "updateAttempt":
             return self.update_attempt(path["attempt_id"], body)
         if operation == "resetAttempt":

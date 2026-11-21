@@ -44,20 +44,26 @@ function LessonContent({
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [demo, setDemo] = useState(false);
   const action = useAction();
-  useEffect(() => {
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+  function load() {
     void action.act(async () => {
-      const [l, a, m] = await Promise.all([
+      const [l, a, m, catalog] = await Promise.all([
         api<Lesson>(
           `/lessons/${pathId(id)}${version ? `?version=${encodeURIComponent(version)}` : ""}`,
         ),
         allPages<Attempt>(`/attempts?lesson_id=${pathId(id)}`),
         api<Schema["Me"]>("/me"),
+        version ? api<Schema["LessonList"]>("/lessons") : null,
       ]);
+      setLatestVersion(
+        catalog?.items.find((item) => item.id === id)?.version ?? l.version,
+      );
       setLesson(l);
       setAttempts(a);
       setDemo(m.capabilities.demo_enabled);
-    }); /* route-scoped load */
-  }, [id, version]);
+    });
+  }
+  useEffect(load, [id, version]);
   function start(mode: "live" | "demo") {
     void action.act(async () => {
       if (!lesson) return;
@@ -84,16 +90,18 @@ function LessonContent({
         <ArrowLeft size={15} />
         全部课程
       </Link>
-      <ErrorBox error={action.error} />
+      <ErrorBox error={action.error} retry={lesson ? undefined : load} />
       {!lesson ? (
         !action.error && <Loading />
       ) : (
         <>
-          {!lesson.assessment_policy && (
+          {latestVersion !== lesson.version && (
             <div className="notice warning">
               正在阅读旧版 {lesson.version}，沿用原验收规则。
-              <Link href={`/lessons/${pathId(lesson.id)}`}>
-                阅读包含模型验收的最新导读 →
+              <Link
+                href={`/lessons/${pathId(lesson.id)}${profile ? `?profile=${pathId(profile)}` : ""}`}
+              >
+                查看最新版 {latestVersion} 的导读 →
               </Link>
             </div>
           )}

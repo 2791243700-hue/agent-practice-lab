@@ -143,6 +143,9 @@ test("没有连接时显示；重入已通过的连接时隐藏，切换未通�
   await expect(page.getByText("连接检查通过", { exact: true })).toBeVisible();
   await expect(tip).toHaveCount(0);
   await page.getByRole("button", { name: /^测试连接 failed/ }).click();
+  await expect(page.locator(".connection-state")).toContainText(
+    "文本调用：未通过 · 工具调用：未执行",
+  );
   await expect(tip).toBeVisible();
   await page.getByRole("button", { name: /^测试连接 passed/ }).click();
   await expect(tip).toHaveCount(0);

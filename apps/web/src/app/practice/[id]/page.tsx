@@ -1,5 +1,6 @@
 "use client";
 import {
+  Fragment,
   use,
   useCallback,
   useEffect,
@@ -8,7 +9,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
@@ -74,25 +75,63 @@ async function historyEvents(run: Run): Promise<Event[]> {
   }
   return result;
 }
+function rememberProfile(attemptId: string, profileId: string) {
+  try {
+    localStorage.setItem(`agent-practice-lab:profile:${attemptId}`, profileId);
+  } catch {
+    // The picker remains usable when browser storage is unavailable.
+  }
+}
+function initialProfile(attemptId: string, profiles: Profile[]) {
+  const url = new URL(window.location.href);
+  const preferred = url.searchParams.get("profile");
+  const fromSettings = url.searchParams.get("from") === "settings";
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(`agent-practice-lab:profile:${attemptId}`);
+  } catch {
+    // Fall back to the incoming link and available profiles.
+  }
+  if (fromSettings) {
+    url.searchParams.delete("from");
+    window.history.replaceState(null, "", url);
+  }
+  if (preferred && (fromSettings || saved === null)) {
+    if (profiles.some((p) => p.id === preferred))
+      rememberProfile(attemptId, preferred);
+    return preferred;
+  }
+  return (
+    saved ??
+    profiles.find(
+      (p) =>
+        p.credential_status === "configured" &&
+        p.connection_check.status === "passed",
+    )?.id ??
+    ""
+  );
+}
 export default function PracticePage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const preferred = useSearchParams().get("profile");
-  return (
-    <Practice key={`${id}/${preferred ?? ""}`} id={id} preferred={preferred} />
-  );
+  return <Practice key={id} id={id} />;
 }
-function Practice({ id, preferred }: { id: string; preferred: string | null }) {
+function Practice({ id }: { id: string }) {
   const router = useRouter();
   const action = useAction();
   const [loadError, setLoadError] = useState<unknown>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [currentVersion, setCurrentVersion] = useState<string | undefined>();
   const [runs, setRuns] = useState<Run[]>([]);
   const [events, setEvents] = useState<Record<string, Event[]>>({});
+  const [historyProblems, setHistoryProblems] = useState<
+    Record<string, "failed" | "loading">
+  >({});
+  const historyReads = useRef(new Map<string, Promise<Event[]>>());
   const [files, setFiles] = useState<Schema["FileInfo"][]>([]);
   const [preview, setPreview] = useState<Schema["FilePreview"] | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -163,10 +202,35 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
       setPreview(value);
     });
   }
+  const readHistory = useCallback((run: Run) => {
+    const pending = historyReads.current.get(run.id);
+    if (pending) return pending;
+    const read = historyEvents(run)
+      .then((items) => {
+        setEvents((old) => ({
+          ...old,
+          [run.id]: (old[run.id] ?? []).reduce(mergeEvent, items),
+        }));
+        setHistoryProblems((old) => {
+          if (!(run.id in old)) return old;
+          const next = { ...old };
+          delete next[run.id];
+          return next;
+        });
+        return items;
+      })
+      .catch(() => {
+        setHistoryProblems((old) => ({ ...old, [run.id]: "failed" }));
+        return [];
+      })
+      .finally(() => historyReads.current.delete(run.id));
+    historyReads.current.set(run.id, read);
+    return read;
+  }, []);
   const refresh = useCallback(
     async (initial = false) => {
       const a = await api<Attempt>(endpoint);
-      const [l, r, f, p, s] = await Promise.all([
+      const [l, r, f, p, s, catalog] = await Promise.all([
         api<Lesson>(
           `/lessons/${pathId(a.lesson_id)}?version=${encodeURIComponent(a.lesson_version)}`,
         ),
@@ -174,48 +238,42 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
         api<Schema["FileList"]>(`${endpoint}/files`),
         api<Schema["ProfileList"]>("/model-profiles"),
         allPages<Schema["SubmissionSummary"]>(`${endpoint}/submissions`),
+        initial
+          ? api<Schema["LessonList"]>("/lessons").catch(() => null)
+          : null,
       ]);
-      // Rebuild visible history from persisted events before subscribing after its cursor.
-      const histories = await Promise.all(
-        r.map(async (run) => [run.id, await historyEvents(run)] as const),
-      );
+      const ordered = r.reverse();
+      // Only the active stream needs its persisted cursor before subscribing.
+      const active = activeRun(ordered);
+      if (initial) {
+        setHistoryProblems(
+          Object.fromEntries(
+            ordered.map((run) => [run.id, "loading" as const]),
+          ),
+        );
+      }
+      for (const run of ordered) {
+        if (run.id !== active?.id) void readHistory(run);
+      }
+      const activeEvents = active ? await readHistory(active) : [];
       setAttempt(a);
       setLesson(l);
+      if (catalog)
+        setCurrentVersion(
+          catalog.items.find((entry) => entry.id === l.id)?.version,
+        );
       setRuns(
-        r
-          .reverse()
-          .map((run) =>
-            (histories.find(([runId]) => runId === run.id)?.[1] ?? []).reduce(
-              eventRun,
-              run,
-            ),
-          ),
+        ordered.map((run) =>
+          run.id === active?.id ? activeEvents.reduce(eventRun, run) : run,
+        ),
       );
       setFiles(f.items);
       setProfiles(p.items);
       setSubmissions(s);
-      setEvents((old) => {
-        const next = { ...old };
-        for (const [runId, items] of histories) {
-          let merged = items;
-          for (const e of old[runId] ?? []) merged = mergeEvent(merged, e);
-          next[runId] = merged;
-        }
-        return next;
-      });
       if (initial) {
         setSettings(a.settings);
         setSelectedFiles(a.selected_file_ids);
-        const readyProfiles = p.items.filter(
-          (profile) =>
-            profile.credential_status === "configured" &&
-            profile.connection_check.status === "passed",
-        );
-        setProfileId(
-          readyProfiles.find((profile) => profile.id === preferred)?.id ??
-            readyProfiles[0]?.id ??
-            "",
-        );
+        if (a.mode === "live") setProfileId(initialProfile(a.id, p.items));
       }
       if (initial && l.id === "01-task" && l.allowed_tools.length === 0) {
         const notice = f.items.find((file) => file.kind === "material");
@@ -232,7 +290,7 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
         }
       }
     },
-    [endpoint, preferred],
+    [endpoint, readHistory],
   );
   useEffect(() => {
     let cancelled = false;
@@ -395,14 +453,6 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
   );
   return (
     <>
-      {!lesson.assessment_policy && (
-        <div className="notice warning">
-          这是旧版 {lesson.version} 实训，沿用原规则，不含正式模型内容验收。
-          <Link href={`/lessons/${pathId(lesson.id)}`}>
-            阅读最新导读并新建包含模型验收的实训 →
-          </Link>
-        </div>
-      )}
       <header className="practice-header">
         <div className="practice-header-nav">
           <nav className="practice-crumbs" aria-label="课程位置">
@@ -774,6 +824,16 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
           </div>
         </aside>
         <div className="practice-main">
+          {currentVersion && currentVersion !== lesson.version && (
+            <div className="notice warning">
+              {`这是旧版 ${lesson.version} 实训，沿用原规则${lesson.assessment_policy ? "。" : "，不含正式模型内容验收。"}`}
+              <Link href={`/lessons/${pathId(lesson.id)}`}>
+                {lesson.assessment_policy
+                  ? `查看最新版 ${currentVersion} 的导读 →`
+                  : "阅读最新导读并新建包含模型验收的实训 →"}
+              </Link>
+            </div>
+          )}
           {intro && (
             <article className="panel intro-review">
               <Markdown text={lesson.intro_markdown} />
@@ -804,20 +864,44 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                   </p>
                 </div>
               )}
-              {runs.map((run) => (
-                <RunView
-                  key={run.id}
-                  run={run}
-                  events={events[run.id] ?? []}
-                  tipsProfile={selectedProfile}
-                  tipsDisabled={
-                    !!active ||
-                    grading ||
-                    syncing ||
-                    action.busy ||
-                    pendingMessage !== null
-                  }
-                />
+              {runs.map((run, index) => (
+                <Fragment key={run.id}>
+                  {historyProblems[run.id] && (
+                    <div className="notice warning" role="status">
+                      第 {index + 1} 轮
+                      {historyProblems[run.id] === "loading"
+                        ? "正在读取历史记录…"
+                        : "的历史记录暂时无法读取。"}
+                      {historyProblems[run.id] === "failed" && (
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setHistoryProblems((old) => ({
+                              ...old,
+                              [run.id]: "loading",
+                            }));
+                            void readHistory(run);
+                          }}
+                        >
+                          重新读取第 {index + 1} 轮
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <RunView
+                    run={run}
+                    events={events[run.id] ?? []}
+                    tipsProfile={selectedProfile}
+                    tipsDisabled={
+                      !!historyProblems[run.id] ||
+                      !!active ||
+                      grading ||
+                      syncing ||
+                      action.busy ||
+                      pendingMessage !== null
+                    }
+                  />
+                </Fragment>
               ))}
               {pendingMessage !== null && (
                 <PendingMessage text={pendingMessage} />
@@ -843,8 +927,11 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                         本轮模型
                         <select
                           aria-label="本轮模型"
-                          value={profileId}
-                          onChange={(e) => setProfileId(e.target.value)}
+                          value={selectedProfile?.id ?? ""}
+                          onChange={(e) => {
+                            rememberProfile(id, e.target.value);
+                            setProfileId(e.target.value);
+                          }}
                           disabled={!!active || action.busy || grading}
                         >
                           <option value="">选择已检查的模型</option>
@@ -873,7 +960,9 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
                 </div>
                 {!ready && (
                   <div className="notice warning">
-                    请先配置模型、输入 Key 并通过连接检查。
+                    {profileId && !ready
+                      ? "上次选择的模型当前不可用，请重新选择已检查的模型或前往设置。"
+                      : "请先配置模型、输入 Key 并通过连接检查。"}
                     <Link
                       href={`/settings?returnTo=${encodeURIComponent(`/practice/${id}`)}`}
                     >
@@ -1038,6 +1127,9 @@ function Practice({ id, preferred }: { id: string; preferred: string | null }) {
             )}
           </section>
           <SubmissionPanel
+            incompleteHistory={runs.flatMap((run, index) =>
+              historyProblems[run.id] ? [index + 1] : [],
+            )}
             assessmentProfile={selectedProfile}
             attempt={attempt}
             lesson={lesson}

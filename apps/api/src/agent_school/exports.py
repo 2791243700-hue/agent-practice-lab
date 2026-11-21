@@ -9,6 +9,24 @@ from agent_school.errors import AppError, new_id, revision
 from agent_school.service import now
 
 
+def learning_summary(title, runs, answers):
+    lines = ["# 学习摘要", "", title, ""]
+    if not runs:
+        lines.append("本次实验尚无运行记录。")
+    for index, run in enumerate(runs, start=1):
+        lines.extend([f"## 第 {index} 轮", "", "### 任务", "", run["input_text"], "", "### 回答", ""])
+        lines.extend(["\n\n".join(answers[run["id"]]) or "本轮没有完整回答。", "", "### Tips", ""])
+        tips = run["tips"]
+        if tips is None:
+            lines.extend(["本轮尚未生成 Tips。", ""])
+            continue
+        lines.extend(["**总结**", "", tips["assessment"], ""])
+        for key, label in (("gaps", "与目标的差距"), ("next_steps", "下一步建议"), ("evidence", "依据")):
+            if tips[key]:
+                lines.extend([f"**{label}**", "", *["- " + entry for entry in tips[key]], ""])
+    return "\n".join(lines).rstrip() + "\n"
+
+
 class ExportService:
     def __init__(self, school):
         self.school = school
@@ -19,18 +37,35 @@ class ExportService:
         revision(attempt, body["expected_revision"])
         school.idle(attempt)
         lesson = school.catalog.get(attempt["lesson_id"], attempt["lesson_version"])
-        runs = [r for r in school.store.list("run") if r["attempt_id"] == attempt_id]
+        runs = [r for r in school.store.list_in_creation_order("run") if r["attempt_id"] == attempt_id]
         clean_runs = []
         events = []
+        answers = {}
         for run in runs:
-            clean = {**run, "snapshot": {k: run["snapshot"][k] for k in ("settings", "selected_file_ids")}}
+            tips = school.store.get("tips", run["id"], missing_ok=True)
+            clean = {
+                **run,
+                "snapshot": {k: run["snapshot"][k] for k in ("settings", "selected_file_ids")},
+                "tips": {k: tips[k] for k in ("assessment", "gaps", "next_steps", "evidence")}
+                if tips
+                else None,
+            }
             clean_runs.append(clean)
-            events.extend(school.store.event_list(run["id"]))
+            run_events = school.store.event_list(run["id"])
+            events.extend(run_events)
+            answers[run["id"]] = [
+                event["payload"]["content"]
+                for event in run_events
+                if event["kind"] == "message.completed" and event["payload"]["content"].strip()
+            ]
         submissions = [s for s in school.store.list("submission") if s["attempt_id"] == attempt_id]
         key = new_id("export")
         snapshot = school.workspace.freeze(attempt_id, key)
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr(
+                "学习摘要.md", learning_summary(lesson["manifest"]["title"], clean_runs, answers)
+            )
             archive.writestr(
                 "learning.json",
                 json.dumps(
