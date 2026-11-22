@@ -23,13 +23,23 @@ class ReflectionService:
             attempt = self.school.attempt(attempt_id, True)
             revision(attempt, body["expected_attempt_revision"])
             lesson = self.school.catalog.get(attempt["lesson_id"], attempt["lesson_version"])
-            if lesson["manifest"]["answer_form"]["kind"] not in ("reflection", "brief_reflection"):
-                raise AppError(message="此实验不使用复盘草稿。")
-            self.school.contracts.validate("ReflectionDraftData", body["draft"])
+            form = lesson["manifest"]["answer_form"]
+            data = copy.deepcopy(body["draft"])
+            if form["kind"] in ("reflection", "brief_reflection"):
+                self.school.contracts.validate("ReflectionDraftData", data)
+                self.validate_references(attempt, lesson, data)
+            elif form["kind"] in ("facts", "course", "artifact") and data.get("kind") == form["kind"]:
+                if form["kind"] == "facts":
+                    tasks = {task["task_id"] for task in form["tasks"]}
+                    sources = {source["source_id"] for source in form["sources"]}
+                    if not set(data["facts"]) <= tasks or any(
+                        row["source_id"] and row["source_id"] not in sources for row in data["facts"].values()
+                    ):
+                        raise AppError(message="草稿只能使用本关的任务与来源。")
+            else:
+                raise AppError(message="草稿类型与本次实训的课件表单不匹配。")
             current = self.get_draft(attempt_id)
             revision(current, body["expected_revision"])
-            data = copy.deepcopy(body["draft"])
-            self.validate_references(attempt, lesson, data)
             value = {
                 "attempt_id": attempt_id,
                 "revision": current["revision"] + 1,

@@ -39,6 +39,8 @@ async function fixture(page: Page, ready: boolean) {
     updated_at: attempt.created_at,
   };
   let submissions = 0;
+  let snapshot: unknown = null;
+  let revision = 0;
   await page.route("**/api/v1/**", (route) => {
     const pathname = new URL(route.request().url()).pathname;
     if (
@@ -52,6 +54,20 @@ async function fixture(page: Page, ready: boolean) {
       return route.fulfill({ json: { items: ready ? [profile] : [] } });
     if (pathname === `/api/v1/attempts/${attempt.id}`)
       return route.fulfill({ json: attempt });
+    if (pathname.endsWith("/reflection-draft")) {
+      if (route.request().method() === "PUT") {
+        snapshot = route.request().postDataJSON().draft;
+        revision++;
+      }
+      return route.fulfill({
+        json: {
+          attempt_id: attempt.id,
+          revision,
+          draft: snapshot,
+          updated_at: null,
+        },
+      });
+    }
     if (pathname.startsWith(`/api/v1/attempts/${attempt.id}/`))
       return route.fulfill({ json: { items: [], next_cursor: null } });
     if (

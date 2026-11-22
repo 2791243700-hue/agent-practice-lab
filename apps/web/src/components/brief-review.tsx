@@ -15,6 +15,7 @@ export function BriefReview({
   attempt,
   runs,
   events,
+  incompleteHistory,
   disabled,
   form,
   onSubmit,
@@ -24,6 +25,7 @@ export function BriefReview({
   attempt: Attempt;
   runs: Run[];
   events: Record<string, Event[]>;
+  incompleteHistory: boolean;
   disabled: boolean;
   form: Schema["BriefReflectionForm"];
   onSubmit: (answers: Schema["BriefReflectionAnswers"]) => Promise<void>;
@@ -37,7 +39,9 @@ export function BriefReview({
   const [focusRequest, setFocusRequest] = useState<{ id: string } | null>(null);
   const [selfCheck, setSelfCheck] = useState(false);
   const candidates = briefCandidates(attempt, runs, events);
-  const autoPair = initialBriefPair(draft, candidates);
+  const autoPair = incompleteHistory
+    ? null
+    : initialBriefPair(draft, candidates);
   const beforeId = autoPair?.beforeId;
   const afterId = autoPair?.afterId;
   useEffect(() => {
@@ -102,7 +106,12 @@ export function BriefReview({
   }
   return (
     <div data-testid="brief-review" className="conversation-review">
-      <p>两轮对话已自动带入。核对回答，选一个判断，再写一句依据就可以提交。</p>
+      <p>
+        {beforeIndex >= 0 && afterIndex >= 0
+          ? "已选好两轮对话。"
+          : "请选择两轮已完成的对话。"}
+        核对回答，选一个判断，再写一句依据就可以提交。
+      </p>
       <p className="small muted">
         不用复制原文或填写引用位置。发现回答不符合要求，也可以如实说明并通过验收。
       </p>
@@ -143,7 +152,7 @@ export function BriefReview({
       <fieldset disabled={disabled || !loaded} className="review-fields">
         <legend className="sr-only">两轮对话与一句复盘</legend>
         <ValidationSummary issues={issues} />
-        {candidates.length < 2 && (
+        {!incompleteHistory && candidates.length < 2 && (
           <p className="review-empty">
             还需要至少两轮完整对话。
             <a href="#task-input">回到对话，补充要求再试一次 →</a>

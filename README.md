@@ -2,9 +2,9 @@
 
 面向零使用经验学习者，通过文字导读和浏览器内实训，学习 Agent 的基本用途、任务设置、资料使用、工具调用与操作授权。
 
-**本版本（2026-10-30）：第一关精简验收。** 第一关 1.3.0 必做为两轮对话和一句复盘，小变式选做；第二至四关仍为 1.1.0。真实证据与模型内容评分、费用确认、单次请求和失败不放行保留；旧实验及成绩沿用原规则。见[精简验收说明](docs/brief-reflection-2026-10-30.md)。
+**2026-11-21 更新。** 四关支持恢复已保存的作答。每次实训记住选用的模型，学习记录显示课程版本、已完成轮数和最近任务。导出 ZIP 中的 `学习摘要.md` 可按轮次阅读回答和已生成的 Tips。
 
-开发基线为 main `3aebaa7`（PR #15）。实训支持 Ctrl+Enter、醒目的 Tips 卡片及缺失项标记定位；完整范围、验证与历史见[版本索引](docs/project-status.md)。
+第一关 1.3.0 的必做任务是两轮对话和一句复盘，小变式选做。第二至四关当前为 1.1.0。验收流程见[新手使用说明](docs/user-guide.md)，兼容范围与发布验证见[版本索引](docs/project-status.md)。
 
 ## 本地启动（Windows）
 
@@ -24,7 +24,7 @@ npm --prefix apps/web ci
 
 ## 首版范围
 
-首页按已配置凭据隐藏或恢复准备提示；模型设置页的申领建议按当前连接检查结果显示或隐藏。新版课程以客观证据和独立模型内容评分共同决定正式通过，提交前确认调用范围与费用；第一关复盘草稿、正式答案和模型报告可回看并纳入 ZIP，旧版本保持原规则。
+首页按已配置凭据隐藏或恢复准备提示；模型设置页的申领建议按当前连接检查结果显示或隐藏。新版课程以客观证据和独立模型内容评分共同决定正式通过，提交前确认调用范围与费用；四关均会保存当前版本的复盘或核对作答。学习记录显示课程版本、已完成轮数和最近任务；导出 ZIP 可按轮次阅读学习摘要和已生成的 Tips。旧版本继续沿用原验收规则。
 
 - 本地运行、浏览器操作；学生自行申请并配置模型服务 API Key。
 - 使用统一教学 Agent，每关先读介绍，再实践并查看反馈。
@@ -44,7 +44,7 @@ npm --prefix apps/web ci
 - [四关导读](outputs/lesson-introductions.md)
 - [分阶段实施计划](outputs/local-agent-learning-implementation-plan.md)
 - [双人分工与 GitHub 协作](outputs/two-person-github-collaboration-plan.md)
-- [v0.1.0 接口契约与调用规则](contracts/README.md)（41 个 HTTP 操作、111 个 schema、11 类事件）
+- [v0.1.0 接口契约与调用规则](contracts/README.md)（41 个 HTTP 操作、116 个 schema、11 类事件）
 - [机器可读 OpenAPI](contracts/openapi.json)与[生成的 TypeScript 类型](contracts/types.d.ts)
 - [后端安装、启动与前端联调](docs/backend.md)
 - [后端验证报告](docs/runtime-validation.md)

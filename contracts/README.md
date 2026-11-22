@@ -1,14 +1,16 @@
 # 前后端接口契约 v0.1.0
 
-> 2026-10-30：第一关 1.3.0 使用简版复盘，第二至四关 1.1.0；41 操作 / 111 schema / 11 类事件。新增字段与旧版兼容见[精简验收说明](../docs/brief-reflection-2026-10-30.md)。第二关 Tips 已修复无 prompt 字段时的内部错误。
+> 四关草稿恢复、学习记录摘要和导出的最新说明见[当前版本索引](../docs/project-status.md)。
 
-更新：2026-10-30。现行契约 v0.1.0 包含 41 个 HTTP 操作、111 个 schema、11 类 SSE 事件。正式模型验收兼容扩展原提交接口，适用性由课程版本决定。机器可读字段见 OpenAPI，样例仅证明结构，不代表真实模型调用。
+更新：2026-11-21。现行契约 v0.1.0 包含 41 个 HTTP 操作、116 个 schema、11 类 SSE 事件。正式模型验收兼容扩展原提交接口，适用性由课程版本决定。机器可读字段见 OpenAPI，样例仅证明结构，不代表真实模型调用。
+
+学习记录 ZIP 的 `learning.json` 在每个 `runs[]` 元素上提供已缓存的 `tips`，尚未生成时为 `null`。`学习摘要.md` 按轮次列出任务、回答与建议，导出只读取已保存的内容。
 
 ## 文件与唯一来源
 
 | 文件 | 用途 |
 | --- | --- |
-| [openapi.json](openapi.json) | 41 个 HTTP 操作、111 个 schema 的请求、响应、字段约束和操作 ID |
+| [openapi.json](openapi.json) | 41 个 HTTP 操作、116 个 schema 的请求、响应、字段约束和操作 ID |
 | [events.schema.json](events.schema.json) | 11 类 SSE 事件及每类 payload 的 JSON Schema |
 | [lesson.schema.json](lesson.schema.json) | 服务端私有课程 manifest，包括评分规则和参考事实 |
 | [types.d.ts](types.d.ts) | 从 OpenAPI 生成的 TypeScript 类型，不手工修改 |
@@ -62,7 +64,7 @@ ModelProfile.revision 初始为 1，非敏感配置或内存凭据变更时递�
 | GET /lessons | 无 | 最新版本列表、正式完成状态 |
 | GET /lessons/{lesson_id} | 可选 version | LessonDetail，含导读和公开任务定义 |
 | POST /attempts | lesson_id、lesson_version、mode；幂等键 | 201 Attempt，不调用模型 |
-| GET /attempts | lesson_id、mode、cursor、limit 可选 | 按创建时间倒序查找实训 |
+| GET /attempts | lesson_id、mode、cursor、limit 可选 | AttemptPage.items 返回 AttemptListItem，含完整实训字段、已完成运行数 completed_run_count 及最近任务摘录 latest_task_preview（最多 120 字符，无任务时为 null） |
 | GET /attempts/{attempt_id} | 实训 ID | Attempt、进度、活跃运行和最近提交 ID |
 | PATCH /attempts/{attempt_id} | expected_revision、settings、selected_file_ids | 更新下一轮配置 |
 | POST /attempts/{attempt_id}/reset | expected_revision；幂等键 | 201 新 Attempt，旧记录保留 |
@@ -287,14 +289,14 @@ POST /submissions 的 answers 新增 ReflectionAnswers：kind=reflection；basel
 
 后端先检查运行归属、指定消息/事件和变式 ID；不合法引用返回 422。随后按课程规则核对完成状态及持久创建顺序、改动引用、原文偏移和变式答案；结构合法但不满足规则时返回 201 Submission，逐项标记不通过。第一关原版 1.1.0 的引用真实不等于自由解释质量已判定，explanation 和 challenge.instruction 必须含非空白内容（最多 6000 字符），这是输入完整性约束，不按字数、关键词或模型评价对解释质量评分。partial/unsatisfied 允许通过，须写后续指令。演示不计正式完成。
 
-GET /attempts/{attempt_id}/reflection-draft 未保存时返回 revision=0、draft=null、updated_at=null。PUT 携当前草稿 expected_revision 及 expected_attempt_revision，成功只使草稿 revision+1。所有草稿字段允许未完成值，但固定字段、长度和数量有上限；私有 Key 经现有 HTTP 边界脱敏。仅 active reflection 实验可写，历史草稿可读。冲突返回 409 REVISION_CONFLICT，前端保留当前编辑内容并让学生主动处理，不自动覆盖。该 PUT 不要求 Idempotency-Key；响应丢失后先 GET，不能盲目重试写入。
+GET /attempts/{attempt_id}/reflection-draft 未保存时返回 revision=0、draft=null、updated_at=null。PUT 携当前草稿 expected_revision 及 expected_attempt_revision，成功只使草稿 revision+1。所有草稿字段允许未完成值，但固定字段、长度和数量有上限；私有 Key 经现有 HTTP 边界脱敏。当前实训可保存与固定版本表单匹配的草稿，历史草稿可读。冲突返回 409 REVISION_CONFLICT，前端保留当前编辑内容并让学生主动处理，不自动覆盖。该 PUT 不要求 Idempotency-Key；响应丢失后先 GET，不能盲目重试写入。
 
 正式提交冻结答案、规则和引用，草稿的后续修改不改变历史结果。ZIP 中包含草稿以及不可变提交，课程与引用均绑定原版本，排除凭据、连接参数和内部令牌。
 
 
 ### 草稿字段与提交映射
 
-GET /attempts/{attempt_id}/reflection-draft 对归属正确的实验均可读取；没有记录时返回空草稿，包括旧版或其他关卡。PUT 仅允许 active 且 answer_form.kind=reflection 的实验。草稿是完整替换而不是 PATCH；下列字段全部必填，不能直接把 draft 作为正式 answers 提交。
+GET /attempts/{attempt_id}/reflection-draft 对归属正确的实验均可读取；没有记录时返回空草稿，包括旧版或其他关卡。PUT 仅允许 active 实训，支持 reflection、brief_reflection、facts、course、artifact。每次保存完整快照。第一关的两种复盘沿用下表字段；正式提交需映射为对应的 answers。
 
 | ReflectionDraftData 字段 | 类型与未完成值 | 正式 ReflectionAnswers 映射 |
 | --- | --- | --- |
@@ -311,7 +313,7 @@ GET /attempts/{attempt_id}/reflection-draft 对归属正确的实验均可读取
 
 草稿文本每项最多 6000 字符；facts 最多 20 项、值最多 40 字符，键须属于本课变式。整数上限 2147483647。非空运行 ID 须属于同一实验同一模式，已选完整消息须存在；保存草稿不检查是否已完成正式评分条件，也不代表通过。
 
-加载顺序：GET Attempt → 按 lesson_version 取课件 → GET reflection-draft。首次保存 expected_revision=0；之后用上次成功响应 revision。expected_attempt_revision 始终来自当前 Attempt；保存草稿只递增草稿 revision。任一版本不匹配均返回 409 REVISION_CONFLICT，需同时重读实验和草稿并让用户处理差异。重置后的旧实验写入返回 409 ATTEMPT_SUPERSEDED，新实验草稿从 0 开始。非复盘实验写入、草稿引用/字段不合法返回 422 VALIDATION_ERROR；不存在的资源返回 404 NOT_FOUND。
+加载顺序：GET Attempt → 按 lesson_version 取课件 → GET reflection-draft。首次保存 expected_revision=0；之后用上次成功响应 revision。expected_attempt_revision 始终来自当前 Attempt；保存草稿只递增草稿 revision。任一版本不匹配均返回 409 REVISION_CONFLICT，需同时重读实验和草稿并让用户处理差异。重置后的旧实验写入返回 409 ATTEMPT_SUPERSEDED，新实验草稿从 0 开始。草稿类型与固定版本表单不符、草稿引用/字段不合法返回 422 VALIDATION_ERROR；不存在的资源返回 404 NOT_FOUND。
 
 PUT 不使用 Idempotency-Key，不进入创建类请求缓存；响应丢失先 GET 核对保存状态，不能自动重放。前端先加载再以 500ms 防抖串行保存，失败或冲突停止队列，保留编辑内容并提供下载/重读入口。正式提交以点击时的表单构造 answers，不由服务端自动把草稿转换为提交。
 
@@ -390,3 +392,16 @@ Tips 缓存保留生成时快照：后续编辑草稿或再次提交不自动刷
 ## Tips 表单兼容修复（2026-10-30）
 
 Tips 内部上下文按公开表单实际字段生成：facts 提供 tasks/sources，其他表单提供已有 prompt；不假定所有类型都有 prompt。修复第二关新旧版本生成 Tips 的 INTERNAL_ERROR。HTTP 请求、响应、错误码与缓存语义不变；此次异常在调用模型前发生。新增覆盖五种表单、七个课程版本的回归。简版答案结构样例见 examples/http.json 的 brief-reflection-answer。
+
+
+### 第二至四关的作答草稿
+
+同一 GET/PUT 接口按 attempt_id 读取和保存。请求使用独立的草稿修订号和当前实训修订号，详细请求见 [HTTP 样例](examples/http.json) 中的 `partial-facts-draft`、`partial-course-draft`、`partial-artifact-draft`。
+
+| draft.kind | 快照字段 |
+| --- | --- |
+| facts | facts 以课件 task_id 为键，每个已编辑的条目包含 due_date 和 source_id。只填写一个字段时，另一个可为空字符串。 |
+| course | session_date 与 room 均可留空。 |
+| artifact | 保存学生的核对说明。 |
+
+三种快照都带 learning_reflection，可为空，最多 6000 字符。草稿只保存学生填写的内容；模型配置、Key、费用同意均不在快照中。正式提交按原课程版本要求单独授权。读失败或修订号冲突时，客户端可下载本页填写并主动重读。

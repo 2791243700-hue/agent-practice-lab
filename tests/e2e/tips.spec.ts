@@ -268,87 +268,111 @@ test("Tips read errors can retry safely and missing credentials prevent generati
   expect(posts).toBe(0);
 });
 
-test("real Tips generation persists one model result and remains readable after clearing its key", async ({
-  page,
-}) => {
-  const headers = {
-    Origin: "http://127.0.0.1:3100",
-    "Idempotency-Key": crypto.randomUUID(),
-  };
-  const createProfile = await page.request.post("/api/v1/model-profiles", {
-    headers,
-    data: {
-      name: "Tips 实际流程",
-      provider: "openai-compatible",
-      base_url: "http://127.0.0.1:8101/v1",
-      model: "browser-scripted-model",
-    },
-  });
-  expect(createProfile.status()).toBe(201);
-  let readyProfile: Profile = await createProfile.json();
-  const credential = await page.request.put(
-    `/api/v1/model-profiles/${readyProfile.id}/credential`,
-    {
-      headers: { Origin: headers.Origin },
+for (const [lessonId, lessonVersion] of [
+  ["01-task", "1.0.0"],
+  ["01-task", "1.3.0"],
+  ["02-context", "1.1.0"],
+  ["03-tools", "1.1.0"],
+  ["04-permission", "1.1.0"],
+]) {
+  test(`real Tips generation and cached reload: ${lessonId}@${lessonVersion}`, async ({
+    page,
+  }) => {
+    const headers = {
+      Origin: "http://127.0.0.1:3100",
+      "Idempotency-Key": crypto.randomUUID(),
+    };
+    const createProfile = await page.request.post("/api/v1/model-profiles", {
+      headers,
       data: {
-        expected_revision: readyProfile.revision,
-        api_key: "browser-test-only",
+        name: "Tips 实际流程",
+        provider: "openai-compatible",
+        base_url: "http://127.0.0.1:8101/v1",
+        model: "browser-scripted-model",
       },
-    },
-  );
-  expect(credential.ok()).toBe(true);
-  readyProfile = await credential.json();
-  const check = await page.request.post(
-    `/api/v1/model-profiles/${readyProfile.id}/check`,
-    {
+    });
+    expect(createProfile.status()).toBe(201);
+    let readyProfile: Profile = await createProfile.json();
+    const credential = await page.request.put(
+      `/api/v1/model-profiles/${readyProfile.id}/credential`,
+      {
+        headers: { Origin: headers.Origin },
+        data: {
+          expected_revision: readyProfile.revision,
+          api_key: "browser-test-only",
+        },
+      },
+    );
+    expect(credential.ok()).toBe(true);
+    readyProfile = await credential.json();
+    const check = await page.request.post(
+      `/api/v1/model-profiles/${readyProfile.id}/check`,
+      {
+        headers: { ...headers, "Idempotency-Key": crypto.randomUUID() },
+        data: { expected_revision: readyProfile.revision },
+      },
+    );
+    expect(check.ok()).toBe(true);
+    readyProfile = await check.json();
+    expect(readyProfile.connection_check.status).toBe("passed");
+    const createAttempt = await page.request.post("/api/v1/attempts", {
       headers: { ...headers, "Idempotency-Key": crypto.randomUUID() },
-      data: { expected_revision: readyProfile.revision },
-    },
-  );
-  expect(check.ok()).toBe(true);
-  readyProfile = await check.json();
-  expect(readyProfile.connection_check.status).toBe("passed");
-  const createAttempt = await page.request.post("/api/v1/attempts", {
-    headers: { ...headers, "Idempotency-Key": crypto.randomUUID() },
-    data: { lesson_id: "01-task", lesson_version: "1.0.0", mode: "live" },
+      data: {
+        lesson_id: lessonId,
+        lesson_version: lessonVersion,
+        mode: "live",
+      },
+    });
+    expect(createAttempt.status()).toBe(201);
+    const attempt = await createAttempt.json();
+    await page.goto(`/practice/${attempt.id}?profile=${readyProfile.id}`);
+    if (lessonId === "02-context" || lessonId === "04-permission") {
+      await page.getByRole("checkbox", { name: "课程通知" }).check();
+      await page.getByRole("button", { name: "保存下一轮设置" }).click();
+      await expect(
+        page.getByRole("button", { name: "设置已同步" }),
+      ).toBeDisabled();
+    }
+
+    await page
+      .getByLabel("任务说明", { exact: true })
+      .fill("请整理今天的任务，并说明完成结果。");
+    await page.getByRole("button", { name: "发送任务", exact: true }).click();
+    await expect(page.getByText("本轮已完成", { exact: true })).toBeVisible();
+    const runs = await (
+      await page.request.get(`/api/v1/attempts/${attempt.id}/runs`)
+    ).json();
+    const runId = runs.items[0].id;
+    const before = await page.request.get(`/api/v1/runs/${runId}/tips`);
+    expect(await before.json()).toEqual({ tips: null });
+    const panel = page.getByRole("region", {
+      name: "本轮学习建议",
+      exact: true,
+    });
+    await panel.getByRole("button", { name: "Tips · 本轮学习建议" }).click();
+    await panel.getByRole("checkbox").check();
+    await panel.getByRole("button", { name: "生成 Tips", exact: true }).click();
+    await expect(panel).toContainText("任务结果已给出，仍需核对完成依据。");
+    const saved = await (
+      await page.request.get(`/api/v1/runs/${runId}/tips`)
+    ).json();
+    expect(saved.tips.usage.model_calls).toBe(1);
+    expect(saved.tips.profile_id).toBe(readyProfile.id);
+    const clear = await page.request.delete(
+      `/api/v1/model-profiles/${readyProfile.id}/credential?expected_revision=${readyProfile.revision}`,
+      {
+        headers: { Origin: headers.Origin },
+      },
+    );
+    expect(clear.ok()).toBe(true);
+    await page.reload();
+    await panel.getByRole("button", { name: "Tips · 本轮学习建议" }).click();
+    await expect(panel).toContainText(saved.tips.assessment);
+    await expect(panel.getByRole("checkbox")).toHaveCount(0);
+    const after = await (
+      await page.request.get(`/api/v1/runs/${runId}/tips`)
+    ).json();
+    expect(after).toEqual(saved);
+    await expect(panel.getByRole("alert")).toHaveCount(0);
   });
-  expect(createAttempt.status()).toBe(201);
-  const attempt = await createAttempt.json();
-  await page.goto(`/practice/${attempt.id}?profile=${readyProfile.id}`);
-  await page
-    .getByLabel("任务说明", { exact: true })
-    .fill("请整理今天的任务，并说明完成结果。");
-  await page.getByRole("button", { name: "发送任务", exact: true }).click();
-  await expect(page.getByText("本轮已完成", { exact: true })).toBeVisible();
-  const runs = await (
-    await page.request.get(`/api/v1/attempts/${attempt.id}/runs`)
-  ).json();
-  const runId = runs.items[0].id;
-  const before = await page.request.get(`/api/v1/runs/${runId}/tips`);
-  expect(await before.json()).toEqual({ tips: null });
-  const panel = page.getByRole("region", { name: "本轮学习建议", exact: true });
-  await panel.getByRole("button", { name: "Tips · 本轮学习建议" }).click();
-  await panel.getByRole("checkbox").check();
-  await panel.getByRole("button", { name: "生成 Tips", exact: true }).click();
-  await expect(panel).toContainText("任务结果已给出，仍需核对完成依据。");
-  const saved = await (
-    await page.request.get(`/api/v1/runs/${runId}/tips`)
-  ).json();
-  expect(saved.tips.usage.model_calls).toBe(1);
-  expect(saved.tips.profile_id).toBe(readyProfile.id);
-  const clear = await page.request.delete(
-    `/api/v1/model-profiles/${readyProfile.id}/credential?expected_revision=${readyProfile.revision}`,
-    {
-      headers: { Origin: headers.Origin },
-    },
-  );
-  expect(clear.ok()).toBe(true);
-  await page.reload();
-  await panel.getByRole("button", { name: "Tips · 本轮学习建议" }).click();
-  await expect(panel).toContainText(saved.tips.assessment);
-  await expect(panel.getByRole("checkbox")).toHaveCount(0);
-  const after = await (
-    await page.request.get(`/api/v1/runs/${runId}/tips`)
-  ).json();
-  expect(after).toEqual(saved);
-});
+}

@@ -744,6 +744,50 @@
         "judgment": "partial",
         "explanation": "第二轮列出了事项，但尚未按日期排序。"
       }
+    },
+    {
+      "name": "partial-facts-draft",
+      "schema": "PutReflectionDraftRequest",
+      "value": {
+        "expected_revision": 0,
+        "expected_attempt_revision": 1,
+        "draft": {
+          "kind": "facts",
+          "facts": {
+            "submit-summary": {
+              "due_date": "",
+              "source_id": "notice-week"
+            }
+          },
+          "learning_reflection": "正在核对。"
+        }
+      }
+    },
+    {
+      "name": "partial-course-draft",
+      "schema": "PutReflectionDraftRequest",
+      "value": {
+        "expected_revision": 0,
+        "expected_attempt_revision": 1,
+        "draft": {
+          "kind": "course",
+          "session_date": "",
+          "room": "教室待核对",
+          "learning_reflection": "正在核对。"
+        }
+      }
+    },
+    {
+      "name": "partial-artifact-draft",
+      "schema": "PutReflectionDraftRequest",
+      "value": {
+        "expected_revision": 0,
+        "expected_attempt_revision": 1,
+        "draft": {
+          "kind": "artifact",
+          "learning_reflection": "正在核对。"
+        }
+      }
     }
   ]
 }

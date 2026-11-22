@@ -45,6 +45,9 @@ test("多个 Key 的识别建议、模型发现、重命名、模型切换与独
     page.getByLabel("选择模型", { exact: true }).locator("option"),
   ).toHaveCount(2);
   expect(checks).toBe(0);
+  await expect(page.locator(".connection-state")).toContainText(
+    "文本调用：待检查 · 工具调用：待检查",
+  );
   await page.getByRole("checkbox", { name: /我知道连接检查/ }).check();
   await page.getByRole("button", { name: "检查连接", exact: true }).click();
   await expect(page.getByText("连接检查通过", { exact: true })).toBeVisible();

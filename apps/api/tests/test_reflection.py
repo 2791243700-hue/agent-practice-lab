@@ -489,3 +489,24 @@ def test_reflection_publishing_rejects_inconsistent_private_challenge(client, in
     with pytest.raises(ValueError):
         catalog.publish(lesson)
     assert catalog.store.get("lesson", "01-task@invalid-reflection", owner="system", missing_ok=True) is None
+
+
+@pytest.mark.parametrize(
+    ("lesson", "draft"),
+    [
+        ("02-context", {"kind": "facts", "facts": {}, "learning_reflection": "已核对一项"}),
+        ("03-tools", {"kind": "course", "session_date": "", "room": "A301", "learning_reflection": ""}),
+        ("04-permission", {"kind": "artifact", "learning_reflection": "已核对保存结果"}),
+    ],
+)
+def test_partial_practice_drafts_are_typed_and_revision_checked(client, lesson, draft):
+    attempt = post(
+        client, "/attempts", {"lesson_id": lesson, "lesson_version": "1.1.0", "mode": "live"}
+    ).json()
+    saved = put_draft(client, attempt, draft)
+    assert saved.status_code == 200, saved.text
+    assert client.get(draft_url(attempt)).json()["draft"] == draft
+    assert put_draft(client, attempt, draft).json()["error"]["code"] == "REVISION_CONFLICT"
+    assert put_draft(client, attempt, {**draft, "consent": True}, revision=1).status_code == 422
+    assert put_draft(client, attempt, draft_data(), revision=1).status_code == 422
+    assert client.get(draft_url(attempt)).json()["revision"] == 1

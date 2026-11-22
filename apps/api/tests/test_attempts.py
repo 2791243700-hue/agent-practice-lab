@@ -1,3 +1,5 @@
+from sqlalchemy import event
+
 from conftest import create_attempt, post
 
 
@@ -68,3 +70,34 @@ def test_idempotency_reset_pagination_and_mode_are_enforced(client):
     next_page = client.get("/api/v1/attempts", params={"limit": 1, "cursor": page["next_cursor"]}).json()
     assert next_page["items"][0]["id"] != page["items"][0]["id"]
     assert client.get("/api/v1/attempts?cursor=invalid").status_code == 400
+
+
+def test_history_lists_completed_counts_and_latest_tasks_in_bulk(client):
+    first = create_attempt(client)
+    empty = create_attempt(client, key="empty-attempt-key")
+    store = client.app.state.school.store
+    for run_id, status, task, owner in [
+        ("z-first", "completed", "旧任务", "local-owner"),
+        ("a-second", "failed", "最新\n  任务" + "长" * 140, "local-owner"),
+        ("foreign", "completed", "其他用户的任务", "someone-else"),
+    ]:
+        store.put("run", run_id, {"attempt_id": first["id"], "status": status, "input_text": task}, owner)
+
+    selects = []
+
+    def count_queries(conn, cursor, statement, parameters, context, executemany):
+        if statement.lstrip().upper().startswith("SELECT"):
+            selects.append(statement)
+
+    event.listen(store.engine, "before_cursor_execute", count_queries)
+    try:
+        response = client.get("/api/v1/attempts")
+    finally:
+        event.remove(store.engine, "before_cursor_execute", count_queries)
+    assert response.status_code == 200, response.text
+    items = {item["id"]: item for item in response.json()["items"]}
+    assert items[first["id"]]["completed_run_count"] == 1
+    assert items[first["id"]]["latest_task_preview"] == ("最新 任务" + "长" * 140)[:119] + "…"
+    assert items[empty["id"]]["completed_run_count"] == 0
+    assert items[empty["id"]]["latest_task_preview"] is None
+    assert len(selects) <= 2

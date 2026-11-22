@@ -24,77 +24,156 @@ export const emptyReflectionDraft: ReflectionDraftData = {
   facts: {},
   instruction: "",
 };
-// Keep unsaved SPA navigation text in tab memory. Restoring never resumes writes.
-const pendingDrafts = new Map<string, ReflectionDraftData>();
+type Snapshot = Schema["AttemptDraftData"];
+type PracticeDraft = Exclude<Snapshot, ReflectionDraftData>;
+const emptyPracticeDrafts: Record<PracticeDraft["kind"], PracticeDraft> = {
+  facts: { kind: "facts", facts: {}, learning_reflection: "" },
+  course: {
+    kind: "course",
+    session_date: "",
+    room: "",
+    learning_reflection: "",
+  },
+  artifact: { kind: "artifact", learning_reflection: "" },
+};
+
+// Preserve unsaved SPA edits per attempt. Only an explicit reload discards them.
+const pendingDrafts = new Map<string, Snapshot>();
+function matchesForm<T extends Snapshot>(
+  draft: Snapshot,
+  initial: T,
+): draft is T {
+  return "kind" in initial
+    ? "kind" in draft && initial.kind === draft.kind
+    : !("kind" in draft) && "step" in draft;
+}
+
+export function usePracticeDraft(
+  attempt: Attempt,
+  form: Schema["AnswerForm"]["kind"],
+  onRefresh?: () => Promise<void>,
+) {
+  const enabled = form === "facts" || form === "course" || form === "artifact";
+  const initial = enabled
+    ? emptyPracticeDrafts[form]
+    : emptyPracticeDrafts.artifact;
+  return useAttemptDraft(attempt, initial, enabled, onRefresh);
+}
+
 export function useReflectionDraft(
   attempt: Attempt,
   onRefresh?: () => Promise<void>,
 ) {
-  const [draft, setDraft] = useState(emptyReflectionDraft);
+  return useAttemptDraft(attempt, emptyReflectionDraft, true, onRefresh);
+}
+
+function useAttemptDraft<T extends Snapshot>(
+  attempt: Attempt,
+  initial: T,
+  enabled: boolean,
+  onRefresh?: () => Promise<void>,
+) {
+  const [draft, setDraft] = useState<T>(initial);
   const [loaded, setLoaded] = useState(false);
-  const [saved, setSaved] = useState(JSON.stringify(emptyReflectionDraft));
+  const [hasSaved, setHasSaved] = useState(false);
+  const [saved, setSaved] = useState(JSON.stringify(initial));
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState(false);
   const [retry, setRetry] = useState(0);
   const [saving, setSaving] = useState(false);
-  const writer = useRef<DraftWriter<ReflectionDraftData> | null>(null);
+  const writer = useRef<DraftWriter<T> | null>(null);
   const attemptRevision = useRef(attempt.revision);
   attemptRevision.current = attempt.revision;
   const endpoint = `/attempts/${pathId(attempt.id)}/reflection-draft`;
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
+    const local = pendingDrafts.get(attempt.id);
+    const editable = attempt.status === "active";
     setLoaded(false);
+    setSaving(false);
+    setConflict(false);
+    setError("");
+    if (editable && local && matchesForm(local, initial)) setDraft(local);
     void api<Schema["ReflectionDraft"]>(endpoint)
       .then((value) => {
         if (cancelled) return;
-        const serverDraft = value.draft ?? emptyReflectionDraft;
-        const restored = pendingDrafts.get(attempt.id) ?? serverDraft;
+        if (
+          value.attempt_id !== attempt.id ||
+          (value.draft !== null && !matchesForm(value.draft, initial))
+        ) {
+          throw new Error("draft-form-mismatch");
+        }
+        const serverDraft = value.draft ?? initial;
+        const restored =
+          !retry && editable && local && matchesForm(local, initial)
+            ? local
+            : serverDraft;
         setDraft(restored);
         setSaved(JSON.stringify(serverDraft));
+        setHasSaved(value.revision > 0);
         setError(
           JSON.stringify(restored) === JSON.stringify(serverDraft)
             ? ""
             : "已恢复离开前尚未保存的本页填写。自动保存已暂停，请先下载备份，再重新读取服务端草稿。",
         );
-        setConflict(false);
-        writer.current = new DraftWriter(
-          value.revision,
-          async (revision, snapshot) => {
-            const result = await api<Schema["ReflectionDraft"]>(endpoint, {
-              method: "PUT",
-              body: {
-                expected_revision: revision,
-                expected_attempt_revision: attemptRevision.current,
-                draft: snapshot,
-              } satisfies Schema["PutReflectionDraftRequest"],
-            });
-            if (!cancelled) setSaved(JSON.stringify(snapshot));
-            return result.revision;
-          },
-        );
+        if (editable)
+          writer.current = new DraftWriter(
+            value.revision,
+            async (revision, snapshot) => {
+              if (cancelled) return revision;
+              const result = await api<Schema["ReflectionDraft"]>(endpoint, {
+                method: "PUT",
+                body: {
+                  expected_revision: revision,
+                  expected_attempt_revision: attemptRevision.current,
+                  draft: snapshot,
+                } satisfies Schema["PutReflectionDraftRequest"],
+              });
+              if (!cancelled) {
+                setHasSaved(true);
+                setSaved(JSON.stringify(snapshot));
+              }
+              return result.revision;
+            },
+          );
         setLoaded(true);
       })
       .catch((reason) => {
-        if (!cancelled) setError(`草稿读取失败：${errorText(reason)}`);
+        if (!cancelled)
+          setError(
+            reason instanceof Error && reason.message === "draft-form-mismatch"
+              ? "服务端草稿与本次实训不匹配，已暂停填写。"
+              : `草稿读取失败：${errorText(reason)}`,
+          );
       });
     return () => {
       cancelled = true;
       writer.current = null;
     };
-  }, [endpoint, retry]);
-  const dirty = JSON.stringify(draft) !== saved;
+  }, [attempt.id, attempt.status, enabled, endpoint, initial, retry]);
+  const dirty = enabled && JSON.stringify(draft) !== saved;
   useLayoutEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !enabled || attempt.status !== "active") return;
     if (dirty) pendingDrafts.set(attempt.id, structuredClone(draft));
     else pendingDrafts.delete(attempt.id);
-  }, [attempt.id, draft, dirty, loaded]);
+  }, [attempt.id, attempt.status, draft, dirty, loaded, enabled]);
   useEffect(() => {
-    if (!dirty || error || attempt.status !== "active") return;
+    const currentWriter = writer.current;
+    if (
+      !loaded ||
+      !dirty ||
+      error ||
+      !currentWriter ||
+      attempt.status !== "active"
+    )
+      return;
     const timer = setTimeout(() => {
       setSaving(true);
-      void writer.current
-        ?.save(structuredClone(draft))
+      void currentWriter
+        .save(structuredClone(draft))
         .catch((reason) => {
+          if (writer.current !== currentWriter) return;
           setConflict(
             reason instanceof ApiError &&
               reason.detail.code === "REVISION_CONFLICT",
@@ -103,10 +182,12 @@ export function useReflectionDraft(
             `草稿未保存：${errorText(reason)} 当前填写仍保留在本页，请先下载备份。`,
           );
         })
-        .finally(() => setSaving(false));
+        .finally(() => {
+          if (writer.current === currentWriter) setSaving(false);
+        });
     }, 500);
     return () => clearTimeout(timer);
-  }, [draft, dirty, error, attempt.status]);
+  }, [loaded, draft, dirty, error, attempt.status]);
   useEffect(() => {
     if (!dirty) return;
     const unload = (event: BeforeUnloadEvent) => {
@@ -134,7 +215,7 @@ export function useReflectionDraft(
         )
           return;
       }
-      if (!confirm("复盘草稿尚未保存，离开可能丢失本页修改。确定离开？")) {
+      if (!confirm("作答草稿尚未保存，离开可能丢失本页修改。确定离开？")) {
         event.preventDefault();
         event.stopPropagation();
       }
@@ -150,6 +231,7 @@ export function useReflectionDraft(
     draft,
     setDraft,
     loaded,
+    hasSaved,
     dirty,
     saving,
     error,
@@ -157,7 +239,6 @@ export function useReflectionDraft(
     reload: async () => {
       try {
         await onRefresh?.();
-        pendingDrafts.delete(attempt.id);
         setRetry((value) => value + 1);
       } catch (reason) {
         setError(`重新读取失败：${errorText(reason)} 当前填写仍保留在本页。`);

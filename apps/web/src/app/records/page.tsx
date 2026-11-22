@@ -3,17 +3,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { allPages, api, pathId } from "@/lib/api";
-import type { Attempt, Schema } from "@/lib/types";
+import type { Schema } from "@/lib/types";
 import { LearningStatus } from "@/components/learning-status";
 import { ErrorBox, Heading, Loading, useAction } from "@/components/ui";
 export default function Records() {
-  const [attempts, setAttempts] = useState<Attempt[] | null>(null);
+  const [attempts, setAttempts] = useState<Schema["AttemptListItem"][] | null>(
+    null,
+  );
   const [titles, setTitles] = useState<Record<string, string>>({});
   const action = useAction();
   function load() {
     void action.act(async () => {
       const [a, l] = await Promise.all([
-        allPages<Attempt>("/attempts"),
+        allPages<Schema["AttemptListItem"]>("/attempts"),
         api<Schema["LessonList"]>("/lessons"),
       ]);
       setAttempts(a);
@@ -30,7 +32,7 @@ export default function Records() {
       />
       <ErrorBox error={action.error} retry={load} />
       {!attempts ? (
-        <Loading />
+        !action.error && <Loading />
       ) : !attempts.length ? (
         <div className="panel empty">
           <h2>第一段学习记录，等你开启</h2>
@@ -50,6 +52,14 @@ export default function Records() {
                   {a.mode === "demo" ? "演示练习" : "正式实训"}
                 </span>
                 <h2>{titles[a.lesson_id] ?? a.lesson_id}</h2>
+                <p className="small muted">
+                  版本 {a.lesson_version} · 已完成 {a.completed_run_count} 轮
+                </p>
+                <p className="record-task">
+                  {a.latest_task_preview
+                    ? `最近任务：${a.latest_task_preview}`
+                    : "尚未发送任务"}
+                </p>
               </div>
               <Link
                 className="button secondary"

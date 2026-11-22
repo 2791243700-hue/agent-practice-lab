@@ -2174,7 +2174,7 @@
     "/attempts/{attempt_id}/reflection-draft": {
       "get": {
         "operationId": "getReflectionDraft",
-        "summary": "读取当前实验的复盘草稿，不调用模型",
+        "summary": "读取本次实训的作答草稿",
         "tags": [
           "attempts"
         ],
@@ -2211,11 +2211,11 @@
             }
           }
         },
-        "description": "读取实验的持久化复盘草稿；未保存返回 revision=0、draft=null、updated_at=null。旧实验可读，无模型调用。"
+        "description": "按实训读取固定课件版本的作答草稿。未保存返回 revision=0、draft=null、updated_at=null。历史实训可读。"
       },
       "put": {
         "operationId": "putReflectionDraft",
-        "summary": "按独立草稿版本保存复盘，不修改实验版本",
+        "summary": "以独立修订号保存当前实训的作答草稿",
         "tags": [
           "attempts"
         ],
@@ -2252,7 +2252,7 @@
             }
           },
           "422": {
-            "description": "字段或引用不合法，或实验不使用 reflection 表单。",
+            "description": "字段、引用或草稿与实训固定版本的表单不匹配。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2282,7 +2282,7 @@
             }
           }
         },
-        "description": "完整替换 active reflection 实验的草稿。expected_revision 对应草稿，expected_attempt_revision 对应实验；成功只递增草稿 revision。不使用 Idempotency-Key，响应丢失先 GET；不产生正式提交或模型调用。"
+        "description": "完整替换进行中实训的草稿，只递增草稿 revision。第一关复盘沿用原快照，第二至四关按 facts、course、artifact 保存。未接到响应时先 GET；草稿保存不提交验收，不调用模型。"
       }
     }
   },
@@ -3331,7 +3331,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Attempt"
+              "$ref": "#/components/schemas/AttemptListItem"
             },
             "maxItems": 100
           },
@@ -6357,7 +6357,7 @@
           "draft": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ReflectionDraftData"
+                "$ref": "#/components/schemas/AttemptDraftData"
               },
               {
                 "type": "null"
@@ -6399,7 +6399,7 @@
             "maximum": 2147483647
           },
           "draft": {
-            "$ref": "#/components/schemas/ReflectionDraftData"
+            "$ref": "#/components/schemas/AttemptDraftData"
           }
         },
         "required": [
@@ -6702,6 +6702,265 @@
           "explanation"
         ],
         "description": "第一关 1.1.0 正式复盘答案。evidence 为待服务端核验的消息引用；不等同于服务端生成的 Submission.evidence。解释须非空白但不按语义质量自动评分。"
+      },
+      "AttemptListItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "owner_id": {
+            "type": "string",
+            "const": "local-owner"
+          },
+          "lesson_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+          },
+          "lesson_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "live",
+              "demo"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "superseded"
+            ]
+          },
+          "settings": {
+            "$ref": "#/components/schemas/Settings"
+          },
+          "selected_file_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+            },
+            "maxItems": 100
+          },
+          "progress": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "in_progress",
+              "completed"
+            ]
+          },
+          "active_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_submission_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reset_to_attempt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_run_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "latest_task_preview": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "lesson_id",
+          "lesson_version",
+          "mode",
+          "revision",
+          "status",
+          "settings",
+          "selected_file_ids",
+          "progress",
+          "active_run_id",
+          "latest_submission_id",
+          "reset_to_attempt_id",
+          "created_at",
+          "updated_at",
+          "completed_run_count",
+          "latest_task_preview"
+        ]
+      },
+      "FactsDraftData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "facts"
+          },
+          "facts": {
+            "type": "object",
+            "maxProperties": 20,
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "due_date": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": ""
+                    },
+                    {
+                      "type": "string",
+                      "format": "date"
+                    }
+                  ]
+                },
+                "source_id": {
+                  "type": "string",
+                  "maxLength": 80
+                }
+              },
+              "required": [
+                "due_date",
+                "source_id"
+              ]
+            }
+          },
+          "learning_reflection": {
+            "type": "string",
+            "maxLength": 6000
+          }
+        },
+        "required": [
+          "kind",
+          "facts",
+          "learning_reflection"
+        ]
+      },
+      "CourseDraftData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "course"
+          },
+          "session_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": ""
+              },
+              {
+                "type": "string",
+                "format": "date"
+              }
+            ]
+          },
+          "room": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "learning_reflection": {
+            "type": "string",
+            "maxLength": 6000
+          }
+        },
+        "required": [
+          "kind",
+          "session_date",
+          "room",
+          "learning_reflection"
+        ]
+      },
+      "ArtifactDraftData": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "artifact"
+          },
+          "learning_reflection": {
+            "type": "string",
+            "maxLength": 6000
+          }
+        },
+        "required": [
+          "kind",
+          "learning_reflection"
+        ]
+      },
+      "AttemptDraftData": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ReflectionDraftData"
+          },
+          {
+            "$ref": "#/components/schemas/FactsDraftData"
+          },
+          {
+            "$ref": "#/components/schemas/CourseDraftData"
+          },
+          {
+            "$ref": "#/components/schemas/ArtifactDraftData"
+          }
+        ]
       }
     }
   },

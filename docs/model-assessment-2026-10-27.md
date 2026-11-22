@@ -67,7 +67,7 @@ Submission 可新增 `learning_reflection`、`model_assessment`；历史记录�
 
 ## 前端、恢复与维护
 
-SubmissionPanel 展示本版评分标准、当前选定的模型与服务商、证据发送范围和费用确认；连接修订变化使旧同意失效，每次提交后清除同意。第二至四关增加核对说明，第一关复用四步复盘。提交失败不清空填写；unavailable 作为提交记录保存在历史和 ZIP 中，刷新后可回看原文。第二至四关未提交的说明仅在当前页面内存，完整刷新前应复制备份。
+SubmissionPanel 展示本版评分标准、当前选定的模型与服务商、证据发送范围和费用确认；连接修订变化使旧同意失效，每次提交后清除同意。第二至四关增加核对说明，第一关复用四步复盘。提交失败不清空填写；unavailable 作为提交记录保存在历史和 ZIP 中，刷新后可回看原文。当时版本将第二至四关未提交的说明保存在页面内存中。2026-11-21 起，这些表单支持服务端草稿恢复，见[当前版本索引](project-status.md)。
 
 主要维护文件：`apps/api/src/agent_school/model_assessment.py`（提示词、证据、模型传输与结果校验）、`submissions.py`（两阶段评分）、`main.py`（付费幂等）、`lessons.py`（版本与公开标准）、`service.py`（互斥）、`apps/web/src/components/feedback.tsx`（同意和反馈）、`conversation-review.tsx`（复盘接入）。
 

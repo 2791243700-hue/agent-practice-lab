@@ -684,11 +684,14 @@ def test_tips_drop_reflection_draft_when_evidence_budget_drops_baseline(client):
     ("lesson_id", "version"),
     [
         ("01-task", "1.0.0"),
+        ("01-task", "1.1.0"),
         ("01-task", "1.2.0"),
         ("01-task", "1.3.0"),
         ("02-context", "1.0.0"),
         ("02-context", "1.1.0"),
+        ("03-tools", "1.0.0"),
         ("03-tools", "1.1.0"),
+        ("04-permission", "1.0.0"),
         ("04-permission", "1.1.0"),
     ],
 )

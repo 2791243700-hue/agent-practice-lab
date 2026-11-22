@@ -5,7 +5,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config as AlembicConfig
-from sqlalchemy import create_engine, delete, event, insert, literal_column, select, update
+from sqlalchemy import create_engine, delete, event, func, insert, literal_column, select, update
 
 from agent_school.errors import not_found
 from agent_school.models import events, records
@@ -128,6 +128,28 @@ class Store:
             run["last_seq"] = seq
             self.put("run", run_id, run, owner)
         return value
+
+    def run_summaries(self, attempt_ids, owner="local-owner"):
+        """Count completed runs and read only the latest task for each listed attempt."""
+        if not attempt_ids:
+            return {}
+        attempt_id = records.c.data["attempt_id"].as_string()
+        completed = records.c.data["status"].as_string() == "completed"
+        summary = (
+            select(
+                attempt_id.label("attempt_id"),
+                func.count().filter(completed).label("completed_count"),
+                func.max(literal_column("rowid")).label("latest_rowid"),
+            )
+            .where(records.c.kind == "run", records.c.owner_id == owner, attempt_id.in_(attempt_ids))
+            .group_by(attempt_id)
+            .subquery()
+        )
+        query = select(
+            summary.c.attempt_id, summary.c.completed_count, records.c.data["input_text"].as_string()
+        ).select_from(summary.join(records, literal_column("records.rowid") == summary.c.latest_rowid))
+        with self.atomic() as connection:
+            return {key: (count, task) for key, count, task in connection.execute(query)}
 
     def list_in_creation_order(self, kind, owner="local-owner"):
         """Durable insertion order; record updates keep their SQLite rowid.
